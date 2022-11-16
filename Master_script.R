@@ -18,6 +18,6 @@ orderly::orderly_commit(model_fit)
 #500iteration, 10 tree_depth, 0.7 hours
 
 #Reduced to 306 thetas
-#500iteration, 12 tree_depth,  hours
+#500iteration, 12 tree_depth,  2.8 hours, and warnings about tree depth
 
 #I think it should really be just thetas for each location
