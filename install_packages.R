@@ -2,7 +2,8 @@
 
 rm(list = ls())
 #Set up the needed packages:
-packages <- c("tidyverse", "INLA", "rstan", "sf", "spdep")
+packages <- c("tidyverse", "INLA", "rstan", "sf", "spdep", "orderly",
+              "pkgdepends")
 miss_pkgs <- packages[!packages %in% installed.packages()[,1]]
 if(length(miss_pkgs) > 0){
   install.packages(miss_pkgs)
@@ -17,3 +18,10 @@ install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-dow
 
 
 rm(miss_pkgs, packages)
+
+#Prior to installing RStan, you need to configure your R installation 
+#to be able to compile C++ code. Follow the link below for your
+#respective operating system for more instructions:
+#https://github.com/stan-dev/rstan/wiki/Configuring-C---Toolchain-for-Windows
+
+
