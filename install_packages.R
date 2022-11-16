@@ -2,7 +2,8 @@
 
 rm(list = ls())
 #Set up the needed packages:
-packages <- c("tidyverse", "INLA", "rstan", "sf", "spdep")
+packages <- c("tidyverse", "INLA", "rstan", "sf", "spdep", "orderly",
+              "pkgdepends")
 miss_pkgs <- packages[!packages %in% installed.packages()[,1]]
 if(length(miss_pkgs) > 0){
   install.packages(miss_pkgs)
