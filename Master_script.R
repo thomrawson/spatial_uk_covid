@@ -6,5 +6,9 @@ orderly::orderly_commit(data_prep)
 #Followed by the actual stanfit task:
 model_fit <- orderly::orderly_run("01a_model_fit", 
                                   parameters = list(warmup_iterations = 100,
-                                                    total_iterations = 250))
+                                                    total_iterations = 500))
 orderly::orderly_commit(model_fit)
+
+#RUNTIMEs
+#First run, 500iteration, 15 tree_depth, 43 hours
+#First run, 500iteration, 10 tree_depth, 1.5 hours

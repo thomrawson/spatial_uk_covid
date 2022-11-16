@@ -2,3 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
+.Renviron
+.ssh
+orderly.sqlite
+data/
+archive/
+draft/
+contexts/
+scratch.R

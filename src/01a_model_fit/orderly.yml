@@ -77,7 +77,7 @@ parameters:
   warmup_iterations: ~
   total_iterations: ~
   tree_depth:
-    default: 15
+    default: 10
 # Similar to "data" but sets of temporary views before the data are
 # extracted.  Can be embedded SQL strings or filenames to actual
 # queries.  Use this to simplify the extraction.
@@ -129,7 +129,7 @@ packages:
 #         use: (mapping of filenames in the format dest: from)
 depends:
   - 00_case_data:
-      id: latest()
+      id: latest
       use:
         Cases_Data.RData: Outputs/Cases_Data.RData
         W.RData: Outputs/W.RData

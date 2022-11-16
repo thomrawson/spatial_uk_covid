@@ -6,6 +6,15 @@
 load('Cases_Data.RData')
 load('W.RData')
 
+#if you are using rstan locally on a multicore machine and have plenty of RAM to
+#estimate your model in parallel, at this point execute
+options(mc.cores = parallel::detectCores())
+#and
+rstan_options(auto_write = TRUE)
+#which allows you to automatically save a bare version of a compiled Stan program 
+#to the hard disk so that it does not need to be recompiled (unless you change it). 
+#You will need to run these commands each time you load the rstan library.
+
 ###################
 #Prepare Data
 
