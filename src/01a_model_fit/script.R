@@ -71,14 +71,16 @@ parameters {
   vector[K] betas;       // covariates
   vector<lower = 0>[N] zetas;       //spatial kernel, but this can't be less than 0
 
-  matrix[N,T] theta;       // heterogeneous effects
+  //matrix[N,T] theta;       // heterogeneous effects
+  //real theta;       // heterogeneous effects
+  vector[N] theta;       // heterogeneous effects
 }
 transformed parameters {
 
 }
 model {
 for(i in 1:T){
-  y[,i] ~ poisson_log(log(E[,i] + zetas .*E_neighbours[,i]) + beta0 + x[i] * betas + theta[,i]);  // co-variates removed: + x * betas
+  y[,i] ~ poisson_log(log(E[,i] + zetas .*E_neighbours[,i]) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
 }
 
   beta0 ~ normal(0.0, 1.0);
@@ -86,9 +88,11 @@ for(i in 1:T){
   //zetas ~ normal(0.05, 1.0);
   zetas ~ gamma(0.05, 1.0);
   
-  for(i in 1:T){
-  theta[,i] ~ normal(0.0, 1.0);
-  }
+  //Unsure just HOW MANY noise terms we should incorporate. Let's try with just one to start with
+  //for(i in 1:T){
+  //theta[,i] ~ normal(0.0, 1.0);
+  //}
+  theta ~ normal(0.0, 1.0);
   
 }
 generated quantities {
