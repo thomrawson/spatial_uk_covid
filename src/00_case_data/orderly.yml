@@ -132,6 +132,7 @@ resources:
   - Data\LTLA_to_Region.csv
   - Data\Wales_cum_first_vacc.csv
   - Data\Wales_cum_second_vacc.csv
+  - Data\Annual_median_income.csv
 
 # Optional name of a variable to make the SQL connection available to
 # the script.  Use this with care and avoid using any queries that

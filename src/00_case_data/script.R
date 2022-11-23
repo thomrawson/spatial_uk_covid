@@ -366,6 +366,7 @@ Case_Rates_Data_hold$date_begin <- as.Date('2020-05-04') + ((Case_Rates_Data_hol
 
 #Previous weeks column
 Case_Rates_Data_hold$previous_week_cases <- NA
+Case_Rates_Data_hold$next_week_cases <- NA
 
 
 for(i in 1: length(Case_Rates_Data_hold$Week)){
@@ -376,12 +377,24 @@ for(i in 1: length(Case_Rates_Data_hold$Week)){
   data_hold <- filter(Case_Rates_Data_hold, areaName == areaName_hold)
   data_hold <- filter(data_hold, Week == date_hold - 1)
   
+  #Obtain the next day's case_Rate
+  data_hold2 <- filter(Case_Rates_Data_hold, areaName == areaName_hold)
+  data_hold2 <- filter(data_hold2, Week == date_hold + 1)
+  
   if(length(data_hold$areaCode) == 0){
     
   } else if (length(data_hold$areaCode) == 1){
     Case_Rates_Data_hold$previous_week_cases[i] <- data_hold$Week_Cases
   } else {
-    print(paste('Error: length neither 0 nor 1 at i =', i, sep = " "))
+    print(paste('Error: length neither 0 nor 1 at prev_week i =', i, sep = " "))
+  }
+  
+  if(length(data_hold2$areaCode) == 0){
+    
+  } else if (length(data_hold2$areaCode) == 1){
+    Case_Rates_Data_hold$next_week_cases[i] <- data_hold2$Week_Cases
+  } else {
+    print(paste('Error: length neither 0 nor 1 at next_week i =', i, sep = " "))
   }
   
 }
@@ -605,6 +618,93 @@ rm(Covar_Data_full, Buck_data, North_North_data, West_North_data, Buck_codes, No
 Case_Rates_Data <- merge(Case_Rates_Data, Covar_Data, by = 'areaCode', all.x = TRUE)
 
 ################
+#Add earnings data
+################
+#This is data taken from here: https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/placeofresidencebylocalauthorityashetable8
+
+Earnings_Data <- read.csv('Data/Annual_median_income.csv')
+
+
+
+#Fortunately, all Earnings areaCodes are already in the case rate data codes
+#We have two "years" split by the tax year change point of 6th April 2021
+#"Annual estimates are provided for the tax year that ended on 5th April in the reference year"
+Earnings_Data_2021 <- filter(Earnings_Data, year == 2021)
+Earnings_Data_2022 <- filter(Earnings_Data, year == 2022)
+
+#Note, we have some "NA" in the earnings data which is marked with an "x"
+#This is a pain, the first thing we'll do is, if it's missing, we'll use the value from the other year
+for(i in 1:length(Earnings_Data_2021$areaCode)){
+  year_hold <- Earnings_Data_2021$year[i]
+  code_hold <- Earnings_Data_2021$areaCode[i]
+  earnings_hold <- Earnings_Data_2021$Median_annual_income[i]
+  jobs_hold <- Earnings_Data_2021$no_jobs[i]
+  
+  if(earnings_hold == "x"){
+    pull_earnings <- filter(Earnings_Data_2022, areaCode == code_hold)
+      Earnings_Data_2021$Median_annual_income[i] <- pull_earnings$Median_annual_income[1]
+  }
+  
+  if(jobs_hold == "x"){
+    pull_jobs <- filter(Earnings_Data_2022, areaCode == code_hold)
+    Earnings_Data_2021$no_jobs[i] <- pull_earnings$no_jobs[1]
+  }
+}
+
+for(i in 1:length(Earnings_Data_2022$areaCode)){
+  year_hold <- Earnings_Data_2022$year[i]
+  code_hold <- Earnings_Data_2022$areaCode[i]
+  earnings_hold <- Earnings_Data_2022$Median_annual_income[i]
+  jobs_hold <- Earnings_Data_2022$no_jobs[i]
+  
+  if(earnings_hold == "x"){
+    pull_earnings <- filter(Earnings_Data_2021, areaCode == code_hold)
+    Earnings_Data_2022$Median_annual_income[i] <- pull_earnings$Median_annual_income[1]
+  }
+  
+  if(jobs_hold == "x"){
+    pull_jobs <- filter(Earnings_Data_2021, areaCode == code_hold)
+    Earnings_Data_2022$no_jobs[i] <- pull_earnings$no_jobs[1]
+  }
+}
+
+
+
+
+#Make new cols
+Case_Rates_Data$Median_annual_income <- NA
+Case_Rates_Data$no_jobs <- NA
+
+#TODO: make this more efficient:
+for(i in 1:length(Case_Rates_Data$areaCode)){
+  date_hold <- Case_Rates_Data$date_begin[i]
+  area_hold <- Case_Rates_Data$areaCode[i]
+  
+  if(date_hold > as.Date("2021-04-06")){
+    earnings_hold <- filter(Earnings_Data_2022, areaCode == area_hold )
+    Case_Rates_Data$Median_annual_income[i] <- earnings_hold$Median_annual_income[1]
+    Case_Rates_Data$no_jobs[i] <- earnings_hold$no_jobs[1]
+  } else if(date_hold <= as.Date("2021-04-06")){
+    earnings_hold <- filter(Earnings_Data_2021, areaCode == area_hold )
+    Case_Rates_Data$Median_annual_income[i] <- earnings_hold$Median_annual_income[1]
+    Case_Rates_Data$no_jobs[i] <- earnings_hold$no_jobs[1]
+  } else{
+    print("Incompatible date for earnings data")
+  }
+  
+}
+
+#remove held data
+rm(earnings_hold, area_hold, date_hold, Earnings_Data_2021,
+   Earnings_Data_2022, Earnings_Data, year_hold, code_hold, jobs_hold,
+   pull_earnings, pull_jobs)
+
+
+#Need to convert these earnings/jobs data to numeric
+Case_Rates_Data$Median_annual_income <- as.numeric(Case_Rates_Data$Median_annual_income)
+Case_Rates_Data$no_jobs <- as.numeric(Case_Rates_Data$no_jobs)
+
+################
 #Add mobility data
 ################
 
@@ -706,6 +806,22 @@ for(i in 1:length(Reduced_Data$areaCode)){
 }
 
 Google_conversion <- One_code_google[,-c(6,7,9,10,11,12,13,14,15)]
+
+#Which codes have been stuck to Google?
+google_codes <- unique(Google_conversion$areaCode)
+#remove the NA
+google_codes <- google_codes[-1]
+#330 of them assigned
+#TODO: check if I'm happy with how these are assigned
+cases_codes <- unique(Case_Rates_Data$areaCode)
+not_assigned_to_google <- cases_codes[which(!(cases_codes %in% google_codes))]
+#26 of them not assigned:
+# "E06000010" "E06000014" "E06000015" "E06000016" "E06000018"
+# "E06000019" "E06000023" "E06000052" "E06000055" "E06000061"
+# "E06000062" "E07000008" "E07000064" "E07000112" "E07000128"
+# "E07000178" "E07000197" "E07000222" "E07000240" "E07000244"
+# "E07000246" "E08000013" "E09000005" "E09000012" "S12000036"
+# "S12000038"
 
 Google_conversion <- filter(Google_conversion, !is.na(areaCode))
 
