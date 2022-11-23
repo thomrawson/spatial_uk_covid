@@ -8,6 +8,7 @@ model_fit <- orderly::orderly_run("01a_model_fit",
                                   parameters = list(warmup_iterations = 100,
                                                     total_iterations = 500,
                                                     tree_depth = 13))
+
 orderly::orderly_commit(model_fit)
 
 #RUNTIMEs
