@@ -805,6 +805,7 @@ for(i in 1:length(Reduced_Data$areaCode)){
   
 }
 
+#SOLUTION HERE IS TO USE THE GOOGLE_TO_LTLA_CODES THAT I'VE ALREADY MADE
 Google_conversion <- One_code_google[,-c(6,7,9,10,11,12,13,14,15)]
 
 #Which codes have been stuck to Google?
