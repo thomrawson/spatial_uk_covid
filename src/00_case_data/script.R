@@ -345,8 +345,8 @@ D <- diag(rowSums(W))
 #Start by summing together the weekly cases
 #Start by adding a new variable, week number:
 
-#FIRST DATE: Monday 4th May 2020
-Case_Rates_Data$Week <- plyr::round_any(as.numeric(Case_Rates_Data$date - as.Date('2020-05-04') + 0.5), 7, f = ceiling)/7
+#FIRST DATE: Sunday 3rd May 2020
+Case_Rates_Data$Week <- plyr::round_any(as.numeric(Case_Rates_Data$date - as.Date('2020-05-03') + 0.5), 7, f = ceiling)/7
 
 #Filter out the week 0 cases
 Case_Rates_Data <- filter(Case_Rates_Data, Week > 0)
@@ -362,7 +362,7 @@ Case_Rates_Data_hold <- aggregate(Case_Rates_Data$Cases, by=list(Week=Case_Rates
 colnames(Case_Rates_Data_hold) <- c('Week', 'areaCode', 'areaName', 'Population',
                                     'Pop_per_km2', 'Median_age', 'INDEX', 'Week_Cases')
 
-Case_Rates_Data_hold$date_begin <- as.Date('2020-05-04') + ((Case_Rates_Data_hold$Week - 1)*7) 
+Case_Rates_Data_hold$date_begin <- as.Date('2020-05-03') + ((Case_Rates_Data_hold$Week - 1)*7) 
 
 #Previous weeks column
 Case_Rates_Data_hold$previous_week_cases <- NA
@@ -1031,7 +1031,7 @@ LTLA_to_region <- read.csv('Data/LTLA_to_Region.csv')
 #Portal_Variant_Data <- read.csv('https://api.coronavirus.data.gov.uk/v2/data?areaType=region&metric=variants&format=csv')
 #But for consistency we use the hard-saved version downloaded on Nov 28th 2022:
 Portal_Variant_Data <- read.csv("Data/Portal_variant_data.csv")
-Portal_Variant_Data <- Portal_Variant_Data[,-3]
+Portal_Variant_Data <- Portal_Variant_Data[,-c(1,3)]
 Portal_Variant_Data$date <- as.Date(Portal_Variant_Data$date)
 
 #We rename the regions to the sircovid format
@@ -1046,6 +1046,24 @@ Portal_Variant_Data %>%
   mutate(across('areaName', str_replace, 'South East', 'south_east')) %>%
   mutate(across('areaName', str_replace, 'South West', 'south_west')) -> Portal_Variant_Data
 
+#Need to multiply out the number of cases for Portal_Variant_Data
+#To then aggregate back into a 7-region format
+Portal_Variant_Data$cases <- round(Portal_Variant_Data$cumWeeklySequenced*(Portal_Variant_Data$newWeeklyPercentage/100))
+Portal_Variant_Data <- Portal_Variant_Data[,-c(4,5)]
+
+#Aggregate
+Portal_Variant_Data <- aggregate(Portal_Variant_Data$cases,
+                              by=list(date=Portal_Variant_Data$date, 
+                                      nhs_region = Portal_Variant_Data$areaName, 
+                                      variant = Portal_Variant_Data$variant),
+                              FUN=sum)
+
+colnames(Portal_Variant_Data) <- c("date", "nhs_region",
+                                   "variant", "cases")
+
+
+group_by(Portal_Variant_Data, date, nhs_region) %>% 
+  mutate(newWeeklyPercentage = 100*(cases/sum(cases))) -> Portal_Variant_Data
 
 
 #We also have another source, aggregated from the VAM linelist.
@@ -1081,31 +1099,100 @@ VAM_Variant_Data %>%
   mutate(across('variant', str_replace, 'V-22APR-03', 'Omicron_BA_4')) %>%
   mutate(across('variant', str_replace, 'V-22OCT-01', 'Omicron_BQ_1')) -> VAM_Variant_Data
 
+Portal_Variant_Data$variant <- str_replace_all(Portal_Variant_Data$variant, " ", "_")
+Portal_Variant_Data$variant <- str_replace_all(Portal_Variant_Data$variant, "\\.", "_")
+Portal_Variant_Data$variant <- str_replace_all(Portal_Variant_Data$variant, "\\(", "")
+Portal_Variant_Data$variant <- str_replace_all(Portal_Variant_Data$variant, "\\)", "")
+
+
 Portal_Variant_Data %>%
-  mutate(across('variant', str_replace, 'VOC-22JAN-01 (Omicron BA.2)', 'Omicron_BA_2')) %>%
-  mutate(across('variant', str_replace, 'V-20DEC-01 (Alpha)', 'Alpha')) %>%
-  mutate(across('variant', str_replace, 'V-21APR-02 (Delta B.1.617.2)', 'Delta')) %>%
-  mutate(across('variant', str_replace, 'VOC-21NOV-01 (Omicron BA.1)', 'Omicron_BA_1')) %>%
-  mutate(across('variant', str_replace, 'V-21OCT-01 (Delta AY 4.2)', 'Delta_AY_4_2')) %>%
-  mutate(across('variant', str_replace, 'VOC-22APR-04 (Omicron BA.5)', 'Omicron_BA_5')) %>%
-  mutate(across('variant', str_replace, 'VOC-22APR-03 (Omicron BA.4)', 'Omicron_BA_4')) %>%
-  mutate(across('variant', str_replace, 'V-22OCT-01 (Omicron BQ.1)', 'Omicron_BQ_1')) -> Portal_Variant_Data
+  mutate(across('variant', str_replace, 'VOC-22JAN-01_Omicron_BA_2', 'Omicron_BA_2')) %>%
+  mutate(across('variant', str_replace, 'V-20DEC-01_Alpha', 'Alpha')) %>%
+  mutate(across('variant', str_replace, 'V-21APR-02_Delta_B_1_617_2', 'Delta')) %>%
+  mutate(across('variant', str_replace, 'VOC-21NOV-01_Omicron_BA_1', 'Omicron_BA_1')) %>%
+  mutate(across('variant', str_replace, 'V-21OCT-01_Delta_AY_4_2', 'Delta_AY_4_2')) %>%
+  mutate(across('variant', str_replace, 'VOC-22APR-04_Omicron_BA_5', 'Omicron_BA_5')) %>%
+  mutate(across('variant', str_replace, 'VOC-22APR-03_Omicron_BA_4', 'Omicron_BA_4')) %>%
+  mutate(across('variant', str_replace, 'V-22OCT-01_Omicron_BQ_1', 'Omicron_BQ_1')) -> Portal_Variant_Data
   
 #Cut the earlier dates
 VAM_Variant_Data <- filter(VAM_Variant_Data, date > minimum_date)
 
-
-#The portal data starts on a Sunday, but we've done everything by starting from Monday
-
-
 #Aggregate the VAM data into weeks
+VAM_Variant_Data$date <- cut.Date(VAM_Variant_Data$date, 
+                                  breaks = "week", start.on.monday = FALSE)
+
+VAM_Variant_Data <- aggregate(VAM_Variant_Data$cases,
+                              by=list(date=VAM_Variant_Data$date, 
+                                      nhs_region = VAM_Variant_Data$nhs_region, 
+                                      variant = VAM_Variant_Data$variant),
+                              FUN=sum)
 
 
-  #Calculate the percentages for the VAM data:
-group_by(VAM_Variant_Data, date, nhs_region) %>% mutate(newWeeklyPercentage = cases/sum(cases)) -> test
+colnames(VAM_Variant_Data) <- c("date", "nhs_region", "variant", "cases")
+
+VAM_Variant_Data$date <- as.Date(VAM_Variant_Data$date)
+#Calculate the percentages for the VAM data:
+group_by(VAM_Variant_Data, date, nhs_region) %>% 
+  mutate(newWeeklyPercentage = 100*(cases/sum(cases))) -> VAM_Variant_Data
+
+#We quickly plot the two datasets together to see how they vary 
+
+VAM_Variant_Data$data_source <- "VAM"
+Portal_Variant_Data$data_source <- "Portal"
+
+plot_test <- rbind(VAM_Variant_Data, Portal_Variant_Data)
+# 
+# nhs_list <- unique(plot_test$nhs_region)
+# ggplot(plot_test) +
+#   geom_line(aes(x = date, y = newWeeklyPercentage, color = variant, 
+#                 lty = data_source)) + 
+#   facet_wrap(~ nhs_region)
+
+#Good to see the datasets align near perfectly, save for some disagreement
+#during the rise in Omicron BA.4
+#We will use the Portal data but append the earlier VAM data to the list.
+
+#So cut the later VAM data:
+VAM_Variant_Data <- filter(VAM_Variant_Data, date < as.Date("2021-02-14"))
+
+#There's technically a few Deltas in the VAM early dates, which is odd. 
+#Will leave it there for now
+
+#Stitch the two together
+Variant_Data <- rbind(VAM_Variant_Data, Portal_Variant_Data)
+
+ggplot(Variant_Data) +
+  geom_line(aes(x = date, y = newWeeklyPercentage, color = variant,
+                lty = data_source)) +
+  facet_wrap(~ nhs_region)
+
+ggsave("Outputs/Variants.png", width = 35, height = 20, units = "cm")
+
+write.csv(Variant_Data, file = "Outputs/Variants_data.csv")
 
 
+#Now add this to Case_Rates_Data
+#We want a separate column for each variant
+Variant_Data <- Variant_Data[,-c(4,6)]
+
+Variant_Data %>%
+  pivot_wider(names_from = variant, 
+              values_from = newWeeklyPercentage) -> Variant_Data
+
+#Set all the NAs to 0s
+Variant_Data[is.na(Variant_Data)] <- 0
+
+Case_Rates_Data$Alpha_proportion <- NA
 Case_Rates_Data$Delta_proportion <- NA
+Case_Rates_Data$Delta_AY_4_2_proportion <- NA
+Case_Rates_Data$Omicron_BA_1_proportion <- NA
+Case_Rates_Data$Omicron_BA_2_proportion <- NA
+Case_Rates_Data$Other_proportion <- NA
+Case_Rates_Data$Omicron_BQ_1_proportion <- NA
+Case_Rates_Data$Omicron_BA_4_proportion <- NA
+Case_Rates_Data$Omicron_BA_5_proportion <- NA
+
 Available_codes <- unique(LTLA_to_region$LAD21CD)
 
 for(i in 1:nrow(Case_Rates_Data)){
@@ -1113,21 +1200,25 @@ for(i in 1:nrow(Case_Rates_Data)){
   date_hold <- Case_Rates_Data$date_begin[i]
   LTLA_hold <- Case_Rates_Data$areaCode[i]
   #Check we have data available
-  #The delta prop data covers march 8th 2021 to july 31st 2021
   
   
   if(!(LTLA_hold %in% Available_codes)){
-    
-  }else if(date_hold < as.Date('2021-03-08')){
-    Case_Rates_Data$Delta_proportion[i] <- 0
-  }else if(date_hold > as.Date('2021-07-25')){
-    Case_Rates_Data$Delta_proportion[i] <- 99.99
+    print("Warning, unrecognised LTLA code")
   }else{
     region_hold <- LTLA_to_region$RGN21NM[which(LTLA_to_region$LAD21CD == LTLA_hold)]
     
-    delta_reduced <- filter(Delta_proportion_data, region == region_hold)
+    variant_reduced <- filter(Variant_Data, nhs_region == region_hold)
+    variant_reduced <- filter(variant_reduced, date == date_hold)
     
-    Case_Rates_Data$Delta_proportion[i] <- mean(delta_reduced$pos_mean[which(delta_reduced$dates == date_hold)+0:6])
+    Case_Rates_Data$Alpha_proportion[i] <- variant_reduced$Alpha[1]
+    Case_Rates_Data$Delta_proportion[i] <- variant_reduced$Delta[1]
+    Case_Rates_Data$Delta_AY_4_2_proportion[i] <- variant_reduced$Delta_AY_4_2[1]
+    Case_Rates_Data$Omicron_BA_1_proportion[i] <- variant_reduced$Omicron_BA_1[1]
+    Case_Rates_Data$Omicron_BA_2_proportion[i] <- variant_reduced$Omicron_BA_2[1]
+    Case_Rates_Data$Other_proportion[i] <- variant_reduced$Other[1]
+    Case_Rates_Data$Omicron_BQ_1_proportion[i] <- variant_reduced$Omicron_BQ_1[1]
+    Case_Rates_Data$Omicron_BA_4_proportion[i] <- variant_reduced$Omicron_BA_4[1]
+    Case_Rates_Data$Omicron_BA_5_proportion[i] <- variant_reduced$Omicron_BA_5[1]
     
   }
   
