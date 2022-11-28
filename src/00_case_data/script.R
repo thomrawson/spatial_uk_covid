@@ -807,22 +807,87 @@ for(i in 1:length(Reduced_Data$areaCode)){
 
 #SOLUTION HERE IS TO USE THE GOOGLE_TO_LTLA_CODES THAT I'VE ALREADY MADE
 Google_conversion <- One_code_google[,-c(6,7,9,10,11,12,13,14,15)]
-
-#Which codes have been stuck to Google?
-google_codes <- unique(Google_conversion$areaCode)
-#remove the NA
-google_codes <- google_codes[-1]
-#330 of them assigned
-#TODO: check if I'm happy with how these are assigned
-cases_codes <- unique(Case_Rates_Data$areaCode)
-not_assigned_to_google <- cases_codes[which(!(cases_codes %in% google_codes))]
-#26 of them not assigned:
+#26 LTLA codes not assigned:
 # "E06000010" "E06000014" "E06000015" "E06000016" "E06000018"
 # "E06000019" "E06000023" "E06000052" "E06000055" "E06000061"
 # "E06000062" "E07000008" "E07000064" "E07000112" "E07000128"
 # "E07000178" "E07000197" "E07000222" "E07000240" "E07000244"
 # "E07000246" "E08000013" "E09000005" "E09000012" "S12000036"
 # "S12000038"
+
+#I'm just going to fix these last few manually. 
+# "E06000010" - Kingston upon Hull, City of
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Kingston upon Hull")] <- "E06000010"
+#"E06000014" - York
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "York")] <- "E06000014"
+#"E06000015" - Derby
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Derby")] <- "E06000015"
+#"E06000016" - Leicester
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Leicester")] <- "E06000016"
+#"E06000018" - Nottingham
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Nottingham")] <- "E06000018"
+#"E06000019" - Herefordshire
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Herefordshire")] <- "E06000019"
+#"E06000023" - Bristol City
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Bristol City")] <- "E06000023"
+#"E06000052" - Cornwall (two listed, one is Penryn which we ignore)
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Cornwall")[1]] <- "E06000052"
+#"E06000055" - Bedford
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Bedford")] <- "E06000055"
+#"E06000061" - North Northamptonshire
+#This is one of the fiendish ones, recall that:
+#Buckinghamshire = South Bucks ("E07000006"), Aylesbury Vale ("E07000004"), Chiltern ("E07000005"), Wycombe ("E07000007"), 
+#West Northamptonshire = Northampton ("E07000154") , South Northamptonshire ("E07000155"), Daventry ("E07000151")
+#North Northamptonshire = East Northamptonshire ("E07000152"), Wellingborough ("E07000156"), Corby ("E07000150"), Kettering ("E07000153")
+#so we assign this code to 4 different areas:
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "East Northamptonshire")] <- "E06000061"
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Borough of Wellingborough")] <- "E06000061"
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Corby District")] <- "E06000061"
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Borough of Kettering")] <- "E06000061"
+#"E06000062" - West Northamptonshire
+#we assign this code to 3 different areas
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Northampton District")] <- "E06000062"
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "South Northamptonshire District")] <- "E06000062"
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Daventry District")] <- "E06000062"
+#"E07000008" - Cambridge
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Cambridge")] <- "E07000008"
+#"E07000064" - Rother District
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Rother District")] <- "E07000064"
+#"E07000112" - Folkestone & Hythe District
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Folkestone & Hythe District")] <- "E07000112"
+#"E07000128" - Wyre District
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Wyre District")] <- "E07000128"
+#"E07000178" - Oxford
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Oxford")] <- "E07000178"
+#"E07000197" - Stafford District
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Stafford District")] <- "E07000197"
+#"E07000222" - Warwick
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Warwick")] <- "E07000222"
+#"E07000240" - Saint Albans District
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Saint Albans District")] <- "E07000240"
+#"E07000244" - East Suffolk
+#This is actually made up of two areas: Suffolk Coastal District, Waveney District
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Suffolk Coastal District")] <- "E07000244"
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Waveney District")] <- "E07000244"
+#"E07000246" - Somerset West and Taunton
+#Also made up of two: West Somerset District, Taunton Deane
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "West Somerset District")] <- "E07000246"
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Taunton Deane")] <- "E07000246"
+#"E08000013" - Metropolitan Borough of St Helens
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "Metropolitan Borough of St Helens")] <- "E08000013"
+#"E09000005" - London Borough of Brent
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "London Borough of Brent")] <- "E09000005"
+#"E09000012" - London Borough of Hackney
+Google_conversion$areaCode[which(Google_conversion$sub_region_2 == "London Borough of Hackney")] <- "E09000012"
+#"S12000036" - Edinburgh
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Edinburgh")] <- "S12000036"
+#"S12000038" - Renfrewshire
+Google_conversion$areaCode[which(Google_conversion$sub_region_1 == "Renfrewshire")] <- "S12000038"
+
+#All areaCodes from the case rates data are now in this "Google_conversion" sheet.
+#We save this for reference
+write.csv(Google_conversion, file = 'Outputs/Google_codes_LTLA_codes.csv')
+
 
 Google_conversion <- filter(Google_conversion, !is.na(areaCode))
 
@@ -834,31 +899,53 @@ Google_Total_Data <- filter(Google_Total_Data, !is.na(areaCode))
 
 Google_Total_Data$date <- as.Date(Google_Total_Data$date)
 
-#Now just need to average together some of the troublesome areas
+#Now just need to average together some of the troublesome areas which have multiple locations under the code:
 Trouble_Codes <- c('E06000061', #North Northamptonshire
                    'E06000062', #West Northamptonshire
-                   'E09000012', #Hackney and City of London     #NOTE, CITY OF LONDON HAS NO RESIDENTIAL DATA, so I've removed it from the code thingy for now
+                   'E09000012', #Hackney and City of London     #NOTE, CITY OF LONDON HAS NO RESIDENTIAL DATA, so I've not affixed the code to the Google entries for "City of London"
                    'E07000244', #East Suffolk
                    'E07000246' #Taunton and West Somerset
 )
 
 
 #We average the columns by areaCode AND date
+#We can use the formula method of aggregate. 
+#The variables on the 'rhs' of ~ are the grouping variables while 
+#the . represents all other variables in the 'df1' 
+#(from the example, we assume that we need the mean for all the 
+#columns except the grouping)
+#aggregate(.~id1+id2, df1, mean)
 
-Google_Total_Data <- aggregate(Google_Total_Data$residential_percent_change_from_baseline,
-                               by=list(areaCode=Google_Total_Data$areaCode, date = Google_Total_Data$date), FUN=mean)
+Google_Total_Data <- stats::aggregate(cbind(retail_and_recreation_percent_change_from_baseline,
+                                  grocery_and_pharmacy_percent_change_from_baseline,
+                                  parks_percent_change_from_baseline,
+                                  transit_stations_percent_change_from_baseline,
+                                  workplaces_percent_change_from_baseline,
+                                  residential_percent_change_from_baseline
+                                )~areaCode+date, Google_Total_Data, FUN=mean, na.rm =TRUE,  na.action=na.pass)
 
-colnames(Google_Total_Data) <- c('areaCode', 'date', 'Residential_mobility_percentage_change')
+#The NAs have changed to NaN, so change them back
+is.nan.data.frame <- function(x)
+  do.call(cbind, lapply(x, is.nan))
+
+Google_Total_Data[is.nan(Google_Total_Data)] <- NA
+
 
 Google_Mobility_Data <- Google_Total_Data
 
 write.csv(Google_Mobility_Data, file = 'Outputs/Google_Mobility_Data.csv')
 
 
-#For now, we just affix the residential data to the case_rates data
+#affix the mobility data to the case_rates data
 #We use the mean of the week
-Case_Rates_Data$Residential_Mobility <- NA
+Case_Rates_Data$retail_and_recreation_percent_change_from_baseline <- NA
+Case_Rates_Data$grocery_and_pharmacy_percent_change_from_baseline <- NA
+Case_Rates_Data$parks_percent_change_from_baseline <- NA
+Case_Rates_Data$transit_stations_percent_change_from_baseline <- NA
+Case_Rates_Data$workplaces_percent_change_from_baseline <- NA
+Case_Rates_Data$residential_percent_change_from_baseline <- NA
 
+#TODO: make this more efficient
 for(i in 1:nrow(Case_Rates_Data)){
   areaCode_hold <- Case_Rates_Data$areaCode[i]
   date_hold <- Case_Rates_Data$date_begin[i] + 0:6
@@ -867,15 +954,55 @@ for(i in 1:nrow(Case_Rates_Data)){
   Reduced_Mobility <- filter(Reduced_Mobility, date %in% date_hold)
   mobility_mean <- mean(Reduced_Mobility$Residential_mobility_percentage_change, na.rm = TRUE)
   
-  Case_Rates_Data$Residential_Mobility[i] <- mobility_mean
+  Case_Rates_Data$retail_and_recreation_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$retail_and_recreation_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$retail_and_recreation_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$grocery_and_pharmacy_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$grocery_and_pharmacy_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$grocery_and_pharmacy_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$parks_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$parks_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$parks_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$transit_stations_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$transit_stations_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$transit_stations_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$workplaces_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$workplaces_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$workplaces_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$residential_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$residential_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$residential_percent_change_from_baseline, na.rm = TRUE))
   
+}
+
+#A few NA issues
+#NA percentage:
+sum(is.na(Case_Rates_Data$retail_and_recreation_percent_change_from_baseline))/length(Case_Rates_Data$areaCode)
+#Retail: 1.9% NA
+sum(is.na(Case_Rates_Data$grocery_and_pharmacy_percent_change_from_baseline))/length(Case_Rates_Data$areaCode)
+#grocery and pharmacy: 2.1% NA
+sum(is.na(Case_Rates_Data$parks_percent_change_from_baseline))/length(Case_Rates_Data$areaCode)
+#parks: 10.5% NA
+sum(is.na(Case_Rates_Data$transit_stations_percent_change_from_baseline))/length(Case_Rates_Data$areaCode)
+#transit: 2.4% NA
+sum(is.na(Case_Rates_Data$workplaces_percent_change_from_baseline))/length(Case_Rates_Data$areaCode)
+#workplace: 0.9% NA
+sum(is.na(Case_Rates_Data$residential_percent_change_from_baseline))/length(Case_Rates_Data$areaCode)
+#residential: 1.2% NA
+
+#To get around this, we'll use the average value between weeks surrounding an NA to see if that helps:
+for(i in 1:nrow(Case_Rates_Data)){
+  areaCode_hold <- Case_Rates_Data$areaCode[i]
+  week_hold <- Case_Rates_Data$Week[i]
+  week_hold <- week_hold + c(-1,0,1)
+  
+  Reduced_Mobility <- filter(Case_Rates_Data, areaCode == areaCode_hold)
+  Reduced_Mobility <- filter(Reduced_Mobility, Week %in% week_hold )
+  
+  Case_Rates_Data$retail_and_recreation_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$retail_and_recreation_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$retail_and_recreation_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$grocery_and_pharmacy_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$grocery_and_pharmacy_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$grocery_and_pharmacy_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$parks_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$parks_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$parks_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$transit_stations_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$transit_stations_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$transit_stations_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$workplaces_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$workplaces_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$workplaces_percent_change_from_baseline, na.rm = TRUE))
+  Case_Rates_Data$residential_percent_change_from_baseline[i] <- ifelse(is.nan(mean(Reduced_Mobility$residential_percent_change_from_baseline, na.rm = TRUE)),NA,mean(Reduced_Mobility$residential_percent_change_from_baseline, na.rm = TRUE))
+
 }
 
 
 
+##################################################################
+
 
 #We want to set the minimum case numbers possible to be 1, to get around issues with log(0)
-#There are 73 occurences of this!
+#There are only 73 occurrences of this!
 for(i in 1:nrow(Case_Rates_Data)){
   if(Case_Rates_Data$Week_Cases[i] == 0){
     Case_Rates_Data$Week_Cases[i] <- 1
@@ -884,18 +1011,99 @@ for(i in 1:nrow(Case_Rates_Data)){
   if(Case_Rates_Data$previous_week_cases[i] == 0){
     Case_Rates_Data$previous_week_cases[i] <- 1
   }
+  if(Case_Rates_Data$next_week_cases[i] == 0){
+    Case_Rates_Data$next_week_cases[i] <- 1
+  }
 }
 
+########################################################
+#Variant Proportion
 
-#We also want to import in the mean Delta proportion data
-#We only have this for the regions of England, but that will do
-#TODO: Add in Alpha proportion data! And Omicron too!
-#TODO: #MAJOR TODO: We need to also record the "switch off" of each variant
-#Load the LTLA to region conversion table
+#Here we record the proportion of cases by variant as a covariate
+#This is too sparse at LTLA level, so we provide aggregates at
+#NHS region instead
+
+#We use this file to help us link LTLAs to regions
 LTLA_to_region <- read.csv('Data/LTLA_to_Region.csv')
-#Load the Delta prop data
-Delta_proportion_data <- read.csv('Data/Delta_Proportion_Data.csv')
-Delta_proportion_data$dates <- as.Date(Delta_proportion_data$dates, format = '%Y-%m-%d')
+
+#We have two sources of data
+#The first is the one taken from the UK COVID portal, there is a live API:
+#Portal_Variant_Data <- read.csv('https://api.coronavirus.data.gov.uk/v2/data?areaType=region&metric=variants&format=csv')
+#But for consistency we use the hard-saved version downloaded on Nov 28th 2022:
+Portal_Variant_Data <- read.csv("Data/Portal_variant_data.csv")
+Portal_Variant_Data <- Portal_Variant_Data[,-3]
+Portal_Variant_Data$date <- as.Date(Portal_Variant_Data$date)
+
+#We rename the regions to the sircovid format
+Portal_Variant_Data %>%
+  mutate(across('areaName', str_replace, 'North East', 'north_east_and_yorkshire')) %>%
+  mutate(across('areaName', str_replace, 'North West', 'north_west')) %>%
+  mutate(across('areaName', str_replace, 'Yorkshire and The Humber', 'north_east_and_yorkshire')) %>%
+  mutate(across('areaName', str_replace, 'East Midlands', 'midlands')) %>%
+  mutate(across('areaName', str_replace, 'West Midlands', 'midlands')) %>%
+  mutate(across('areaName', str_replace, 'East of England', 'east_of_england')) %>%
+  mutate(across('areaName', str_replace, 'London', 'london')) %>%
+  mutate(across('areaName', str_replace, 'South East', 'south_east')) %>%
+  mutate(across('areaName', str_replace, 'South West', 'south_west')) -> Portal_Variant_Data
+
+
+
+#We also have another source, aggregated from the VAM linelist.
+#This has the benefit of covering the Alpha window. The above
+#data only covers Feb-21 onwards.
+VAM_Variant_Data <- read.csv("Data/VAM_variant_data.csv")
+
+VAM_Variant_Data %>%
+  mutate(across('nhs_region', str_replace, 'North East and Yorkshire', 'north_east_and_yorkshire')) %>%
+  mutate(across('nhs_region', str_replace, 'North West', 'north_west')) %>%
+  mutate(across('nhs_region', str_replace, 'Midlands', 'midlands')) %>%
+  mutate(across('nhs_region', str_replace, 'East of England', 'east_of_england')) %>%
+  mutate(across('nhs_region', str_replace, 'London', 'london')) %>%
+  mutate(across('nhs_region', str_replace, 'South East', 'south_east')) %>%
+  mutate(across('nhs_region', str_replace, 'South West', 'south_west')) -> VAM_Variant_Data
+
+VAM_Variant_Data$date <- as.Date(VAM_Variant_Data$date)
+
+#Now make sure they have the same variant names
+#A reminder that in the VAM data, undetermined means we don't know what it is
+#Unclassified means we do, but it's not major.
+#Filter out all the undetermined to start with:
+VAM_Variant_Data <- filter(VAM_Variant_Data, variant != "Undetermined")
+
+VAM_Variant_Data %>%
+  mutate(across('variant', str_replace, 'Unclassified', 'Other')) %>%
+  mutate(across('variant', str_replace, 'VUI-22JAN-01', 'Omicron_BA_2')) %>%
+  mutate(across('variant', str_replace, 'VOC-20DEC-01', 'Alpha')) %>%
+  mutate(across('variant', str_replace, 'VOC-21APR-02', 'Delta')) %>%
+  mutate(across('variant', str_replace, 'VOC-21NOV-01', 'Omicron_BA_1')) %>%
+  mutate(across('variant', str_replace, 'VUI-21OCT-01', 'Delta_AY_4_2')) %>%
+  mutate(across('variant', str_replace, 'V-22APR-04', 'Omicron_BA_5')) %>%
+  mutate(across('variant', str_replace, 'V-22APR-03', 'Omicron_BA_4')) %>%
+  mutate(across('variant', str_replace, 'V-22OCT-01', 'Omicron_BQ_1')) -> VAM_Variant_Data
+
+Portal_Variant_Data %>%
+  mutate(across('variant', str_replace, 'VOC-22JAN-01 (Omicron BA.2)', 'Omicron_BA_2')) %>%
+  mutate(across('variant', str_replace, 'V-20DEC-01 (Alpha)', 'Alpha')) %>%
+  mutate(across('variant', str_replace, 'V-21APR-02 (Delta B.1.617.2)', 'Delta')) %>%
+  mutate(across('variant', str_replace, 'VOC-21NOV-01 (Omicron BA.1)', 'Omicron_BA_1')) %>%
+  mutate(across('variant', str_replace, 'V-21OCT-01 (Delta AY 4.2)', 'Delta_AY_4_2')) %>%
+  mutate(across('variant', str_replace, 'VOC-22APR-04 (Omicron BA.5)', 'Omicron_BA_5')) %>%
+  mutate(across('variant', str_replace, 'VOC-22APR-03 (Omicron BA.4)', 'Omicron_BA_4')) %>%
+  mutate(across('variant', str_replace, 'V-22OCT-01 (Omicron BQ.1)', 'Omicron_BQ_1')) -> Portal_Variant_Data
+  
+#Cut the earlier dates
+VAM_Variant_Data <- filter(VAM_Variant_Data, date > minimum_date)
+
+
+#The portal data starts on a Sunday, but we've done everything by starting from Monday
+
+
+#Aggregate the VAM data into weeks
+
+
+  #Calculate the percentages for the VAM data:
+group_by(VAM_Variant_Data, date, nhs_region) %>% mutate(newWeeklyPercentage = cases/sum(cases)) -> test
+
 
 Case_Rates_Data$Delta_proportion <- NA
 Available_codes <- unique(LTLA_to_region$LAD21CD)

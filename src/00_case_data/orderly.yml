@@ -51,6 +51,7 @@ artefacts:
         - Outputs/Cases_Data.csv
         - Outputs/Cases_Data.RData
         - Outputs/W.RData
+        - Outputs/Google_codes_LTLA_codes.csv
 
 # An optional name to describe the report in more detail than its
 # directory name (which must be short) but less detail than
