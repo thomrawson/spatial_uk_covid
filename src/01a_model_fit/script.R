@@ -80,9 +80,36 @@ Rutland_neighbors <- c(117, 189, 190, 195)
 for(i in 1:length(missing_data$areaCode)){
   if(missing_data$areaName[i] == "Rutland"){
     Week_hold <- missing_data$Week[i]
+    Neighbor_hold <- filter(Case_Rates_Data, Week == Week_hold)
+    Neighbor_hold <- filter(Neighbor_hold, INDEX %in% Rutland_neighbors)
+    residential_mean_hold <- mean(Neighbor_hold$residential_percent_change_from_baseline)
+    
+    Case_Rates_Data$residential_percent_change_from_baseline[which((Case_Rates_Data$areaName == "Rutland")&(Case_Rates_Data$Week == Week_hold))] <- residential_mean_hold
+    
   }
 }
 
+missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
+unique(missing_data$areaCode)
+
+#For these remaining 5, all week 2 and 3, I'm going to use the mobility scores for
+#week 4
+#These dates are within the first lockdown so I don't envision much difference
+for( i in 1:length(missing_data$areaCode)){
+  Week_hold <- missing_data$Week[i]
+  areaCode_hold <- missing_data$areaCode[i]
+  
+  Neighbor_hold <- filter(Case_Rates_Data, areaCode == areaCode_hold)
+  Neighbor_hold <- filter(Neighbor_hold, Week == 4)
+  residential_mean_hold <- Neighbor_hold$residential_percent_change_from_baseline[1]
+  
+  Case_Rates_Data$residential_percent_change_from_baseline[which((Case_Rates_Data$areaCode == areaCode_hold)&(Case_Rates_Data$Week == Week_hold))] <- residential_mean_hold
+  
+}
+
+missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
+#All NAs are now removed!
+}
 
 ###################
 #Begin STAN fit
@@ -149,13 +176,6 @@ generated quantities {
 "
 
 
-#Weeks go from 2:130
-#Note, the government stopped providing free LFTs on April 1st 2022
-#This will have, in turn, affected the case data, so let's chop off everything
-#after week 104 (w/b 25/04/22)
-#TODO: Could include still but keep this as a variable
-final_week <- 104
-Case_Rates_Data <- filter(Case_Rates_Data, Week < final_week+1)
 
 T <- final_week-1;
 #Note, 306 is after cutting the 21 welsh, and 29 scottish. JUST ENGLISH CODES
@@ -163,7 +183,7 @@ N <- 306;
 y <- array(0, dim = c(T,N))
 E <- array(0, dim = c(T,N))
 #K is current number of covariates
-K <- 10;
+K <- 18;
 x <- array(0, dim = c(T, N,K))
 
 
@@ -174,44 +194,41 @@ for(i in 2:final_week){
   
   Reduced_Data <- filter(Case_Rates_Data, Week == i)
   Reduced_Data <- Reduced_Data[order(Reduced_Data$INDEX),]
+
+  test <- scale(Reduced_Data)
   
-  #Note that Rutland is often NaN
-  if(sum(is.na(Reduced_Data$Residential_Mobility))>0){
-    #Then set it to the average 
-    #set <- 1:356
-    #set <- set[-97]
-    dropped_data <- drop_na(Reduced_Data)
-    Reduced_Data$Residential_Mobility[is.na(Reduced_Data$Residential_Mobility)] <- mean(dropped_data$Residential_Mobility)
-  }
+  y[j,] = Reduced_Data$next_week_cases;
+  E[j,] = Reduced_Data$Week_Cases;
   
-  
-  #There are 21 Welsh codes
-  #There are 29 Scottish codes
-  #Dropping these 50 leaves us with 306 English rows
-  Reduced_Data <- drop_na(Reduced_Data)
-  
-  
-  y[j,] = Reduced_Data$Week_Cases;
-  E[j,] = Reduced_Data$previous_week_cases;
-  
-  x[j,,1] <- Reduced_Data$cumVaccPercentage_FirstDose/100
-  x[j,,2] <- Reduced_Data$cumVaccPercentage_SecondDose/100
-  x[j,,3] <- Reduced_Data$cumVaccPercentage_ThirdDose/100
-  x[j,,4] <- Reduced_Data$prop_white_british
-  x[j,,5] <- Reduced_Data$IMD_Average_score/100   #(Highest value is 45.039, should probably scale to this really, should check what this measure means literally)
-  x[j,,6] <- Reduced_Data$resident_earnings/1000 #(highest 912.9) #TODO: Change to MEDIAN
-  x[j,,7] <- Reduced_Data$mean_age/100 #(highest is 47.50081)
-  #x[j,,7] <- Reduced_Data$prop_o65
-  x[j,,8] <- Reduced_Data$mean_popden/10000   #(highest is 16426.98)
-  x[j,,9] <- Reduced_Data$Residential_Mobility/100  #(highest is 31.2)
-  x[j,,10] <- Reduced_Data$Delta_proportion/100   #(highest is 99.99)
+  x[j,,1] <- scale(Reduced_Data$Pop_per_km2)
+  x[j,,2] <- scale(Reduced_Data$cumVaccPercentage_FirstDose)
+  x[j,,3] <- scale(Reduced_Data$cumVaccPercentage_SecondDose)
+  x[j,,4] <- scale(Reduced_Data$cumVaccPercentage_ThirdDose)
+  x[j,,5] <- scale(Reduced_Data$prop_white_british)
+  x[j,,6] <- scale(Reduced_Data$IMD_Average_score)   
+  x[j,,7] <- scale(Reduced_Data$mean_age) 
+  x[j,,8] <- scale(Reduced_Data$Median_annual_income) 
+  x[j,,9] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
+  x[j,,10] <- scale(Reduced_Data$residential_percent_change_from_baseline)
+  x[j,,11] <- scale(Reduced_Data$Alpha_proportion)
+  x[j,,12] <- scale(Reduced_Data$Delta_proportion)
+  x[j,,13] <- scale(Reduced_Data$Delta_AY_4_2_proportion)
+  x[j,,14] <- scale(Reduced_Data$Omicron_BA_1_proportion)
+  x[j,,15] <- scale(Reduced_Data$Omicron_BA_2_proportion)
+  x[j,,16] <- scale(Reduced_Data$Omicron_BA_4_proportion)
+  x[j,,17] <- scale(Reduced_Data$Omicron_BA_5_proportion)
+  x[j,,18] <- scale(Reduced_Data$Other_proportion)
   
 }
 
 W_reduced <- W[Reduced_Data$INDEX, Reduced_Data$INDEX]
 #Calculate E_neighbours
 E_neighbours <- W_reduced%*%t(E)
+if(scale_by_number_of_neighbours == TRUE){
 Nbors <- as.numeric(rowSums(W_reduced))
+} else{
+  Nbors <- 1
+}
 E_neighbours_scaled <- E_neighbours/Nbors
 
 stanfit = stan(model_code = Stan_model_string,

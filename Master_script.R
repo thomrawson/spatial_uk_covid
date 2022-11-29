@@ -47,7 +47,8 @@ model_fit <- orderly::orderly_run("01a_model_fit",
                                   parameters = list(warmup_iterations = 100,
                                                     total_iterations = 500,
                                                     tree_depth = 8,
-                                                    covariates = "default"))
+                                                    covariates = "default",
+                                                    scale_by_number_of_neighbours = TRUE))
 
 orderly::orderly_commit(model_fit)
 
