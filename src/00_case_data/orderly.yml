@@ -51,6 +51,9 @@ artefacts:
         - Outputs/Cases_Data.csv
         - Outputs/Cases_Data.RData
         - Outputs/W.RData
+        - Outputs/Google_codes_LTLA_codes.csv
+        - Outputs/Variants.png
+        - Outputs/Variants_data.csv
 
 # An optional name to describe the report in more detail than its
 # directory name (which must be short) but less detail than
@@ -132,6 +135,9 @@ resources:
   - Data\LTLA_to_Region.csv
   - Data\Wales_cum_first_vacc.csv
   - Data\Wales_cum_second_vacc.csv
+  - Data\Annual_median_income.csv
+  - Data\Portal_variant_data.csv
+  - Data\VAM_variant_data.csv
 
 # Optional name of a variable to make the SQL connection available to
 # the script.  Use this with care and avoid using any queries that
