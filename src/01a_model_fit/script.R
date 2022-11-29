@@ -194,30 +194,32 @@ for(i in 2:final_week){
   
   Reduced_Data <- filter(Case_Rates_Data, Week == i)
   Reduced_Data <- Reduced_Data[order(Reduced_Data$INDEX),]
-
-  test <- scale(Reduced_Data)
   
   y[j,] = Reduced_Data$next_week_cases;
   E[j,] = Reduced_Data$Week_Cases;
   
+  #scale() will fail if all variables are the same value (i.e. if sd = 0)
+  
+  #For now I will not scale the percentages, I'll just give them from 0 to 1
+  
   x[j,,1] <- scale(Reduced_Data$Pop_per_km2)
-  x[j,,2] <- scale(Reduced_Data$cumVaccPercentage_FirstDose)
-  x[j,,3] <- scale(Reduced_Data$cumVaccPercentage_SecondDose)
-  x[j,,4] <- scale(Reduced_Data$cumVaccPercentage_ThirdDose)
+  x[j,,2] <- Reduced_Data$cumVaccPercentage_FirstDose/100
+  x[j,,3] <- Reduced_Data$cumVaccPercentage_SecondDose/100
+  x[j,,4] <- Reduced_Data$cumVaccPercentage_ThirdDose/100
   x[j,,5] <- scale(Reduced_Data$prop_white_british)
   x[j,,6] <- scale(Reduced_Data$IMD_Average_score)   
   x[j,,7] <- scale(Reduced_Data$mean_age) 
   x[j,,8] <- scale(Reduced_Data$Median_annual_income) 
   x[j,,9] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
   x[j,,10] <- scale(Reduced_Data$residential_percent_change_from_baseline)
-  x[j,,11] <- scale(Reduced_Data$Alpha_proportion)
-  x[j,,12] <- scale(Reduced_Data$Delta_proportion)
-  x[j,,13] <- scale(Reduced_Data$Delta_AY_4_2_proportion)
-  x[j,,14] <- scale(Reduced_Data$Omicron_BA_1_proportion)
-  x[j,,15] <- scale(Reduced_Data$Omicron_BA_2_proportion)
-  x[j,,16] <- scale(Reduced_Data$Omicron_BA_4_proportion)
-  x[j,,17] <- scale(Reduced_Data$Omicron_BA_5_proportion)
-  x[j,,18] <- scale(Reduced_Data$Other_proportion)
+  x[j,,11] <- Reduced_Data$Alpha_proportion/100
+  x[j,,12] <- Reduced_Data$Delta_proportion/100
+  x[j,,13] <- Reduced_Data$Delta_AY_4_2_proportion/100
+  x[j,,14] <- Reduced_Data$Omicron_BA_1_proportion/100
+  x[j,,15] <- Reduced_Data$Omicron_BA_2_proportion/100
+  x[j,,16] <- Reduced_Data$Omicron_BA_4_proportion/100
+  x[j,,17] <- Reduced_Data$Omicron_BA_5_proportion/100
+  x[j,,18] <- Reduced_Data$Other_proportion/100
   
 }
 
