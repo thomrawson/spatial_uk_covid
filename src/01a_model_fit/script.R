@@ -18,26 +18,71 @@ rstan_options(auto_write = TRUE)
 ###################
 #Prepare Data
 
+if(covariates == "default"){
+  
+  #Cut down to the only covariates we're interested in:
+  Case_Rates_Data <- Case_Rates_Data[,-c(4,6,15,18,19,21,22,24,25,26,27,28,
+                                         37)] #Cut Omicron BQ1
+  
+  
+  #Weeks go from 2:130
+  #Note, the government stopped providing free LFTs on April 1st 2022
+  #This will have, in turn, affected the case data, so let's chop off everything
+  #after week 104 (w/b 25/04/22)
+  #TODO: Could include still but keep this as a variable
+  final_week <- 104
+  Case_Rates_Data <- filter(Case_Rates_Data, Week < final_week+1)
+
+  #Let's investigate NAs. First of all, we sadly have incomplete mobility/vaccine
+  #data in devolved nations, so we trim down to just England:
+  #sum(is.na(Case_Rates_Data$prop_white_british))/36668
+  #8% NA
+  #sum(is.na(Case_Rates_Data$IMD_Average_score))/36668
+  #14% NA
+  #sum(is.na(Case_Rates_Data$mean_age))/36668
+  #8% NA
+  #sum(is.na(Case_Rates_Data$residential_percent_change_from_baseline))/36668
+  #0.3% NA
+  #sum(is.na(Case_Rates_Data$Alpha_proportion))/36668
+  #14% NA
+  test <- Case_Rates_Data[which(is.na(Case_Rates_Data$Alpha_proportion)),]
+  unique(test$areaCode)
+  
+  #Missing Scotland and Wales in the variant proportions, so start by filtering out those:
+  Case_Rates_Data <- Case_Rates_Data[which(!is.na(Case_Rates_Data$Alpha_proportion)),]
+  
+  #After this:
+  #sum(is.na(Case_Rates_Data$prop_white_british))/36668
+  #0% NA
+  #sum(is.na(Case_Rates_Data$IMD_Average_score))/36668
+  #0% NA
+  #sum(is.na(Case_Rates_Data$mean_age))/36668
+  #0% NA
+  #sum(is.na(Case_Rates_Data$residential_percent_change_from_baseline))/36668
+  #0.06% NA
+  #sum(is.na(Case_Rates_Data$Alpha_proportion))/36668
+  #0% NA
+  
+  missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
+  unique(missing_data$areaCode)
+  
+  
 #We need to quickly clean up an issue with the Residential mobility
 #TODO: Move this to the 00 task.
-#First reduce, let's pick out just week 56
-Reduced_Data <- filter(Case_Rates_Data, Week == 56)
-Reduced_Data <- Reduced_Data[order(Reduced_Data$INDEX),]
+  #There are 24 occassions where the residential mobility is NA,
+  #19 of these are Rutland
 
-#Note that Rutland is often NaN
-if(sum(is.na(Reduced_Data$Residential_Mobility))>0){
-  #Then set it to the average 
-  #set <- 1:356
-  #set <- set[-97]
-  dropped_data <- drop_na(Reduced_Data)
-  Reduced_Data$Residential_Mobility[is.na(Reduced_Data$Residential_Mobility)] <- mean(dropped_data$Residential_Mobility)
+#For Rutland, we're going to take the average of it's neighbors mobility score for these days:
+#Rutland is index 97
+which(W[97,] == 1)
+#Has four neighboring regions, 117, 189, 190, 195
+Rutland_neighbors <- c(117, 189, 190, 195)
+for(i in 1:length(missing_data$areaCode)){
+  if(missing_data$areaName[i] == "Rutland"){
+    Week_hold <- missing_data$Week[i]
+  }
 }
 
-
-#There are 21 Welsh codes
-#There are 29 Scottish codes
-#Dropping these 50 leaves us with 306 English rows
-Reduced_Data <- drop_na(Reduced_Data)
 
 ###################
 #Begin STAN fit

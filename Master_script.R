@@ -4,16 +4,63 @@ data_prep <- orderly::orderly_run("00_case_data")
 orderly::orderly_commit(data_prep)
 
 #Followed by the actual stanfit task:
+
+#Define the covariates you want to include in the model.
+#Options are:
+
+#Population
+#pop_per_km2
+#Median_age
+#VaccPercentage_FirstDose
+#VaccPercentage_SecondDose
+#VaccPercentage_ThirdDose
+#prop_whitebritish (ADD MORE OF THESE)
+#IMD_Average_score
+#IMD_Rank_of_average_score
+#mean_age
+#prop_over65
+#mean_popden
+#Median_annual_income
+#no_jobs
+#retail_and_recreation_mobility
+#grocery_and_pharmacy_mobility
+#parks_mobility
+#transit_stations_mobility
+#workplace_mobility
+#residential_mobility
+#Alpha_proportion
+#Delta_proportion
+#Delta_AY_4_2_proportion
+#Omicron_BA_1_proportion
+#Omicron_BA_2_proportion
+#Other_variants_proportion
+#Omicron_BQ_1_proportion
+#Omicron_BA_4_proportion
+#Omicron_BA_5_proportion
+
+####################
+#I use "default" = 
+
+
+
 model_fit <- orderly::orderly_run("01a_model_fit", 
                                   parameters = list(warmup_iterations = 100,
                                                     total_iterations = 500,
-                                                    tree_depth = 13))
+                                                    tree_depth = 8,
+                                                    covariates = "default"))
 
 orderly::orderly_commit(model_fit)
+
+
+
+
+
 
 #RUNTIMEs
 #First run, 500iteration, 15 tree_depth, 43 hours
 #First run, 500iteration, 10 tree_depth, 1.5 hours, as expected, this is faster by factor of ~2^5
+
+
 
 #Reduced to just one theta
 #500iteration, 10 tree_depth, 0.7 hours
