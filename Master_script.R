@@ -44,17 +44,23 @@ orderly::orderly_commit(data_prep)
 
 
 model_fit <- orderly::orderly_run("01a_model_fit", 
-                                  parameters = list(warmup_iterations = 100,
-                                                    total_iterations = 500,
+                                  parameters = list(warmup_iterations = 200,
+                                                    total_iterations = 1000,
                                                     tree_depth = 8,
                                                     covariates = "default",
-                                                    scale_by_number_of_neighbours = TRUE))
+                                                    scale_by_number_of_neighbours = TRUE,
+                                                    algorithm = "NUTS"))  #HMC or "NUTS" (default)
 
 orderly::orderly_commit(model_fit)
 
 
+#200/1000: 8 td : 35mins PC NUTS
+#200/1000: 8 td : bloody ages PC HMC
 
+#100/500 : 9 tree depth : 30mins PC The largest R-hat is 3.63 #20221129-162746-530dca60
+#200/1000: 9 td : 90mins PC The largest R-hat is 4.53, indicating chains have not mixed #20221129-185913-9aa3d73d
 
+#200/1000 : 12 td: 8 hours PC The largest R-hat is 3.14 #20221129-233450-5e332b7d
 
 
 #RUNTIMEs
