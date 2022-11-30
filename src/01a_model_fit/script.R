@@ -157,8 +157,8 @@ for(i in 1:T){
 
   beta0 ~ normal(0.0, 1.0);
   betas ~ normal(0.0, 1.0);
-  //zetas ~ normal(0.05, 1.0);
-  zetas ~ gamma(0.05, 1.0);
+  zetas ~ normal(0.05, 1.0);
+  //zetas ~ gamma(0.05, 1.0);
   
   //Unsure just HOW MANY noise terms we should incorporate. Let's try with just one to start with
   //for(i in 1:T){
@@ -233,15 +233,28 @@ Nbors <- as.numeric(rowSums(W_reduced))
 }
 E_neighbours_scaled <- E_neighbours/Nbors
 
+if(algorithm == "NUTS"){
 stanfit = stan(model_code = Stan_model_string,
                data=list(N=N,T=T,
                          y=t(y),
                          x=x, K=K,
                          E=t(E),
                          E_neighbours = E_neighbours_scaled),
+               algorithm = algorithm,
                warmup=warmup_iterations, iter=total_iterations,
                control = list(max_treedepth = tree_depth));
-
+} else if(algorithm == "HMC"){
+  stanfit = stan(model_code = Stan_model_string,
+                 data=list(N=N,T=T,
+                           y=t(y),
+                           x=x, K=K,
+                           E=t(E),
+                           E_neighbours = E_neighbours_scaled),
+                 algorithm = algorithm,
+                 warmup=warmup_iterations, iter=total_iterations);
+} else{
+  print("Unknown fitting algorithm")
+}
 
 #Make folder for outputs
 dir.create("Outputs")

@@ -10,10 +10,10 @@ dir.create("Outputs")
 
 #Output summaries of the mixed chains for all parameters except theta
 main_summaries <- summary(stanfit, pars = c('beta0', 'betas', 'zetas', 'lp__'))
-write.csv(main_summaries$summary,"Outputs\main_summaries.csv", row.names = FALSE)
+write.csv(main_summaries$summary,"Outputs/main_summaries.csv", row.names = TRUE)
 #Theta summaries are big, but we output anyway
 theta_summaries <- summary(stanfit, pars = c('theta'))
-write.csv(theta_summaries$summary,"Outputs\theta_summaries.csv", row.names = FALSE)
+write.csv(theta_summaries$summary,"Outputs/theta_summaries.csv", row.names = FALSE)
 
 #Save a plot of the beta trajectories
 beta_trajectories <- traceplot(stanfit, pars=c('beta0', 'betas'))
@@ -43,7 +43,7 @@ Theta_means <- get_posterior_mean(stanfit, pars = 'theta')
 
 
 #Next we have a look at how good our fit is
-
+plot(stanfit, pars = sprintf('betas[%s]',1:10))
 
 #Other stuff
 sampler_params <- get_sampler_params(stanfit, inc_warmup = FALSE)
