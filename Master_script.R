@@ -57,6 +57,9 @@ orderly::orderly_commit(model_fit)
 #200/1000: 8 td : 35mins PC NUTS
 #200/1000: 8 td : bloody ages PC HMC
 
+#100/500 8 tree_depth = 20mins on laptop The largest R-hat is 4.41
+#200/1000 8 tree_depth = 60mins on laptop. The largest R-hat is 4.54 #20221129-182400-edab68de
+
 #100/500 : 9 tree depth : 30mins PC The largest R-hat is 3.63 #20221129-162746-530dca60
 #200/1000: 9 td : 90mins PC The largest R-hat is 4.53, indicating chains have not mixed #20221129-185913-9aa3d73d
 
