@@ -260,4 +260,5 @@ stanfit = stan(model_code = Stan_model_string,
 dir.create("Outputs")
 
 save(stanfit, file = 'Outputs/stanfit.RData')
+save(c(N,T,y,x,K,E,E_neighbours_scaled, file = "Outputs/model_data.RData"))
 

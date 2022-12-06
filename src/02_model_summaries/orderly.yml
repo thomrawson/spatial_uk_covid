@@ -135,3 +135,4 @@ depends:
       id: latest
       use:
         stanfit.RData: - Outputs/stanfit.RData
+        model_data.RData: - Outputs/model_data.RData

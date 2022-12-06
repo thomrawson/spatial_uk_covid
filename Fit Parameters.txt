@@ -1,0 +1,40 @@
+Orderly ID
+parameters
+run-time
+-------------------
+
+20221130-163147-e3db44c2
+warmup: 500
+total_iterations: 2500
+tree_depth: 13
+scale_by_neighbours: TRUE
+42.25hrs
+
+
+-----------------------
+
+
+20221130-163234-61bf881f
+warmup: 500
+total_iterations: 2500
+tree_depth: 13
+scale_by_neighbours: FALSE
+41.4hrs
+
+-----------------------
+
+20221130-163346-53028b2f
+warmup: 500
+total_iterations: 2500
+tree_depth: 14
+scale_by_neighbours: TRUE
+85hrs
+
+-----------------------
+
+20221130-163431-619a4c0c
+warmup: 500
+total_iterations: 2500
+tree_depth: 14
+scale_by_neighbours: FALSE
+83.6hrs

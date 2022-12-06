@@ -48,6 +48,7 @@ artefacts:
       description: stanfit object containing model output
       filenames:
         - Outputs/stanfit.RData
+        - Outputs/model_data.RData
 
 # An optional name to describe the report in more detail than its
 # directory name (which must be short) but less detail than
