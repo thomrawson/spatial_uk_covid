@@ -38,3 +38,13 @@ total_iterations: 2500
 tree_depth: 14
 scale_by_neighbours: FALSE
 83.6hrs
+
+
+-----------------------
+
+20221130-163431-619a4c0c
+warmup: 500
+total_iterations: 2500
+tree_depth: 15
+scale_by_neighbours: FALSE
+169hrs (6.9 days)
