@@ -1224,6 +1224,112 @@ for(i in 1:nrow(Case_Rates_Data)){
   
 }
 
+#Now add funding data.
+#Start with NHS Funding data, as taken from the allocation doc found here: 
+#https://www.england.nhs.uk/allocations/previous/allocations-for-2019-20-to-2023-24/
+#Note, this seems to miss some reported extra COVID surge funding which I'm struggling to find
+#info on how it was allocated.
+CCG_LTLA_lookup <- read.csv("Data/LTLA_to_CCG_codes.csv")
+NHS_funding_data <- read.csv("Data/NHS_funding_allocations.csv")
+
+Case_Data_Codes <- unique(Case_Rates_Data$areaCode)
+Lookup_codes <- unique(CCG_LTLA_lookup$ï..areaCode)
+
+CCG_LTLA_lookup <- rename(CCG_LTLA_lookup, areaCode = ï..areaCode)
+CCG_LTLA_lookup <- CCG_LTLA_lookup[,c(1,5,6)]
+
+Case_Rates_Data <- left_join(Case_Rates_Data, CCG_LTLA_lookup, by = 'areaCode')
+
+#Now add the funding data
+NHS_funding_data <- rename(NHS_funding_data, CCG_code = ï..CCG_code)
+
+CCG_Case_codes <- unique(Case_Rates_Data$CCG_2019_Code)
+Funding_CCG_codes <- unique(NHS_funding_data$CCG_code)
+CCG_Case_codes %in% Funding_CCG_codes
+#For some reason, the NHS Funding data stream here is using two different CCGs for Devon (99P and 99Q)
+#This hasn't been correctly changed to 15N, so change all appearances of 15N in Case rates to "QJK" which is the DEvon STP
+Case_Rates_Data$CCG_2019_Code[which(Case_Rates_Data$CCG_2019_Code == "15N")] <- "QJK"
+
+Case_Rates_Data$NHS_registered_population <- NA
+
+Case_Rates_Data$Core_services_funding <- NA
+Case_Rates_Data$Primary_care_funding <- NA
+Case_Rates_Data$Specialised_services <- NA
+
+#The allocated funds are designed via a algorithm that calculates a weighted population need
+#This column is the above total funding but divided by that weighted population
+Case_Rates_Data$Core_services_funding_by_weighted <- NA
+Case_Rates_Data$Primary_care_funding_by_weighted <- NA
+Case_Rates_Data$Specialised_services_by_weighted <- NA
+
+#TODO: Make more efficient
+for(i in 1:length(Case_Rates_Data$areaCode)){
+  if(Case_Rates_Data$CCG_2019_Code[i] != ""){
+date_hold <- Case_Rates_Data$date_begin[i]
+CCG_hold <- Case_Rates_Data$CCG_2019_Code[i]
+
+if(date_hold < as.Date("2021-04-06")){
+  funding_hold <- filter(NHS_funding_data, tax_year_start == 2020)
+  funding_hold <- filter(funding_hold, CCG_code == CCG_hold)
+  funding_hold_core <- filter(funding_hold, funding_type == "core_services")
+  funding_hold_primary <- filter(funding_hold, funding_type == "primary_care")
+  funding_hold_specialised <- filter(funding_hold, funding_type == "specialised_services")
+  
+  Case_Rates_Data$NHS_registered_population[i] <- funding_hold$registered_population[1]
+  
+  Case_Rates_Data$Core_services_funding[i] <- funding_hold_core$funding_allocation[1]
+  Case_Rates_Data$Primary_care_funding[i] <- funding_hold_primary$funding_allocation[1]
+  Case_Rates_Data$Specialised_services[i] <- funding_hold_specialised$funding_allocation[1]
+  
+  Case_Rates_Data$Core_services_funding_by_weighted[i] <- funding_hold_core$funding_allocation[1] / funding_hold_core$weighted_population[1]
+  Case_Rates_Data$Primary_care_funding_by_weighted[i] <- funding_hold_primary$funding_allocation[1] / funding_hold_primary$weighted_population[1]
+  Case_Rates_Data$Specialised_services_by_weighted[i] <- funding_hold_specialised$funding_allocation[1] / funding_hold_specialised$weighted_population[1]
+  
+} else if(date_hold < as.Date("2022-04-06")){
+  funding_hold <- filter(NHS_funding_data, tax_year_start == 2021)
+  funding_hold <- filter(funding_hold, CCG_code == CCG_hold)
+  funding_hold_core <- filter(funding_hold, funding_type == "core_services")
+  funding_hold_primary <- filter(funding_hold, funding_type == "primary_care")
+  funding_hold_specialised <- filter(funding_hold, funding_type == "specialised_services")
+  
+  Case_Rates_Data$NHS_registered_population[i] <- funding_hold$registered_population[1]
+  
+  Case_Rates_Data$Core_services_funding[i] <- funding_hold_core$funding_allocation[1]
+  Case_Rates_Data$Primary_care_funding[i] <- funding_hold_primary$funding_allocation[1]
+  Case_Rates_Data$Specialised_services[i] <- funding_hold_specialised$funding_allocation[1]
+  
+  Case_Rates_Data$Core_services_funding_by_weighted[i] <- funding_hold_core$funding_allocation[1] / funding_hold_core$weighted_population[1]
+  Case_Rates_Data$Primary_care_funding_by_weighted[i] <- funding_hold_primary$funding_allocation[1] / funding_hold_primary$weighted_population[1]
+  Case_Rates_Data$Specialised_services_by_weighted[i] <- funding_hold_specialised$funding_allocation[1] / funding_hold_specialised$weighted_population[1]
+  
+} else{
+  funding_hold <- filter(NHS_funding_data, tax_year_start == 2022)
+  funding_hold <- filter(funding_hold, CCG_code == CCG_hold)
+  funding_hold_core <- filter(funding_hold, funding_type == "core_services")
+  funding_hold_primary <- filter(funding_hold, funding_type == "primary_care")
+  funding_hold_specialised <- filter(funding_hold, funding_type == "specialised_services")
+  
+  Case_Rates_Data$NHS_registered_population[i] <- funding_hold$registered_population[1]
+  
+  Case_Rates_Data$Core_services_funding[i] <- funding_hold_core$funding_allocation[1]
+  Case_Rates_Data$Primary_care_funding[i] <- funding_hold_primary$funding_allocation[1]
+  Case_Rates_Data$Specialised_services[i] <- funding_hold_specialised$funding_allocation[1]
+  
+  Case_Rates_Data$Core_services_funding_by_weighted[i] <- funding_hold_core$funding_allocation[1] / funding_hold_core$weighted_population[1]
+  Case_Rates_Data$Primary_care_funding_by_weighted[i] <- funding_hold_primary$funding_allocation[1] / funding_hold_primary$weighted_population[1]
+  Case_Rates_Data$Specialised_services_by_weighted[i] <- funding_hold_specialised$funding_allocation[1] / funding_hold_specialised$weighted_population[1]
+  
+}
+
+}
+}
+
+
+#Now add specific COVID support funds provided, as taken from here:
+#https://www.gov.uk/government/publications/covid-19-emergency-funding-for-local-government
+
+
+
 #Done for now, export the data
 
 write.csv(Case_Rates_Data, file = 'Outputs/Cases_Data.csv')
