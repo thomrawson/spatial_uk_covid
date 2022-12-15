@@ -97,6 +97,7 @@ packages:
   - dplyr
   - spdep
   - tidyverse
+  - janitor
 
 
 # Source files, in addition to the script.  Typically these will

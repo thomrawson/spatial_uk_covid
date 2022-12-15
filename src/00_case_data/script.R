@@ -1233,15 +1233,20 @@ CCG_LTLA_lookup <- read.csv("Data/LTLA_to_CCG_codes.csv")
 NHS_funding_data <- read.csv("Data/NHS_funding_allocations.csv")
 
 Case_Data_Codes <- unique(Case_Rates_Data$areaCode)
-Lookup_codes <- unique(CCG_LTLA_lookup$ï..areaCode)
+Lookup_codes <- unique(CCG_LTLA_lookup[,1])
 
-CCG_LTLA_lookup <- rename(CCG_LTLA_lookup, areaCode = ï..areaCode)
+cols_hold <- colnames(CCG_LTLA_lookup)
+cols_hold[1] <- "areaCode"
+colnames(CCG_LTLA_lookup) <- cols_hold
+
 CCG_LTLA_lookup <- CCG_LTLA_lookup[,c(1,5,6)]
 
 Case_Rates_Data <- left_join(Case_Rates_Data, CCG_LTLA_lookup, by = 'areaCode')
 
 #Now add the funding data
-NHS_funding_data <- rename(NHS_funding_data, CCG_code = ï..CCG_code)
+cols_hold <- colnames(NHS_funding_data)
+cols_hold[1] <- "CCG_code"
+colnames(NHS_funding_data) <- cols_hold
 
 CCG_Case_codes <- unique(Case_Rates_Data$CCG_2019_Code)
 Funding_CCG_codes <- unique(NHS_funding_data$CCG_code)
@@ -1327,8 +1332,210 @@ if(date_hold < as.Date("2021-04-06")){
 
 #Now add specific COVID support funds provided, as taken from here:
 #https://www.gov.uk/government/publications/covid-19-emergency-funding-for-local-government
+COVID_funding <- read.csv("Data/LTLA_Covid_Extra_Funding.csv")
+funding_types <- unique(COVID_funding$fund)
+ONS_codes <- unique(COVID_funding$ONS_code)
+#All the England codes are captured in this funding block
+#Turn funding type into a variable
+COVID_funding <- pivot_wider(COVID_funding, names_from = fund, values_from = value)
+
+Case_Rates_Data[funding_types] <- NA
+
+#Now, the first problem, is that some funding was given to LTLAs (included), while 
+#other funding was given to UTLAs. So we need to roughly divide up this UTLA funding amongst the LTLAs
+#We'll do this by LTLA population, seems reasonable.
+
+#First, split the data into those that we currently track (LTLAs) and those we don't
+COVID_funding_LTLA <- filter(COVID_funding, ONS_code %in% Case_Data_Codes)
+COVID_funding_other <- filter(COVID_funding, !(ONS_code %in% Case_Data_Codes))
+
+#We have 30 fire services. I'm going to remove these
+COVID_funding_other <- filter(COVID_funding_other, !grepl('E31', ONS_code))
+
+LTLA_to_UTLA <- read.csv("Data/LTLA_to_UTLA_codes.csv")
+UTLA_codes <- unique(LTLA_to_UTLA$UTLA21CD)
+sum(UTLA_codes %in% COVID_funding_other$ONS_code) #There's 27 codes we can divide up further
+LTLA_Populations <- data.frame(areaCode = Case_Rates_Data$areaCode,
+                               Population = Case_Rates_Data$Population)
+LTLA_Populations <- distinct(LTLA_Populations)
+
+COVID_funding_UTLA <- filter(COVID_funding_other, ONS_code %in% UTLA_codes)
+COVID_funding_other <- filter(COVID_funding_other, !(ONS_code %in% UTLA_codes))
+
+for(i in 1:length(COVID_funding_UTLA$ONS_code)){
+  UTLA_code_hold <- COVID_funding_UTLA$ONS_code[i]
+  tax_year_hold <- COVID_funding_UTLA$tax_year_start[i]
+  
+  #extract which LTLAs this will be divided by:
+  LTLAs_hold <- filter(LTLA_to_UTLA, UTLA21CD == UTLA_code_hold)
+  LTLA_codes_hold <- unique(LTLAs_hold$LTLA21CD)
+  Populations_hold <- filter(LTLA_Populations, areaCode %in% LTLA_codes_hold)
+  Population_sum <- sum(Populations_hold$Population)
+  
+  for(j in 1:length(LTLAs_hold$LTLA21CD)){
+    LTLA_code_hold <- LTLAs_hold$LTLA21CD[j]
+    
+    #There are three specialist cases: Isle of Wight, Isles of Scilly, City of London
+    if(LTLA_code_hold == "E06000046"){} else #Isle of Wight
+      if(LTLA_code_hold == "E06000053"){
+        LTLA_code_hold <- "E06000052" #If Scilly, change to Cornwall
+        funding_vector <- COVID_funding_UTLA[i,4:25]
+
+        #Now add this vector to the LTLA version
+        if(!(LTLA_code_hold %in% unique(COVID_funding_LTLA$ONS_code))){
+          sprintf("Error: We don't have an LTLA code (%s) to give this to.",LTLA_code_hold)
+        }
+        COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == tax_year_hold)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] <- COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == tax_year_hold)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] + funding_vector
+        
+      } else 
+      if(LTLA_code_hold == "E09000001"){
+        LTLA_code_hold <- "E09000012" #If City of London, change to Hackney
+        funding_vector <- COVID_funding_UTLA[i,4:25]
+        
+        #Now add this vector to the LTLA version
+        if(!(LTLA_code_hold %in% unique(COVID_funding_LTLA$ONS_code))){
+          sprintf("Error: We don't have an LTLA code (%s) to give this to.",LTLA_code_hold)
+        }
+        COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == tax_year_hold)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] <- COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == tax_year_hold)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] + funding_vector
+        
+      } else{
+    
+    specific_population_hold <- Populations_hold$Population[which(Populations_hold$areaCode == LTLA_code_hold)]
+    funding_vector <- COVID_funding_UTLA[i,4:25]
+    funding_vector <- funding_vector*(specific_population_hold/Population_sum)
+    
+    #Now add this vector to the LTLA version
+    if(!(LTLA_code_hold %in% unique(COVID_funding_LTLA$ONS_code))){
+      sprintf("Error: We don't have an LTLA code (%s) to give this to.",LTLA_code_hold)
+    }
+    COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == tax_year_hold)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] <- COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == tax_year_hold)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] + funding_vector
+    
+    
+  }
+  }
+}
 
 
+#Next, we need to divide up this Greater London extra funding across the 32 london districts we include
+COVID_funding_london <- filter(COVID_funding_other, ONS_code == "-")
+COVID_funding_other <- filter(COVID_funding_other, !(ONS_code == "-"))
+London_populations <- filter(LTLA_Populations, grepl('E09', areaCode))
+London_sum_populations <- sum(London_populations$Population)
+funding_vector <- COVID_funding_london[1,4:25]
+for(i in length(London_populations$areaCode)){
+  LTLA_code_hold <- London_populations$areaCode[i]
+  funding_vector <- funding_vector*(London_populations$Population[i]/London_sum_populations)
+  COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2020)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] <- COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2020)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] + funding_vector
+}
+funding_vector <- COVID_funding_london[2,4:25]
+for(i in length(London_populations$areaCode)){
+  LTLA_code_hold <- London_populations$areaCode[i]
+  funding_vector <- funding_vector*(London_populations$Population[i]/London_sum_populations)
+  COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2021)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] <- COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2020)&(COVID_funding_LTLA$ONS_code == LTLA_code_hold)), 4:25] + funding_vector
+}
+
+#Lastly, we need to sort out the northamptonshire issue that's been coming up constantly
+#We need to divide the northamptonshire funding across the seven sub-regions, then split that into the separate two councils
+northamptonshire_codes <- unique(COVID_funding_other$ONS_code)
+northamptonshire_codes <- northamptonshire_codes[-6]
+
+west_north_fund_2020 <- filter(COVID_funding_other, tax_year_start == 2020)
+west_north_fund_2020 <- filter(west_north_fund_2020, 
+                               ONS_code %in% c("E07000154", "E07000155", "E07000151"))
+west_north_fund_2020 %>%
+  adorn_totals("row") -> west_north_fund_2020
+west_north_fund_2020$ONS_code[4] <- "E06000062"
+west_north_fund_2020$ONS_name[4] <- "West Northamptonshire"
+west_north_fund_2020 <- west_north_fund_2020[4,]
+west_north_fund_2020$tax_year_start <- 2020
+west_north_fund_2020[1,4:25] <- west_north_fund_2020[1,4:25] + (COVID_funding_other[which((COVID_funding_other$tax_year_start == 2020)&(COVID_funding_other$ONS_code == "E10000021")),4:25]*(406733/(406733+350448)))
+
+west_north_fund_2021 <- filter(COVID_funding_other, tax_year_start == 2021)
+west_north_fund_2021 <- filter(west_north_fund_2021, 
+                               ONS_code %in% c("E07000154", "E07000155", "E07000151"))
+west_north_fund_2021 %>%
+  adorn_totals("row") -> west_north_fund_2021
+west_north_fund_2021$ONS_code[4] <- "E06000062"
+west_north_fund_2021$ONS_name[4] <- "West Northamptonshire"
+west_north_fund_2021 <- west_north_fund_2021[4,]
+west_north_fund_2021$tax_year_start <- 2021
+west_north_fund_2021[1,4:25] <- west_north_fund_2021[1,4:25] + (COVID_funding_other[which((COVID_funding_other$tax_year_start == 2021)&(COVID_funding_other$ONS_code == "E10000021")),4:25]*(406733/(406733+350448)))
+
+
+north_north_fund_2020 <- filter(COVID_funding_other, tax_year_start == 2020)
+north_north_fund_2020 <- filter(north_north_fund_2020, 
+                                ONS_code %in% c("E07000152", "E07000156", "E07000150", "E07000153"))
+north_north_fund_2020 %>%
+  adorn_totals("row") -> north_north_fund_2020
+north_north_fund_2020$ONS_code[5] <- "E06000061"
+north_north_fund_2020$ONS_name[5] <- "North Northamptonshire"
+north_north_fund_2020 <- north_north_fund_2020[5,]
+north_north_fund_2020$tax_year_start <- 2020
+north_north_fund_2020[1,4:25] <- north_north_fund_2020[1,4:25] + (COVID_funding_other[which((COVID_funding_other$tax_year_start == 2020)&(COVID_funding_other$ONS_code == "E10000021")),4:25]*(350448/(406733+350448)))
+
+
+north_north_fund_2021 <- filter(COVID_funding_other, tax_year_start == 2021)
+north_north_fund_2021 <- filter(north_north_fund_2021, 
+                                ONS_code %in% c("E07000152", "E07000156", "E07000150", "E07000153"))
+north_north_fund_2021 %>%
+  adorn_totals("row") -> north_north_fund_2021
+north_north_fund_2021$ONS_code[5] <- "E06000061"
+north_north_fund_2021$ONS_name[5] <- "North Northamptonshire"
+north_north_fund_2021 <- north_north_fund_2021[5,]
+north_north_fund_2021$tax_year_start <- 2021
+north_north_fund_2021[1,4:25] <- north_north_fund_2021[1,4:25] + (COVID_funding_other[which((COVID_funding_other$tax_year_start == 2021)&(COVID_funding_other$ONS_code == "E10000021")),4:25]*(350448/(406733+350448)))
+
+COVID_funding_Northamptonshire <- rbind(west_north_fund_2020, west_north_fund_2021, north_north_fund_2020, north_north_fund_2021)
+
+COVID_funding_LTLA <- rbind(COVID_funding_LTLA, COVID_funding_Northamptonshire)
+
+#There are some existing payments to North northamptonshire, add the two together
+COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2020)&(COVID_funding_LTLA$ONS_name =="North Northamptonshire" )),4:25] <- COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2020)&(COVID_funding_LTLA$ONS_name =="North Northamptonshire" )),4:25] + COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2020)&(COVID_funding_LTLA$ONS_name =="North Northamptonshire4" )),4:25]
+COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2021)&(COVID_funding_LTLA$ONS_name =="North Northamptonshire" )),4:25] <- COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2021)&(COVID_funding_LTLA$ONS_name =="North Northamptonshire" )),4:25] + COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2021)&(COVID_funding_LTLA$ONS_name =="North Northamptonshire4" )),4:25]
+
+COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2020)&(COVID_funding_LTLA$ONS_name =="West Northamptonshire" )),4:25] <- COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2020)&(COVID_funding_LTLA$ONS_name =="West Northamptonshire" )),4:25] + COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2020)&(COVID_funding_LTLA$ONS_name =="West Northamptonshire5" )),4:25]
+COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2021)&(COVID_funding_LTLA$ONS_name =="West Northamptonshire" )),4:25] <- COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2021)&(COVID_funding_LTLA$ONS_name =="West Northamptonshire" )),4:25] + COVID_funding_LTLA[which((COVID_funding_LTLA$tax_year_start == 2021)&(COVID_funding_LTLA$ONS_name =="West Northamptonshire5" )),4:25]
+
+#Remove the old ones
+COVID_funding_LTLA <- filter(COVID_funding_LTLA, !(ONS_name %in% c("North Northamptonshire4", "West Northamptonshire5") ))
+
+#Now, assign those LTLA funding values to the Case Rates dataframe
+#TODO: make more efficient (set a tax year column and "merge" the dataframes)
+for(i in 1:length(Case_Rates_Data$areaCode)){
+  date_hold <- Case_Rates_Data$date_begin[i]
+  areaCode_hold <- Case_Rates_Data$areaCode[i]
+  
+  if(areaCode_hold %in% ONS_codes){
+    
+    if(date_hold < as.Date("2021-04-06")){
+      
+      extra_funding_hold <- filter(COVID_funding_LTLA, tax_year_start == 2020)
+      extra_funding_hold <- filter(extra_funding_hold, ONS_code == areaCode_hold)
+      
+      Case_Rates_Data[i,49:70] <- extra_funding_hold[4:25]
+      
+    } else{
+      extra_funding_hold <- filter(COVID_funding_LTLA, tax_year_start == 2021)
+      extra_funding_hold <- filter(extra_funding_hold, ONS_code == areaCode_hold)
+      
+      Case_Rates_Data[i,49:70] <- extra_funding_hold[4:25]
+    }
+    
+  }
+}
+
+#Lastly, we want to export some midpoint coordinates for more spatially-specific spatial kernels
+sf_cent <- st_centroid(Boundaries)
+sf_cent_geom <- sf_cent$geometry
+plot(sf_cent_geom)
+
+LTLA_centroids <- data.frame(areaCode = sf_cent$CODE, centroid_x = NA, centroid_y = NA)
+for(i in 1:356){
+  LTLA_centroids$centroid_x[i] <- as.numeric(sf_cent$geometry[[i]])[1]
+  LTLA_centroids$centroid_y[i] <- as.numeric(sf_cent$geometry[[i]])[2]
+}
+
+Case_Rates_Data <- merge(Case_Rates_Data, LTLA_centroids, by = c('areaCode'), all.x = TRUE)
 
 #Done for now, export the data
 
