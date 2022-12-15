@@ -139,7 +139,10 @@ resources:
   - Data\Annual_median_income.csv
   - Data\Portal_variant_data.csv
   - Data\VAM_variant_data.csv
-
+  - Data\NHS_funding_allocations.csv
+  - Data\LTLA_to_CCG_codes.csv
+  - Data\LTLA_Covid_Extra_Funding.csv
+  - Data\LTLA_to_UTLA_codes.csv
 # Optional name of a variable to make the SQL connection available to
 # the script.  Use this with care and avoid using any queries that
 # modify the database (i.e., use DBI::dbGetQuery with "SELECT" queries
