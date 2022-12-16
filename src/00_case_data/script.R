@@ -1560,7 +1560,7 @@ for(i in 1:length(Case_Rates_Data$areaCode)){
 #Lastly, we want to export some midpoint coordinates for more spatially-specific spatial kernels
 sf_cent <- st_centroid(Boundaries)
 sf_cent_geom <- sf_cent$geometry
-plot(sf_cent_geom)
+#plot(sf_cent_geom)
 
 LTLA_centroids <- data.frame(areaCode = sf_cent$CODE, centroid_x = NA, centroid_y = NA)
 for(i in 1:356){
@@ -1576,3 +1576,37 @@ write.csv(Case_Rates_Data, file = 'Outputs/Cases_Data.csv')
 save(Case_Rates_Data, file = 'Outputs/Cases_Data.RData')
 save(W, file = 'Outputs/W.RData')
 
+#We also export hospitalisations by NHS region data, for use in coupled model.
+#This is taken from dashboard, api link: https://api.coronavirus.data.gov.uk/v2/data?areaType=nhsRegion&metric=newAdmissions&format=csv
+
+#But we use a hard-saved version downloaded on 16/12/2022
+hospital_admissions <- read.csv("Data/hospital_admissions_nhsRegion_2022_12_15.csv")
+hospital_admissions$date <- as.Date(hospital_admissions$date)
+hospital_admissions <- hospital_admissions[-3]
+
+#To aid with modelling, we also want to export a 306x7 matrix that denotes with 0/1 which LTLAs are in which region
+#assign a region index
+nhs_regions <- unique(hospital_admissions$areaName)
+hospital_admissions$region_index <- lapply(hospital_admissions$areaName, function(x) which(nhs_regions == x))
+
+LTLA_indexs <- Case_Rates_Data[,c(1,3,7)]
+LTLA_indexs <- distinct(LTLA_indexs)
+
+LTLA_to_region_matrix <- matrix(0, nrow = 356, ncol = 7)
+lookup_regions <- c("london", "south_east", "south_west", "east_of_england", 
+                    "midlands", "north_east_and_yorkshire", "north_west")
+
+for(i in 1:length(LTLA_indexs$areaCode)){
+  LTLA_coord <- LTLA_indexs$INDEX[i]
+  LTLA_code_hold <- LTLA_indexs$areaCode[i]
+  
+  region_hold <- LTLA_to_region$RGN21NM[which(LTLA_to_region$LAD21CD == LTLA_code_hold)]
+  region_coord <- which(lookup_regions == region_hold)
+  
+  LTLA_to_region_matrix[LTLA_coord, region_coord] <- 1
+  
+}
+
+save(LTLA_to_region_matrix, file = 'Outputs/LTLA_to_region_matrix.RData')
+write.csv(hospital_admissions, file = 'Outputs/Hospitalisations_Data.csv')
+save(hospital_admissions, file = 'Outputs/Hospitalisations_Data.RData')
