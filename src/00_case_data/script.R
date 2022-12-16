@@ -525,13 +525,19 @@ Covar_Data <- read.csv('Data/combined_covariates.csv')
 #For now we're picking out just these covariates
 Covars_keep <- c('LTLA19CD',
                  'prop_white_british',
+                 'prop_all_other_white',
+                 'prop_mixed_multiple',
+                 'prop_asian',
+                 'prop_black_afr_car',
+                 'prop_other',
                  'IMD_Average_score',
                  'IMD_Rank_of_average_score',
                  'prop_travelling_to_work',
                  'resident_earnings',
                  'mean_age',
                  'mean_popden',
-                 'prop_o65')
+                 'prop_o65',
+                 'prop_not_in_work')
 
 #Filter down just to the above columns
 Covar_Data <- Covar_Data[ , which(names(Covar_Data) %in% Covars_keep)]
@@ -579,9 +585,33 @@ Covar_Extra <- data.frame(areaCode = c("E06000060", "E06000061", "E06000062"),
                                                       (sum(North_North_data$nomis_total_people*North_North_data$prop_travelling_to_work)/sum(North_North_data$nomis_total_people)),
                                                       (sum(West_North_data$nomis_total_people*West_North_data$prop_travelling_to_work)/sum(West_North_data$nomis_total_people))),
                           
+                          prop_not_in_work = c((sum(Buck_data$nomis_total_people*Buck_data$prop_not_in_work)/sum(Buck_data$nomis_total_people)),
+                                               (sum(North_North_data$nomis_total_people*North_North_data$prop_not_in_work)/sum(North_North_data$nomis_total_people)),
+                                               (sum(West_North_data$nomis_total_people*West_North_data$prop_not_in_work)/sum(West_North_data$nomis_total_people))),
+                          
                           prop_white_british = c((sum(Buck_data$total_people_eth*Buck_data$prop_white_british)/sum(Buck_data$total_people_eth)),
                                                  (sum(North_North_data$total_people_eth*North_North_data$prop_white_british)/sum(North_North_data$total_people_eth)),
                                                  (sum(West_North_data$total_people_eth*West_North_data$prop_white_british)/sum(West_North_data$total_people_eth))),
+                          
+                          prop_all_other_white = c((sum(Buck_data$total_people_eth*Buck_data$prop_all_other_white)/sum(Buck_data$total_people_eth)),
+                                                   (sum(North_North_data$total_people_eth*North_North_data$prop_all_other_white)/sum(North_North_data$total_people_eth)),
+                                                   (sum(West_North_data$total_people_eth*West_North_data$prop_all_other_white)/sum(West_North_data$total_people_eth))),
+                          
+                          prop_mixed_multiple = c((sum(Buck_data$total_people_eth*Buck_data$prop_mixed_multiple)/sum(Buck_data$total_people_eth)),
+                                                  (sum(North_North_data$total_people_eth*North_North_data$prop_mixed_multiple)/sum(North_North_data$total_people_eth)),
+                                                  (sum(West_North_data$total_people_eth*West_North_data$prop_mixed_multiple)/sum(West_North_data$total_people_eth))),
+                          
+                          prop_asian = c((sum(Buck_data$total_people_eth*Buck_data$prop_asian)/sum(Buck_data$total_people_eth)),
+                                         (sum(North_North_data$total_people_eth*North_North_data$prop_asian)/sum(North_North_data$total_people_eth)),
+                                         (sum(West_North_data$total_people_eth*West_North_data$prop_asian)/sum(West_North_data$total_people_eth))),
+                          
+                          prop_black_afr_car = c((sum(Buck_data$total_people_eth*Buck_data$prop_black_afr_car)/sum(Buck_data$total_people_eth)),
+                                                 (sum(North_North_data$total_people_eth*North_North_data$prop_black_afr_car)/sum(North_North_data$total_people_eth)),
+                                                 (sum(West_North_data$total_people_eth*West_North_data$prop_black_afr_car)/sum(West_North_data$total_people_eth))),
+                          
+                          prop_other = c((sum(Buck_data$total_people_eth*Buck_data$prop_other)/sum(Buck_data$total_people_eth)),
+                                         (sum(North_North_data$total_people_eth*North_North_data$prop_other)/sum(North_North_data$total_people_eth)),
+                                         (sum(West_North_data$total_people_eth*West_North_data$prop_other)/sum(West_North_data$total_people_eth))),
                           
                           IMD_Average_score = c(sum(Buck_data$IMD_Average_score*Buck_data$total_people_eth)/sum(Buck_data$total_people_eth),
                                                 sum(North_North_data$IMD_Average_score*North_North_data$total_people_eth)/sum(North_North_data$total_people_eth),
@@ -1501,6 +1531,9 @@ COVID_funding_LTLA <- filter(COVID_funding_LTLA, !(ONS_name %in% c("North Northa
 
 #Now, assign those LTLA funding values to the Case Rates dataframe
 #TODO: make more efficient (set a tax year column and "merge" the dataframes)
+
+case_rates_cols <- ncol(Case_Rates_Data)
+
 for(i in 1:length(Case_Rates_Data$areaCode)){
   date_hold <- Case_Rates_Data$date_begin[i]
   areaCode_hold <- Case_Rates_Data$areaCode[i]
@@ -1512,13 +1545,13 @@ for(i in 1:length(Case_Rates_Data$areaCode)){
       extra_funding_hold <- filter(COVID_funding_LTLA, tax_year_start == 2020)
       extra_funding_hold <- filter(extra_funding_hold, ONS_code == areaCode_hold)
       
-      Case_Rates_Data[i,49:70] <- extra_funding_hold[4:25]
+      Case_Rates_Data[i,(case_rates_cols-21):case_rates_cols] <- extra_funding_hold[4:25]
       
     } else{
       extra_funding_hold <- filter(COVID_funding_LTLA, tax_year_start == 2021)
       extra_funding_hold <- filter(extra_funding_hold, ONS_code == areaCode_hold)
       
-      Case_Rates_Data[i,49:70] <- extra_funding_hold[4:25]
+      Case_Rates_Data[i,(case_rates_cols-21):case_rates_cols] <- extra_funding_hold[4:25]
     }
     
   }
