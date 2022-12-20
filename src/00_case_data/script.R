@@ -239,7 +239,7 @@ Case_Rates_Data$date <- as.Date(Case_Rates_Data$date)
 
 #Now we record, for each LTLA, the case count from the previous day in the row too.
 #This takes a long time, there's probably a...
-#TODO: Make this way more efficient!
+#TODO: Make this more efficient!
 
 if(record_previous_day_cases){
 
@@ -276,18 +276,8 @@ LTLA_Demog <- read.csv('Data/LTLA_demog.csv')
 #This contains, for each LTLA, the population, area, pop. density, and median age
 
 #Attach this demographic data to the case_rates dataframe
-#TODO: Make this more efficient!
-Case_Rates_Data$Population <- NA
-Case_Rates_Data$Pop_per_km2 <- NA
-Case_Rates_Data$Median_age <- NA
 
-for(i in 1:length(Case_Rates_Data$date)){
-  hold_code <- Case_Rates_Data$areaCode[i]
-  data_hold <- filter(LTLA_Demog, areaCode == hold_code)
-  Case_Rates_Data$Population[i] <- data_hold$Population
-  Case_Rates_Data$Pop_per_km2[i] <- data_hold$Pop_per_km2
-  Case_Rates_Data$Median_age[i] <- data_hold$Median_age
-}
+Case_Rates_Data <- merge(Case_Rates_Data, LTLA_Demog[,c(1,5,6,7)], by = 'areaCode', all.x = TRUE)
 
 #Remove the unnecessary vaccine dataframes
 rm(Agg_Case_Rates_Data, First_Vacc_Mean_Data, First_Vaccine_Data,
@@ -328,7 +318,7 @@ W <- W * 1L
 D <- diag(rowSums(W))
 
 #######################
-#That's all we need, now we export:
+#If desired, could export daily data here:
 #Case_Rates_Data
 #Boundaries
 #W
@@ -705,7 +695,7 @@ for(i in 1:length(Earnings_Data_2022$areaCode)){
 Case_Rates_Data$Median_annual_income <- NA
 Case_Rates_Data$no_jobs <- NA
 
-#TODO: make this more efficient:
+#TODO: make this more efficient: would need to add a tax_year column to case_rates data.
 for(i in 1:length(Case_Rates_Data$areaCode)){
   date_hold <- Case_Rates_Data$date_begin[i]
   area_hold <- Case_Rates_Data$areaCode[i]
@@ -1570,6 +1560,26 @@ for(i in 1:356){
 
 Case_Rates_Data <- merge(Case_Rates_Data, LTLA_centroids, by = c('areaCode'), all.x = TRUE)
 
+#We want to keep a tally of the total number of cases in the region for the last... 
+#say... 5 weeks
+Case_Rates_Data$total_cases_last25 <- NA
+for(i in 1:nrow(Case_Rates_Data)){
+  Week_hold <- Case_Rates_Data$Week[i]
+  Week_start_hold <- max((Week_hold - 5),2)
+  areahold <- Case_Rates_Data$areaCode[i]
+  weeks_to_keep <- seq(Week_start_hold, Week_hold)
+  
+  Case_Rates_Data %>%
+    filter(areaCode == areahold) %>%
+    filter(Week %in% weeks_to_keep) -> data_hold
+  
+  cumCases <- sum(data_hold$Week_Cases)
+  Case_Rates_Data$total_cases_last25[i] <- cumCases
+    
+}
+
+sum(which(Case_Rates_Data$total_cases_last25 > Case_Rates_Data$Population))
+
 #Done for now, export the data
 
 write.csv(Case_Rates_Data, file = 'Outputs/Cases_Data.csv')
@@ -1588,6 +1598,7 @@ hospital_admissions <- hospital_admissions[-3]
 #assign a region index
 nhs_regions <- unique(hospital_admissions$areaName)
 hospital_admissions$region_index <- lapply(hospital_admissions$areaName, function(x) which(nhs_regions == x))
+hospital_admissions$region_index <- as.numeric(hospital_admissions$region_index)
 
 LTLA_indexs <- Case_Rates_Data[,c(1,3,7)]
 LTLA_indexs <- distinct(LTLA_indexs)
@@ -1606,6 +1617,323 @@ for(i in 1:length(LTLA_indexs$areaCode)){
   LTLA_to_region_matrix[LTLA_coord, region_coord] <- 1
   
 }
+#Convert this to WEEKLY hospitalisations
+#FIRST DATE: Sunday 3rd May 2020
+hospital_admissions$Week <- plyr::round_any(as.numeric(hospital_admissions$date - as.Date('2020-05-03') + 0.5), 7, f = ceiling)/7
+
+#Filter out the week 0 cases
+hospital_admissions <- filter(hospital_admissions, Week > 0)
+
+#Now sum by, everything, but not vaccination yet
+hospital_admissions_hold <- aggregate(hospital_admissions$newAdmissions, by=list(Week=hospital_admissions$Week, areaCode = hospital_admissions$areaCode,
+                                                                                 areaName = hospital_admissions$areaName,
+                                                                 region_index = hospital_admissions$region_index), FUN=sum)
+
+#Now need to add a "previous week cases" column, and a "date_begin" column:
+colnames(hospital_admissions_hold) <- c('Week', 'areaCode', 'areaName', 'region_index', 'Week_Hospitalisations')
+
+hospital_admissions_hold$date_begin <- as.Date('2020-05-03') + ((hospital_admissions_hold$Week - 1)*7) 
+
+hospital_admissions <- hospital_admissions_hold
+rm(hospital_admissions_hold)
+
+#Now we add most of the covariate data to the hospital admissions dataframe too
+#Population
+LTLA_Populations <- distinct(Case_Rates_Data[,c(1,4)])
+colnames(LTLA_to_region) <- c("row", "areaCode", "areaName", "regionCode", "regionName")
+LTLA_Populations <- merge(LTLA_Populations, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_populations <- aggregate(LTLA_Populations$Population, by = list(regionName = LTLA_Populations$regionName),
+                                FUN = sum)
+colnames(Region_populations) <- c("areaName", "Population")
+
+hospital_admissions %>%
+  mutate(across('areaName', str_replace, 'London', 'london')) %>%
+  mutate(across('areaName', str_replace, 'South East', 'south_east')) %>%
+  mutate(across('areaName', str_replace, 'South West', 'south_west')) %>%
+  mutate(across('areaName', str_replace, 'East of England', 'east_of_england')) %>%
+  mutate(across('areaName', str_replace, 'Midlands', 'midlands')) %>%
+  mutate(across('areaName', str_replace, 'North East and Yorkshire', 'north_east_and_yorkshire')) %>%
+  mutate(across('areaName', str_replace, 'North West', 'north_west'))  -> hospital_admissions
+
+hospital_admissions <- merge(hospital_admissions, Region_populations, by = "areaName")
+
+#Median age? Too largescale to be useful here I think
+
+#VACCINATION. 
+#We need to multiply the percentages by the population and then add them all together and divide back down.
+LTLA_Vaccinations <- Case_Rates_Data[,c(1,2,4,12,13,14)]
+
+LTLA_Vaccinations$no_vaccs_one <- LTLA_Vaccinations$Population*LTLA_Vaccinations$cumVaccPercentage_FirstDose/100
+LTLA_Vaccinations$no_vaccs_two <- LTLA_Vaccinations$Population*LTLA_Vaccinations$cumVaccPercentage_SecondDose/100
+LTLA_Vaccinations$no_vaccs_three <- LTLA_Vaccinations$Population*LTLA_Vaccinations$cumVaccPercentage_ThirdDose/100
+
+#Now total those three new columns by region
+LTLA_Vaccinations <- merge(LTLA_Vaccinations, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+#first dose
+region_one_dose <- aggregate(LTLA_Vaccinations$no_vaccs_one, by = list(regionName = LTLA_Vaccinations$regionName,
+                                                                       Week = LTLA_Vaccinations$Week),
+                                FUN = sum)
+region_one_dose$x <- round(region_one_dose$x)
+colnames(region_one_dose) <- c("areaName", "Week", "vacc_one_dose_population")
+hospital_admissions <- merge(hospital_admissions, region_one_dose, by = c("areaName","Week"))
+#second dose
+region_two_dose <- aggregate(LTLA_Vaccinations$no_vaccs_two, by = list(regionName = LTLA_Vaccinations$regionName,
+                                                                       Week = LTLA_Vaccinations$Week),
+                             FUN = sum)
+region_two_dose$x <- round(region_two_dose$x)
+colnames(region_two_dose) <- c("areaName", "Week", "vacc_two_dose_population")
+hospital_admissions <- merge(hospital_admissions, region_two_dose, by = c("areaName","Week"))
+#third dose
+region_three_dose <- aggregate(LTLA_Vaccinations$no_vaccs_three, by = list(regionName = LTLA_Vaccinations$regionName,
+                                                                       Week = LTLA_Vaccinations$Week),
+                             FUN = sum)
+region_three_dose$x <- round(region_three_dose$x)
+colnames(region_three_dose) <- c("areaName", "Week", "vacc_three_dose_population")
+hospital_admissions <- merge(hospital_admissions, region_three_dose, by = c("areaName","Week"))
+####
+hospital_admissions$cumVaccPercentage_FirstDose <- (hospital_admissions$vacc_one_dose_population/hospital_admissions$Population)*100
+hospital_admissions$cumVaccPercentage_SecondDose <- (hospital_admissions$vacc_two_dose_population/hospital_admissions$Population)*100
+hospital_admissions$cumVaccPercentage_ThirdDose <- (hospital_admissions$vacc_three_dose_population/hospital_admissions$Population)*100
+
+#remove all the chaff
+hospital_admissions <- hospital_admissions[,-c(8,9,10)]
+rm(region_one_dose, region_two_dose, region_three_dose, LTLA_Vaccinations)
+
+
+#IMD average score
+#Again, multiply by population, aggregate, then divide down
+LTLA_IMD <- distinct(Case_Rates_Data[,c(1,4,23)])
+LTLA_IMD$total_IMD <- LTLA_IMD$Population*LTLA_IMD$IMD_Average_score
+
+LTLA_IMD <- merge(LTLA_IMD, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+#first dose
+Region_IMD <- aggregate(LTLA_IMD$total_IMD, by = list(regionName = LTLA_IMD$regionName),
+                             FUN = sum)
+
+colnames(Region_IMD) <- c("areaName","Total_IMD")
+hospital_admissions <- merge(hospital_admissions, Region_IMD, by = c("areaName"))
+hospital_admissions$IMD_Average_score <- hospital_admissions$Total_IMD/hospital_admissions$Population
+hospital_admissions <- hospital_admissions[,-11]
+rm(LTLA_IMD, Region_IMD)
+
+#transit_stations_percent_change_from_baseline
+#Again, multiply by population, aggregate, then divide down
+LTLA_transit <- distinct(Case_Rates_Data[,c(1,2,4,34)])
+LTLA_transit$total_transit <- LTLA_transit$Population*LTLA_transit$transit_stations_percent_change_from_baseline/100
+
+LTLA_transit <- merge(LTLA_transit, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_transit <- aggregate(LTLA_transit$total_transit, by = list(regionName = LTLA_transit$regionName,
+                                                                  Week = LTLA_transit$Week),
+                        FUN = sum, na.rm = TRUE)
+
+colnames(Region_transit) <- c("areaName","Week", "Total_transit")
+hospital_admissions <- merge(hospital_admissions, Region_transit, by = c("areaName", "Week"))
+hospital_admissions$transit_stations_percent_change_from_baseline <- hospital_admissions$Total_transit/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-12]
+rm(LTLA_transit, Region_transit)
+
+#residential_percent_change_from_baseline
+#Again, multiply by population, aggregate, then divide down
+LTLA_resident <- distinct(Case_Rates_Data[,c(1,2,4,36)])
+LTLA_resident$total_resident <- LTLA_resident$Population*LTLA_resident$residential_percent_change_from_baseline/100
+
+LTLA_resident <- merge(LTLA_resident, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_resident <- aggregate(LTLA_resident$total_resident, by = list(regionName = LTLA_resident$regionName,
+                                                                  Week = LTLA_resident$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_resident) <- c("areaName","Week", "Total_resident")
+hospital_admissions <- merge(hospital_admissions, Region_resident, by = c("areaName", "Week"))
+hospital_admissions$residential_percent_change_from_baseline <- hospital_admissions$Total_resident/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-13]
+rm(LTLA_resident, Region_resident)
+
+
+#VARIANT PROPORTIONS
+#ALPHA
+LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,37)])
+LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Alpha_proportion/100
+
+LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_variant <- aggregate(LTLA_variant$total_variant, by = list(regionName = LTLA_variant$regionName,
+                                                                     Week = LTLA_variant$Week),
+                             FUN = sum, na.rm = TRUE)
+
+colnames(Region_variant) <- c("areaName","Week", "Total_variant")
+hospital_admissions <- merge(hospital_admissions, Region_variant, by = c("areaName", "Week"))
+hospital_admissions$Alpha_proportion <- hospital_admissions$Total_variant/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-14]
+rm(LTLA_variant, Region_variant)
+
+#Delta_proportion
+LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,38)])
+LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Delta_proportion/100
+
+LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_variant <- aggregate(LTLA_variant$total_variant, by = list(regionName = LTLA_variant$regionName,
+                                                                  Week = LTLA_variant$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_variant) <- c("areaName","Week", "Total_variant")
+hospital_admissions <- merge(hospital_admissions, Region_variant, by = c("areaName", "Week"))
+hospital_admissions$Delta_proportion <- hospital_admissions$Total_variant/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-15]
+rm(LTLA_variant, Region_variant)
+
+
+#Delta_AY_4_2_proportion
+LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,39)])
+LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Delta_AY_4_2_proportion/100
+
+LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_variant <- aggregate(LTLA_variant$total_variant, by = list(regionName = LTLA_variant$regionName,
+                                                                  Week = LTLA_variant$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_variant) <- c("areaName","Week", "Total_variant")
+hospital_admissions <- merge(hospital_admissions, Region_variant, by = c("areaName", "Week"))
+hospital_admissions$Delta_AY_4_2_proportion <- hospital_admissions$Total_variant/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-16]
+rm(LTLA_variant, Region_variant)
+
+
+#Omicron_BA_1_proportion
+LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,40)])
+LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BA_1_proportion/100
+
+LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_variant <- aggregate(LTLA_variant$total_variant, by = list(regionName = LTLA_variant$regionName,
+                                                                  Week = LTLA_variant$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_variant) <- c("areaName","Week", "Total_variant")
+hospital_admissions <- merge(hospital_admissions, Region_variant, by = c("areaName", "Week"))
+hospital_admissions$Omicron_BA_1_proportion <- hospital_admissions$Total_variant/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-17]
+rm(LTLA_variant, Region_variant)
+
+#Omicron_BA_2_proportion
+LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,41)])
+LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BA_2_proportion/100
+
+LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_variant <- aggregate(LTLA_variant$total_variant, by = list(regionName = LTLA_variant$regionName,
+                                                                  Week = LTLA_variant$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_variant) <- c("areaName","Week", "Total_variant")
+hospital_admissions <- merge(hospital_admissions, Region_variant, by = c("areaName", "Week"))
+hospital_admissions$Omicron_BA_2_proportion <- hospital_admissions$Total_variant/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-18]
+rm(LTLA_variant, Region_variant)
+
+#Other_proportion
+LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,42)])
+LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Other_proportion/100
+
+LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_variant <- aggregate(LTLA_variant$total_variant, by = list(regionName = LTLA_variant$regionName,
+                                                                  Week = LTLA_variant$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_variant) <- c("areaName","Week", "Total_variant")
+hospital_admissions <- merge(hospital_admissions, Region_variant, by = c("areaName", "Week"))
+hospital_admissions$Other_proportion <- hospital_admissions$Total_variant/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-19]
+rm(LTLA_variant, Region_variant)
+
+#Omicron_BQ_1_proportion
+LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,43)])
+LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BQ_1_proportion/100
+
+LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_variant <- aggregate(LTLA_variant$total_variant, by = list(regionName = LTLA_variant$regionName,
+                                                                  Week = LTLA_variant$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_variant) <- c("areaName","Week", "Total_variant")
+hospital_admissions <- merge(hospital_admissions, Region_variant, by = c("areaName", "Week"))
+hospital_admissions$Omicron_BQ_1_proportion <- hospital_admissions$Total_variant/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-20]
+rm(LTLA_variant, Region_variant)
+
+#Omicron_BA_4_proportion
+LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,44)])
+LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BA_4_proportion/100
+
+LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_variant <- aggregate(LTLA_variant$total_variant, by = list(regionName = LTLA_variant$regionName,
+                                                                  Week = LTLA_variant$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_variant) <- c("areaName","Week", "Total_variant")
+hospital_admissions <- merge(hospital_admissions, Region_variant, by = c("areaName", "Week"))
+hospital_admissions$Omicron_BA_4_proportion <- hospital_admissions$Total_variant/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-21]
+rm(LTLA_variant, Region_variant)
+
+#Omicron_BA_5_proportion
+LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,45)])
+LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BA_5_proportion/100
+
+LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_variant <- aggregate(LTLA_variant$total_variant, by = list(regionName = LTLA_variant$regionName,
+                                                                  Week = LTLA_variant$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_variant) <- c("areaName","Week", "Total_variant")
+hospital_admissions <- merge(hospital_admissions, Region_variant, by = c("areaName", "Week"))
+hospital_admissions$Omicron_BA_5_proportion <- hospital_admissions$Total_variant/hospital_admissions$Population*100
+hospital_admissions <- hospital_admissions[,-22]
+rm(LTLA_variant, Region_variant)
+
+
+#Weighted NHS funding
+#"Core_services_funding_by_weighted"                 
+LTLA_funding <- distinct(Case_Rates_Data[,c(1,2,4,52)])
+LTLA_funding$total_funding <- LTLA_funding$Population*LTLA_funding$Core_services_funding_by_weighted
+
+LTLA_funding <- merge(LTLA_funding, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_funding <- aggregate(LTLA_funding$total_funding, by = list(regionName = LTLA_funding$regionName,
+                                                                  Week = LTLA_funding$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_funding) <- c("areaName","Week", "Total_funding")
+hospital_admissions <- merge(hospital_admissions, Region_funding, by = c("areaName", "Week"))
+hospital_admissions$Core_services_funding_by_weighted <- hospital_admissions$Total_funding/hospital_admissions$Population
+hospital_admissions <- hospital_admissions[,-23]
+rm(LTLA_funding, Region_funding)
+
+#"Primary_care_funding_by_weighted"
+LTLA_funding <- distinct(Case_Rates_Data[,c(1,2,4,53)])
+LTLA_funding$total_funding <- LTLA_funding$Population*LTLA_funding$Primary_care_funding_by_weighted
+
+LTLA_funding <- merge(LTLA_funding, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_funding <- aggregate(LTLA_funding$total_funding, by = list(regionName = LTLA_funding$regionName,
+                                                                  Week = LTLA_funding$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_funding) <- c("areaName","Week", "Total_funding")
+hospital_admissions <- merge(hospital_admissions, Region_funding, by = c("areaName", "Week"))
+hospital_admissions$Primary_care_funding_by_weighted <- hospital_admissions$Total_funding/hospital_admissions$Population
+hospital_admissions <- hospital_admissions[,-24]
+rm(LTLA_funding, Region_funding)
+
+#"Specialised_services_by_weighted"  
+LTLA_funding <- distinct(Case_Rates_Data[,c(1,2,4,54)])
+LTLA_funding$total_funding <- LTLA_funding$Population*LTLA_funding$Specialised_services_by_weighted
+
+LTLA_funding <- merge(LTLA_funding, LTLA_to_region[,c(2,5)], by = c("areaCode"))
+Region_funding <- aggregate(LTLA_funding$total_funding, by = list(regionName = LTLA_funding$regionName,
+                                                                  Week = LTLA_funding$Week),
+                            FUN = sum, na.rm = TRUE)
+
+colnames(Region_funding) <- c("areaName","Week", "Total_funding")
+hospital_admissions <- merge(hospital_admissions, Region_funding, by = c("areaName", "Week"))
+hospital_admissions$Specialised_services_by_weighted <- hospital_admissions$Total_funding/hospital_admissions$Population
+hospital_admissions <- hospital_admissions[,-25]
+rm(LTLA_funding, Region_funding)
+
 
 save(LTLA_to_region_matrix, file = 'Outputs/LTLA_to_region_matrix.RData')
 write.csv(hospital_admissions, file = 'Outputs/Hospitalisations_Data.csv')
