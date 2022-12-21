@@ -82,7 +82,7 @@ parameters:
   covariates:
     default: "default"
   scale_by_number_of_neighbours:
-    default: TRUE
+    default: FALSE
   algorithm:
     default: "NUTS"
 # Similar to "data" but sets of temporary views before the data are
@@ -140,6 +140,9 @@ depends:
       use:
         Cases_Data.RData: Outputs/Cases_Data.RData
         W.RData: Outputs/W.RData
+        Hospitalisations_Data.RData: Outputs/Hospitalisations_Data.RData
+        LTLA_to_region_matrix.RData: Outputs/LTLA_to_region_matrix.RData
+        
 
 # For example, to depend on the latest version of report
 # 'other-report', pulling in 'data.csv' as 'other-data.csv' you might

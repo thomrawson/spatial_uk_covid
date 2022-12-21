@@ -4,7 +4,12 @@
 ###########################################################################
 #Load the cleaned and prepared case/covariate data
 load('Cases_Data.RData')
+#Load the neigbors matrix
 load('W.RData')
+#Load the region-to-LTLA matrix
+load('LTLA_to_region_matrix.RData')
+#Load the hospitalisations matrix
+load('Hospitalisations_Data.RData')
 
 #if you are using rstan locally on a multicore machine and have plenty of RAM to
 #estimate your model in parallel, at this point execute
@@ -21,8 +26,9 @@ rstan_options(auto_write = TRUE)
 if(covariates == "default"){
   
   #Cut down to the only covariates we're interested in:
-  Case_Rates_Data <- Case_Rates_Data[,-c(4,6,15,18,19,21,22,24,25,26,27,28,
-                                         37)] #Cut Omicron BQ1
+  Case_Rates_Data <- Case_Rates_Data[,-c(5,6,15,16,18,19,22,24,25,28,30,31,32,33,
+                                         43, #Cut Omicron BQ1
+                                         46,49,50,51,60,61,62:76)] 
   
   
   #Weeks go from 2:130
@@ -67,9 +73,9 @@ if(covariates == "default"){
   unique(missing_data$areaCode)
   
   
-#We need to quickly clean up an issue with the Residential mobility
+#We need to quickly clean up an issue with the Residential & transit mobility
 #TODO: Move this to the 00 task.
-  #There are 24 occassions where the residential mobility is NA,
+  #There are 24 occasions where the residential mobility is NA,
   #19 of these are Rutland
 
 #For Rutland, we're going to take the average of it's neighbors mobility score for these days:
@@ -89,8 +95,6 @@ for(i in 1:length(missing_data$areaCode)){
   }
 }
 
-missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
-unique(missing_data$areaCode)
 
 #For these remaining 5, all week 2 and 3, I'm going to use the mobility scores for
 #week 4
@@ -109,7 +113,24 @@ for( i in 1:length(missing_data$areaCode)){
 
 missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
 #All NAs are now removed!
+rm(test, missing_data, Neighbor_hold, Week_hold, areaCode_hold, residential_mean_hold)
+
+#Rutland is missing basically all of it's transit mobility data, so we'll take the average of it's neighbors for all of these
+
+missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$transit_stations_percent_change_from_baseline)),]
+for(i in 1:length(missing_data$areaCode)){
+  Week_hold <- missing_data$Week[i]
+  Neighbor_hold <- filter(Case_Rates_Data, Week == Week_hold)
+  Neighbor_hold <- filter(Neighbor_hold, INDEX %in% Rutland_neighbors)
+  transit_mean_hold <- mean(Neighbor_hold$transit_stations_percent_change_from_baseline)
+  
+  Case_Rates_Data$transit_stations_percent_change_from_baseline[which((Case_Rates_Data$areaName == "Rutland")&(Case_Rates_Data$Week == Week_hold))] <- transit_mean_hold
+  
 }
+
+}
+
+
 
 ###################
 #Begin STAN fit
@@ -126,33 +147,33 @@ data {
   //int<lower=1, upper=N> node1[N_edges];  // node1[i] adjacent to node2[i]
   //int<lower=1, upper=N> node2[N_edges];  // and node1[i] < node2[i]
 
-  int<lower=0> y[N,T];              // count outcomes
-  matrix<lower=0>[N,T] E;           // exposure (previous days cases)
-  matrix<lower=0>[N,T] E_neighbours; // exposure (mean previous days cases of neighbours)
+  int<lower=0> y[N,T];              // count outcomes (next week's cases)
+  matrix<lower=0>[N,T] E;           // exposure (current week's cases)
+  matrix<lower=0>[N,T] E_neighbours; // exposure (mean current week's cases for neighbours)
   int<lower=1> K;                 // num covariates 
   //matrix[N, K] x;                 // design matrix
-  //matrix[7, 2] mu[15, 12];  declares a 15 by 12 array of  7Ã—2 matrices.
+  //matrix[7, 2] mu[15, 12];  declares a 15 by 12 array of  7Ã—2 matrices. kept as an example of formatting
   matrix[N, K] x[T];                 // design matrix
 
 }
 transformed data {
-  //matrix[N,T] log_E = log(E + E_neighbours);
+  //matrix[N,T] log_E = log(E + E_neighbours); #kept as formatting reminder
 }
 parameters {
   real beta0;            // intercept
   vector[K] betas;       // covariates
   vector<lower = 0>[N] zetas;       //spatial kernel, but this can't be less than 0
 
-  //matrix[N,T] theta;       // heterogeneous effects
-  //real theta;       // heterogeneous effects
   vector[N] theta;       // heterogeneous effects
+  real theta_mu; //hierarchical hyperparameter for drawing theta
+  real theta_sd; //hierarchical hyperparameter for drawing theta
 }
 transformed parameters {
 
 }
 model {
 for(i in 1:T){
-  y[,i] ~ poisson_log(log(E[,i] + zetas .*E_neighbours[,i]) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ poisson_log(log(E[,i] + (zetas .*E_neighbours[,i])) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
 }
 
   beta0 ~ normal(0.0, 1.0);
@@ -160,11 +181,18 @@ for(i in 1:T){
   zetas ~ normal(0.05, 1.0);
   //zetas ~ gamma(0.05, 1.0);
   
-  //Unsure just HOW MANY noise terms we should incorporate. Let's try with just one to start with
+  //Unsure just HOW MANY noise terms we should incorporate. 
+  // Let's try drawing them all from a hierarchical distribution 
   //for(i in 1:T){
-  //theta[,i] ~ normal(0.0, 1.0);
+  //theta[,i] ~ normal(theta_mu, theta_sd);
+  //theta_mu ~ normal(0.0,1.0);
+  //theta_sd ~ uniform(0.0,20.0);
   //}
-  theta ~ normal(0.0, 1.0);
+   // Let's try with just one for each region to start with
+  theta ~ normal(theta_mu, theta_sd);
+  theta_mu ~ normal(0.0,1.0);
+  theta_sd ~ uniform(0.0,20.0);
+
   
 }
 generated quantities {
@@ -183,12 +211,10 @@ N <- 306;
 y <- array(0, dim = c(T,N))
 E <- array(0, dim = c(T,N))
 #K is current number of covariates
-K <- 18;
+K <- 26;
 x <- array(0, dim = c(T, N,K))
 
 
-#Now we smooth out the mobility means for when there's NaN
-#TODO: Think of a better way to do this tbh...
 for(i in 2:final_week){
   j <- i-1
   
@@ -202,24 +228,32 @@ for(i in 2:final_week){
   
   #For now I will not scale the percentages, I'll just give them from 0 to 1
   
-  x[j,,1] <- scale(Reduced_Data$Pop_per_km2)
-  x[j,,2] <- Reduced_Data$cumVaccPercentage_FirstDose/100
-  x[j,,3] <- Reduced_Data$cumVaccPercentage_SecondDose/100
-  x[j,,4] <- Reduced_Data$cumVaccPercentage_ThirdDose/100
-  x[j,,5] <- scale(Reduced_Data$prop_white_british)
-  x[j,,6] <- scale(Reduced_Data$IMD_Average_score)   
-  x[j,,7] <- scale(Reduced_Data$mean_age) 
-  x[j,,8] <- scale(Reduced_Data$Median_annual_income) 
-  x[j,,9] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
-  x[j,,10] <- scale(Reduced_Data$residential_percent_change_from_baseline)
-  x[j,,11] <- Reduced_Data$Alpha_proportion/100
-  x[j,,12] <- Reduced_Data$Delta_proportion/100
-  x[j,,13] <- Reduced_Data$Delta_AY_4_2_proportion/100
-  x[j,,14] <- Reduced_Data$Omicron_BA_1_proportion/100
-  x[j,,15] <- Reduced_Data$Omicron_BA_2_proportion/100
-  x[j,,16] <- Reduced_Data$Omicron_BA_4_proportion/100
-  x[j,,17] <- Reduced_Data$Omicron_BA_5_proportion/100
-  x[j,,18] <- Reduced_Data$Other_proportion/100
+  x[j,,1] <- Reduced_Data$cumVaccPercentage_FirstDose/100
+  x[j,,2] <- Reduced_Data$cumVaccPercentage_SecondDose/100
+  x[j,,3] <- Reduced_Data$cumVaccPercentage_ThirdDose/100
+  x[j,,4] <- scale(Reduced_Data$prop_white_british)
+  x[j,,5] <- scale(Reduced_Data$prop_asian)
+  x[j,,6] <- scale(Reduced_Data$prop_black_afr_car)
+  x[j,,7] <- scale(Reduced_Data$IMD_Average_score)   
+  x[j,,8] <- scale(Reduced_Data$prop_o65) 
+  x[j,,9] <- scale(Reduced_Data$Median_annual_income) 
+  x[j,,10] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
+  x[j,,11] <- scale(Reduced_Data$residential_percent_change_from_baseline)
+  x[j,,12] <- scale(Reduced_Data$transit_stations_percent_change_from_baseline)
+  x[j,,13] <- Reduced_Data$Alpha_proportion/100
+  x[j,,14] <- Reduced_Data$Delta_proportion/100
+  x[j,,15] <- Reduced_Data$Delta_AY_4_2_proportion/100
+  x[j,,16] <- Reduced_Data$Omicron_BA_1_proportion/100
+  x[j,,17] <- Reduced_Data$Omicron_BA_2_proportion/100
+  x[j,,18] <- Reduced_Data$Omicron_BA_4_proportion/100
+  x[j,,19] <- Reduced_Data$Omicron_BA_5_proportion/100
+  x[j,,20] <- Reduced_Data$Other_proportion/100
+  x[j,,21] <- scale(Reduced_Data$Core_services_funding_by_weighted)
+  x[j,,22] <- scale(Reduced_Data$Primary_care_funding_by_weighted)
+  x[j,,23] <- scale(Reduced_Data$Specialised_services_by_weighted)
+  x[j,,24] <- scale(Reduced_Data$unringfenced/Reduced_Data$Population)
+  x[j,,25] <- scale(Reduced_Data$contain_outbreak_management/Reduced_Data$Population)
+  x[j,,26] <- scale(Reduced_Data$ASC_infection_control_fund/Reduced_Data$Population)
   
 }
 

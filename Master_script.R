@@ -53,6 +53,16 @@ model_fit <- orderly::orderly_run("01a_model_fit",
 
 orderly::orderly_commit(model_fit)
 
+#develop the code
+orderly::orderly_develop_start("01a_model_fit", 
+                     parameters = list(warmup_iterations = 200,
+                                       total_iterations = 1000,
+                                       tree_depth = 8,
+                                       covariates = "default",
+                                       scale_by_number_of_neighbours = FALSE,
+                                       algorithm = "NUTS"))  #HMC or "NUTS" (default)
+
+orderly::orderly_develop_clean()
 
 #200/1000: 8 td : 35mins PC NUTS
 #200/1000: 8 td : bloody ages PC HMC

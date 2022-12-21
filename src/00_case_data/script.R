@@ -1185,9 +1185,14 @@ Variant_Data <- rbind(VAM_Variant_Data, Portal_Variant_Data)
 ggplot(Variant_Data) +
   geom_line(aes(x = date, y = newWeeklyPercentage, color = variant,
                 lty = data_source)) +
-  facet_wrap(~ nhs_region)
+  facet_wrap(~ nhs_region) -> variant_plot
 
-ggsave("Outputs/Variants.png", width = 35, height = 20, units = "cm")
+#ggsave("Outputs/Variants.png", width = 35, height = 20, units = "cm")
+ggsave(filename = "Variants.png",
+       path = 'Outputs/', plot = variant_plot,
+       dpi=300, 
+       height=20, width=35, units="cm")
+
 
 write.csv(Variant_Data, file = "Outputs/Variants_data.csv")
 
@@ -1935,6 +1940,7 @@ hospital_admissions <- hospital_admissions[,-25]
 rm(LTLA_funding, Region_funding)
 
 
+save(hospital_admissions, file = 'Outputs/Hospitalisations_Data.RData')
 save(LTLA_to_region_matrix, file = 'Outputs/LTLA_to_region_matrix.RData')
 write.csv(hospital_admissions, file = 'Outputs/Hospitalisations_Data.csv')
-save(hospital_admissions, file = 'Outputs/Hospitalisations_Data.RData')
+
