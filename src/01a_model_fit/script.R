@@ -517,5 +517,7 @@ stanfit = stan(model_code = Stan_model_string,
 dir.create("Outputs")
 
 save(stanfit, file = 'Outputs/stanfit.RData')
-save(c(N,T,y,x,K,E,E_neighbours_scaled, file = "Outputs/model_data.RData"))
+save(c(N,T,y,x,K,E,E_neighbours_scaled, N_hosp, y_hosp, x_hosp, K_hosp, 
+       Distance_matrix, susceptible_proxy, LTLA_to_region_matrix, 
+       hospital_admissions,Case_Rates_Data, file = "Outputs/model_data.RData"))
 
