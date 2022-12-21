@@ -131,6 +131,9 @@ for(i in 1:length(missing_data$areaCode)){
 }
 
 
+#Hospitalisations data
+hospital_admissions <- filter(hospital_admissions, Week < final_week+1+5) #we add an extra 5 to allow for the lagged time to hospitalisation
+
 
 ###################
 #Begin STAN fit
@@ -143,17 +146,22 @@ Stan_model_string = "
 data {
   int<lower=0> N; // Number of areas
   int<lower=0> T; // Number of timepoints
-  //int<lower=0> N_edges; //Number of edges
-  //int<lower=1, upper=N> node1[N_edges];  // node1[i] adjacent to node2[i]
-  //int<lower=1, upper=N> node2[N_edges];  // and node1[i] < node2[i]
+
 
   int<lower=0> y[N,T];              // count outcomes (next week's cases)
   matrix<lower=0>[N,T] E;           // exposure (current week's cases)
   matrix<lower=0>[N,T] E_neighbours; // exposure (mean current week's cases for neighbours)
   int<lower=1> K;                 // num covariates 
-  //matrix[N, K] x;                 // design matrix
-  //matrix[7, 2] mu[15, 12];  declares a 15 by 12 array of  7Ã—2 matrices. kept as an example of formatting
   matrix[N, K] x[T];                 // design matrix
+  
+  //Hospitalisations
+  int<lower=0> N_hosp;
+  int<lower=1> K_hosp;
+  matrix[N_hosp,N] LTLA_to_region;
+  int<lower=0> y_hosp[N_hosp,T+4];
+  matrix[N_hosp,K_hosp] x_hosp[T+4];
+  matrix[N,T] y_as_matrix;
+  int<lower=0> average_hosp_lag;
 
 }
 transformed data {
@@ -167,6 +175,16 @@ parameters {
   vector[N] theta;       // heterogeneous effects
   real theta_mu; //hierarchical hyperparameter for drawing theta
   real theta_sd; //hierarchical hyperparameter for drawing theta
+  
+  //Coupled Hospitalisation parameters
+  //real<lower=0,upper=3> average_hosp_lag; //The number of weeks hospitalisations lag behind cases
+  //real<lower=0> average_hosp_lag_lambda; //The hyperparameter for the lag
+  
+  real beta0_hosp; //intercept
+  vector[K_hosp] betas_hosp;
+  vector[N_hosp] theta_hosp;       // heterogeneous effects
+  real theta_hosp_mu; //hierarchical hyperparameter for drawing theta
+  real theta_hosp_sd; //hierarchical hyperparameter for drawing theta
 }
 transformed parameters {
 
@@ -174,12 +192,16 @@ transformed parameters {
 model {
 for(i in 1:T){
   y[,i] ~ poisson_log(log(E[,i] + (zetas .*E_neighbours[,i])) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
+  y_hosp[,i+average_hosp_lag] ~ poisson_log(log(LTLA_to_region*y_as_matrix[,i]) + beta0_hosp + x_hosp[i]*betas_hosp + theta_hosp);
 }
+
 
   beta0 ~ normal(0.0, 1.0);
   betas ~ normal(0.0, 1.0);
   zetas ~ normal(0.05, 1.0);
-  //zetas ~ gamma(0.05, 1.0);
+  
+  beta0_hosp ~ normal(0.0, 1.0);
+  betas_hosp ~ normal(0.0, 1.0);
   
   //Unsure just HOW MANY noise terms we should incorporate. 
   // Let's try drawing them all from a hierarchical distribution 
@@ -192,7 +214,11 @@ for(i in 1:T){
   theta ~ normal(theta_mu, theta_sd);
   theta_mu ~ normal(0.0,1.0);
   theta_sd ~ uniform(0.0,20.0);
-
+  
+    theta_hosp ~ normal(theta_hosp_mu, theta_hosp_sd);
+  theta_hosp_mu ~ normal(0.0,1.0);
+  theta_hosp_sd ~ uniform(0.0,20.0);
+  
   
 }
 generated quantities {
@@ -213,7 +239,6 @@ E <- array(0, dim = c(T,N))
 #K is current number of covariates
 K <- 26;
 x <- array(0, dim = c(T, N,K))
-
 
 for(i in 2:final_week){
   j <- i-1
@@ -257,7 +282,10 @@ for(i in 2:final_week){
   
 }
 
+
+
 W_reduced <- W[Reduced_Data$INDEX, Reduced_Data$INDEX]
+
 #Calculate E_neighbours
 E_neighbours <- W_reduced%*%t(E)
 if(scale_by_number_of_neighbours == TRUE){
@@ -267,13 +295,64 @@ Nbors <- as.numeric(rowSums(W_reduced))
 }
 E_neighbours_scaled <- E_neighbours/Nbors
 
+#Hospitalisations
+##################
+LTLA_to_region_matrix <- LTLA_to_region_matrix[Reduced_Data$INDEX,]
+
+N_hosp <- 7;
+y_hosp <- array(0, dim = c(T+4,N_hosp))
+#K is current number of covariates
+K_hosp <- 17;
+x_hosp <- array(0, dim = c(T+4, N_hosp,K_hosp))
+
+for(i in 3:(final_week+5)){ #107 total
+  j <- i-2
+  
+  Reduced_Hosp_Data <- filter(hospital_admissions, Week == i)
+  Reduced_Hosp_Data <- Reduced_Hosp_Data[order(Reduced_Hosp_Data$region_index),]
+  
+  y_hosp[j,] = Reduced_Hosp_Data$Week_Hospitalisations;
+  
+  #scale() will fail if all variables are the same value (i.e. if sd = 0)
+  
+  #For now I will not scale the percentages, I'll just give them from 0 to 1
+  
+  x_hosp[j,,1] <- Reduced_Hosp_Data$cumVaccPercentage_FirstDose/100
+  x_hosp[j,,2] <- Reduced_Hosp_Data$cumVaccPercentage_SecondDose/100
+  x_hosp[j,,3] <- Reduced_Hosp_Data$cumVaccPercentage_ThirdDose/100
+  x_hosp[j,,4] <- scale(Reduced_Hosp_Data$IMD_Average_score)   
+  x_hosp[j,,5] <- scale(Reduced_Hosp_Data$residential_percent_change_from_baseline)
+  x_hosp[j,,6] <- scale(Reduced_Hosp_Data$transit_stations_percent_change_from_baseline)
+  x_hosp[j,,7] <- Reduced_Hosp_Data$Alpha_proportion/100
+  x_hosp[j,,8] <- Reduced_Hosp_Data$Delta_proportion/100
+  x_hosp[j,,9] <- Reduced_Hosp_Data$Delta_AY_4_2_proportion/100
+  x_hosp[j,,10] <- Reduced_Hosp_Data$Omicron_BA_1_proportion/100
+  x_hosp[j,,11] <- Reduced_Hosp_Data$Omicron_BA_2_proportion/100
+  x_hosp[j,,12] <- Reduced_Hosp_Data$Omicron_BA_4_proportion/100
+  x_hosp[j,,13] <- Reduced_Hosp_Data$Omicron_BA_5_proportion/100
+  x_hosp[j,,14] <- Reduced_Hosp_Data$Other_proportion/100
+  x_hosp[j,,15] <- scale(Reduced_Hosp_Data$Core_services_funding_by_weighted)
+  x_hosp[j,,16] <- scale(Reduced_Hosp_Data$Primary_care_funding_by_weighted)
+  x_hosp[j,,17] <- scale(Reduced_Hosp_Data$Specialised_services_by_weighted)
+
+  
+}
+
+
+
 if(algorithm == "NUTS"){
 stanfit = stan(model_code = Stan_model_string,
                data=list(N=N,T=T,
                          y=t(y),
                          x=x, K=K,
                          E=t(E),
-                         E_neighbours = E_neighbours_scaled),
+                         E_neighbours = E_neighbours_scaled,
+                         N_hosp = N_hosp,
+                         y_hosp = t(y_hosp),
+                         x_hosp = x_hosp, K_hosp = K_hosp,
+                         average_hosp_lag = 1,
+                         y_as_matrix = t(y),
+                         LTLA_to_region = t(LTLA_to_region_matrix)),
                algorithm = algorithm,
                warmup=warmup_iterations, iter=total_iterations,
                control = list(max_treedepth = tree_depth));
@@ -283,7 +362,12 @@ stanfit = stan(model_code = Stan_model_string,
                            y=t(y),
                            x=x, K=K,
                            E=t(E),
-                           E_neighbours = E_neighbours_scaled),
+                           E_neighbours = E_neighbours_scaled,
+                           N_hosp = N_hosp,
+                           y_hosp = t(y_hosp),
+                           x_hosp = x_hosp, K_hosp = K_hosp,
+                           average_hosp_lag = 1,
+                           LTLA_to_region = t(LTLA_to_region_matrix)),
                  algorithm = algorithm,
                  warmup=warmup_iterations, iter=total_iterations);
 } else{
