@@ -49,6 +49,8 @@ model_fit <- orderly::orderly_run("01a_model_fit",
                                                     tree_depth = 8,
                                                     covariates = "default",
                                                     scale_by_number_of_neighbours = TRUE,
+                                                    scale_by_susceptible_pool = FALSE,
+                                                    spatial_kernel = "neighbours",
                                                     algorithm = "NUTS"))  #HMC or "NUTS" (default)
 
 orderly::orderly_commit(model_fit)

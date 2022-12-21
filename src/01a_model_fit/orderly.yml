@@ -85,6 +85,10 @@ parameters:
     default: FALSE
   algorithm:
     default: "NUTS"
+  scale_by_susceptible_pool:
+    default: FALSE
+  spatial_kernel:
+  default: "neighbours"
 # Similar to "data" but sets of temporary views before the data are
 # extracted.  Can be embedded SQL strings or filenames to actual
 # queries.  Use this to simplify the extraction.

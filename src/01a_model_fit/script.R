@@ -142,7 +142,7 @@ hospital_admissions <- filter(hospital_admissions, Week < final_week+1+5) #we ad
 
 #Define model
 
-Stan_model_string = "
+Stan_model_string_neighbours = "
 data {
   int<lower=0> N; // Number of areas
   int<lower=0> T; // Number of timepoints
@@ -154,6 +154,8 @@ data {
   int<lower=1> K;                 // num covariates 
   matrix[N, K] x[T];                 // design matrix
   
+  matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
+  
   //Hospitalisations
   int<lower=0> N_hosp;
   int<lower=1> K_hosp;
@@ -162,6 +164,9 @@ data {
   matrix[N_hosp,K_hosp] x_hosp[T+4];
   matrix[N,T] y_as_matrix;
   int<lower=0> average_hosp_lag;
+  
+  //Distance between LTLAs
+  matrix<lower=0>[N,N] Distance_matrix;
 
 }
 transformed data {
@@ -191,7 +196,7 @@ transformed parameters {
 }
 model {
 for(i in 1:T){
-  y[,i] ~ poisson_log(log(E[,i] + (zetas .*E_neighbours[,i])) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ poisson_log(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
   y_hosp[,i+average_hosp_lag] ~ poisson_log(log(LTLA_to_region*y_as_matrix[,i]) + beta0_hosp + x_hosp[i]*betas_hosp + theta_hosp);
 }
 
@@ -228,7 +233,114 @@ generated quantities {
   
 }
 "
+#######################################################################################################################
 
+Stan_model_string_gravity = "
+data {
+  int<lower=0> N; // Number of areas
+  int<lower=0> T; // Number of timepoints
+
+
+  int<lower=0> y[N,T];              // count outcomes (next week's cases)
+  matrix<lower=0>[N,T] E;           // exposure (current week's cases)
+  matrix<lower=0>[N,T] E_neighbours; // exposure (mean current week's cases for neighbours)
+  int<lower=1> K;                 // num covariates 
+  matrix[N, K] x[T];                 // design matrix
+  
+  matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
+  
+  //Hospitalisations
+  int<lower=0> N_hosp;
+  int<lower=1> K_hosp;
+  matrix[N_hosp,N] LTLA_to_region;
+  int<lower=0> y_hosp[N_hosp,T+4];
+  matrix[N_hosp,K_hosp] x_hosp[T+4];
+  matrix[N,T] y_as_matrix;
+  int<lower=0> average_hosp_lag;
+  
+  //Distance between LTLAs
+  matrix<lower=0>[N,N] Distance_matrix;
+
+}
+transformed data {
+}
+parameters {
+  real beta0;            // intercept
+  vector[K] betas;       // covariates
+  //vector<lower = 0>[N] zetas;       //spatial kernel, but this can't be less than 0
+
+  vector[N] theta;       // heterogeneous effects
+  real theta_mu; //hierarchical hyperparameter for drawing theta
+  real theta_sd; //hierarchical hyperparameter for drawing theta
+  
+  real beta0_hosp; //intercept
+  vector[K_hosp] betas_hosp;
+  vector[N_hosp] theta_hosp;       // heterogeneous effects
+  real theta_hosp_mu; //hierarchical hyperparameter for drawing theta
+  real theta_hosp_sd; //hierarchical hyperparameter for drawing theta
+  
+  real<lower=0> distance_alpha;
+  real<lower=0> distance_gamma;
+  
+}
+transformed parameters {
+matrix<lower=0>[N,N] smoothed_distance_matrix;
+  for(i in 1:N){
+  for(j in 1:N){
+  smoothed_distance_matrix[i,j] = 1/((1 + (Distance_matrix[i,j]/distance_alpha))^distance_gamma);
+  }
+  }
+
+}
+model {
+for(i in 1:T){
+  y[,i] ~ poisson_log(log(susceptible_proxy[,i].*((smoothed_distance_matrix*E[,i]))) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
+  y_hosp[,i+average_hosp_lag] ~ poisson_log(log(LTLA_to_region*y_as_matrix[,i]) + beta0_hosp + x_hosp[i]*betas_hosp + theta_hosp);
+}
+
+
+  beta0 ~ normal(0.0, 1.0);
+  betas ~ normal(0.0, 1.0);
+  //zetas ~ normal(0.05, 1.0);
+  
+  beta0_hosp ~ normal(0.0, 1.0);
+  betas_hosp ~ normal(0.0, 1.0);
+  
+  theta ~ normal(theta_mu, theta_sd);
+  theta_mu ~ normal(0.0,1.0);
+  theta_sd ~ uniform(0.0,20.0);
+  
+    theta_hosp ~ normal(theta_hosp_mu, theta_hosp_sd);
+  theta_hosp_mu ~ normal(0.0,1.0);
+  theta_hosp_sd ~ uniform(0.0,20.0);
+  
+  distance_alpha ~ uniform(0,50);
+  distance_gamma ~ normal(1.0, 1.0);
+
+  
+}
+generated quantities {
+}
+"
+
+#Build the distance matrix
+#scaled also by population of location
+Week_50_data <- filter(Case_Rates_Data, Week == 50)
+Week_50_data <- Week_50_data[,c(4,5,41,42)]
+Week_50_data <- Week_50_data[order(Week_50_data$INDEX),]
+
+Distance_matrix <- array(0, dim = c(N,N))
+for(i in 1:306){
+  for(j in 1:306){
+    location_i <- Week_50_data[i,]
+    location_j <- Week_50_data[j,]
+    euclid_distance <- sqrt((location_i$centroid_x - location_j$centroid_x)^2 + (location_i$centroid_y - location_j$centroid_y)^2)
+    Distance_matrix[i,j] <- (euclid_distance/1e+16)*location_i$Population*location_j$Population
+  }
+}
+
+
+######################################################################################################################
 
 
 T <- final_week-1;
@@ -240,6 +352,8 @@ E <- array(0, dim = c(T,N))
 K <- 26;
 x <- array(0, dim = c(T, N,K))
 
+scale_by_recent_cases <- array(0, dim = c(T,N))
+
 for(i in 2:final_week){
   j <- i-1
   
@@ -248,6 +362,7 @@ for(i in 2:final_week){
   
   y[j,] = Reduced_Data$next_week_cases;
   E[j,] = Reduced_Data$Week_Cases;
+  scale_by_recent_cases[j,] = Reduced_Data$total_cases_last25/Reduced_Data$Population
   
   #scale() will fail if all variables are the same value (i.e. if sd = 0)
   
@@ -294,6 +409,16 @@ Nbors <- as.numeric(rowSums(W_reduced))
   Nbors <- 1
 }
 E_neighbours_scaled <- E_neighbours/Nbors
+susceptible_proportion_estimate <- 1 - scale_by_recent_cases #This is currently #of cases / population, so 1 - this is a rough proxy of S/N
+
+if(scale_by_susceptible_pool){
+  susceptible_proxy <- susceptible_proportion_estimate
+}else if(!scale_by_susceptible_pool){
+  susceptible_proxy <- t(array(1, dim = c(T,N)))
+}else{
+  stop("Incompatible scale_by_susceptible_pool. Expected TRUE or FALSE")
+}
+
 
 #Hospitalisations
 ##################
@@ -339,6 +464,15 @@ for(i in 3:(final_week+5)){ #107 total
 }
 
 
+#Pick which model string
+if(spatial_kernel == "neighbours"){
+  Stan_model_string <- Stan_model_string_neighbours
+}else if(spatial_kernel == "gravity"){
+  Stan_model_string <- Stan_model_string_gravity
+}else{
+  stop("Unexpected spatial_kernel. Expected neighbours, or gravity.")
+}
+
 
 if(algorithm == "NUTS"){
 stanfit = stan(model_code = Stan_model_string,
@@ -351,7 +485,9 @@ stanfit = stan(model_code = Stan_model_string,
                          y_hosp = t(y_hosp),
                          x_hosp = x_hosp, K_hosp = K_hosp,
                          average_hosp_lag = 1,
+                         Distance_matrix = Distance_matrix,
                          y_as_matrix = t(y),
+                         susceptible_proxy = susceptible_proxy,
                          LTLA_to_region = t(LTLA_to_region_matrix)),
                algorithm = algorithm,
                warmup=warmup_iterations, iter=total_iterations,
@@ -367,11 +503,14 @@ stanfit = stan(model_code = Stan_model_string,
                            y_hosp = t(y_hosp),
                            x_hosp = x_hosp, K_hosp = K_hosp,
                            average_hosp_lag = 1,
+                           Distance_matrix = Distance_matrix,
+                           y_as_matrix = t(y),
+                           susceptible_proxy = susceptible_proxy,
                            LTLA_to_region = t(LTLA_to_region_matrix)),
                  algorithm = algorithm,
                  warmup=warmup_iterations, iter=total_iterations);
 } else{
-  print("Unknown fitting algorithm")
+  stop("Unknown fitting algorithm")
 }
 
 #Make folder for outputs
