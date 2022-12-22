@@ -323,21 +323,6 @@ generated quantities {
 }
 "
 
-#Build the distance matrix
-#scaled also by population of location
-Week_50_data <- filter(Case_Rates_Data, Week == 50)
-Week_50_data <- Week_50_data[,c(4,5,41,42)]
-Week_50_data <- Week_50_data[order(Week_50_data$INDEX),]
-
-Distance_matrix <- array(0, dim = c(N,N))
-for(i in 1:306){
-  for(j in 1:306){
-    location_i <- Week_50_data[i,]
-    location_j <- Week_50_data[j,]
-    euclid_distance <- sqrt((location_i$centroid_x - location_j$centroid_x)^2 + (location_i$centroid_y - location_j$centroid_y)^2)
-    Distance_matrix[i,j] <- (euclid_distance/1e+16)*location_i$Population*location_j$Population
-  }
-}
 
 
 ######################################################################################################################
@@ -418,6 +403,24 @@ if(scale_by_susceptible_pool){
 }else{
   stop("Incompatible scale_by_susceptible_pool. Expected TRUE or FALSE")
 }
+
+#################################################################################
+#Build the distance matrix
+#scaled also by population of location
+Week_50_data <- filter(Case_Rates_Data, Week == 50)
+Week_50_data <- Week_50_data[,c(4,5,41,42)]
+Week_50_data <- Week_50_data[order(Week_50_data$INDEX),]
+
+Distance_matrix <- array(0, dim = c(N,N))
+for(i in 1:306){
+  for(j in 1:306){
+    location_i <- Week_50_data[i,]
+    location_j <- Week_50_data[j,]
+    euclid_distance <- sqrt((location_i$centroid_x - location_j$centroid_x)^2 + (location_i$centroid_y - location_j$centroid_y)^2)
+    Distance_matrix[i,j] <- (euclid_distance/1e+16)*location_i$Population*location_j$Population
+  }
+}
+#################################################################################
 
 
 #Hospitalisations
@@ -517,7 +520,7 @@ stanfit = stan(model_code = Stan_model_string,
 dir.create("Outputs")
 
 save(stanfit, file = 'Outputs/stanfit.RData')
-save(c(N,T,y,x,K,E,E_neighbours_scaled, N_hosp, y_hosp, x_hosp, K_hosp, 
+save(N,T,y,x,K,E,E_neighbours_scaled, N_hosp, y_hosp, x_hosp, K_hosp, 
        Distance_matrix, susceptible_proxy, LTLA_to_region_matrix, 
-       hospital_admissions,Case_Rates_Data, file = "Outputs/model_data.RData"))
+       hospital_admissions,Case_Rates_Data, file = "Outputs/model_data.RData")
 
