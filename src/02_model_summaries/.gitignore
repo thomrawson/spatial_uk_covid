@@ -1,3 +1,5 @@
 *.png
 Outputs/
+Hospital_Outputs/
+Case_Outputs/
 Outputs/*.png

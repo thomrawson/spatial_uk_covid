@@ -45,44 +45,10 @@ script: script.R
 #             - figures/fig2.png
 artefacts:
   - data:
-      description: Model traceplot figures
+      description: stanfit object containing model output
       filenames:
-        - Case_Outputs/betas_21_26.png
-        - Case_Outputs/betas_1_12.png
-        - Case_Outputs/betas_13_20.png
-        - Case_Outputs/beta_trajectories1.png
-        - Case_Outputs/beta_trajectories2.png
-        - Case_Outputs/main_summaries.csv
-        - Case_Outputs/theta_summaries.csv
-        - Hospital_Outputs/main_summaries_hosp.csv
-        - Hospital_Outputs/theta_summaries_hosp.csv
-        - Hospital_Outputs/betas_other.png
-        - Hospital_Outputs/betas_variants.png
-        - Hospital_Outputs/beta_trajectories1.png
-        - Hospital_Outputs/beta_trajectories2.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_1.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_2.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_3.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_4.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_5.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_6.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_7.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_8.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_9.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_10.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_11.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_12.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_13.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_14.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_15.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_16.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_17.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_18.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_19.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_20.png
-        - Case_Outputs/theta_trajectories.png
-        - Hospital_Outputs/theta_trajectories.png
-        
+        - Outputs/stanfit.RData
+        - Outputs/model_data.RData
 
 # An optional name to describe the report in more detail than its
 # directory name (which must be short) but less detail than
@@ -109,6 +75,8 @@ artefacts:
 #
 # parameters:
 parameters:
+  warmup_iterations: ~
+  total_iterations: ~
   tree_depth:
     default: 10
   covariates:
@@ -170,6 +138,13 @@ packages:
 #       other_report_name:
 #         id: (identifier, possibly "latest")
 #         use: (mapping of filenames in the format dest: from)
+depends:
+  - 00_case_data:
+      id: latest
+      use:
+        Cases_Data.RData: Outputs/Cases_Data.RData
+        W.RData: Outputs/W.RData
+        
 
 # For example, to depend on the latest version of report
 # 'other-report', pulling in 'data.csv' as 'other-data.csv' you might
@@ -181,9 +156,4 @@ packages:
 #         use:
 #           other-data.csv: data.csv
 #
-depends:
-  - 01a_model_fit:
-      id: latest(parameter:tree_depth == tree_depth && parameter:covariates == covariates && parameter:scale_by_number_of_neighbours == scale_by_number_of_neighbours && parameter:algorithm == algorithm && parameter:scale_by_susceptible_pool == scale_by_susceptible_pool && parameter:spatial_kernel == spatial_kernel)
-      use:
-        stanfit.RData: Outputs/stanfit.RData
-        model_data.RData: Outputs/model_data.RData
+# depends:
