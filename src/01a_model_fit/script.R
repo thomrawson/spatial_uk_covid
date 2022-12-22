@@ -397,7 +397,7 @@ E_neighbours_scaled <- E_neighbours/Nbors
 susceptible_proportion_estimate <- 1 - scale_by_recent_cases #This is currently #of cases / population, so 1 - this is a rough proxy of S/N
 
 if(scale_by_susceptible_pool){
-  susceptible_proxy <- susceptible_proportion_estimate
+  susceptible_proxy <- t(susceptible_proportion_estimate)
 }else if(!scale_by_susceptible_pool){
   susceptible_proxy <- t(array(1, dim = c(T,N)))
 }else{
