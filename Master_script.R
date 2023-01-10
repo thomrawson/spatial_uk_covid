@@ -70,12 +70,12 @@ orderly::orderly_develop_clean()
 #Model without hospitalisations
 model_fit_no_hosp <- orderly::orderly_run("01b_model_fit_no_hospital", 
                                   parameters = list(warmup_iterations = 100,
-                                                    total_iterations = 300,
-                                                    tree_depth = 8,
+                                                    total_iterations = 200,
+                                                    tree_depth = 6,
                                                     covariates = "default",
                                                     scale_by_number_of_neighbours = FALSE,
                                                     scale_by_susceptible_pool = FALSE,
-                                                    spatial_kernel = "neighbours",
+                                                    spatial_kernel = "gravity",
                                                     algorithm = "NUTS"))  #HMC or "NUTS" (default)
 
 orderly::orderly_commit(model_fit_no_hosp)
@@ -127,10 +127,10 @@ orderly::orderly_commit(model_fit_no_hosp)
 
 ###############
 # 02 - Assessing the model fits
-model_assessment <- orderly::orderly_run("02_model_summaries",
-                                         parameters = list(tree_depth = 9,
+model_assessment <- orderly::orderly_run("02a_model_summaries",
+                                         parameters = list(tree_depth = 14,
                                                            scale_by_susceptible_pool = FALSE,
-                                                           spatial_kernel = "gravity"),
+                                                           spatial_kernel = "neighbours"),
                                          use_draft = "newer")
 
 
@@ -138,8 +138,8 @@ orderly::orderly_commit(model_assessment)
 
 
 #Develop
-orderly::orderly_develop_start("02_model_summaries",
-                     parameters = list(tree_depth = 12,
+orderly::orderly_develop_start("02a_model_summaries",
+                     parameters = list(tree_depth = 14,
                                        scale_by_susceptible_pool = FALSE,
                                        spatial_kernel = "neighbours"),
                      use_draft = "newer")

@@ -57,6 +57,7 @@ artefacts:
         - Outputs/LTLA_to_region_matrix.RData
         - Outputs/Hospitalisations_Data.csv
         - Outputs/Hospitalisations_Data.RData
+        - Outputs/Boundaries_Data.RData
 
 # An optional name to describe the report in more detail than its
 # directory name (which must be short) but less detail than

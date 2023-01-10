@@ -15,23 +15,23 @@ main_summaries <- summary(stanfit, pars = c('beta0', 'betas', 'zetas', 'lp__'))
 write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
 #Theta summaries are big, but we output anyway
 theta_summaries <- summary(stanfit, pars = c('theta_mu', 'theta_sd','theta'))
-write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names = FALSE)
+write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names = TRUE)
 #Main hospitalisation summaries
 main_summaries_hosp <- summary(stanfit, pars = c('beta0_hosp', 'betas_hosp', 'lp__'))
 write.csv(main_summaries_hosp$summary,"Hospital_Outputs/main_summaries_hosp.csv", row.names = TRUE)
 theta_summaries_hosp <- summary(stanfit, pars = c('theta_hosp_mu', 'theta_hosp_sd','theta_hosp'))
-write.csv(theta_summaries_hosp$summary,"Hospital_Outputs/theta_summaries_hosp.csv", row.names = FALSE)
+write.csv(theta_summaries_hosp$summary,"Hospital_Outputs/theta_summaries_hosp.csv", row.names = TRUE)
 } else if(spatial_kernel == "gravity"){
   main_summaries <- summary(stanfit, pars = c('beta0', 'betas', 'distance_alpha', 'distance_gamma', 'lp__'))
   write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
   #Theta summaries are big, but we output anyway
   theta_summaries <- summary(stanfit, pars = c('theta_mu', 'theta_sd','theta'))
-  write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names = FALSE)
+  write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names = TRUE)
   #Main hospitalisation summaries
   main_summaries_hosp <- summary(stanfit, pars = c('beta0_hosp', 'betas_hosp', 'lp__'))
   write.csv(main_summaries_hosp$summary,"Hospital_Outputs/main_summaries_hosp.csv", row.names = TRUE)
   theta_summaries_hosp <- summary(stanfit, pars = c('theta_hosp_mu', 'theta_hosp_sd','theta_hosp'))
-  write.csv(theta_summaries_hosp$summary,"Hospital_Outputs/theta_summaries_hosp.csv", row.names = FALSE)
+  write.csv(theta_summaries_hosp$summary,"Hospital_Outputs/theta_summaries_hosp.csv", row.names = TRUE)
 }else{
   stop("Unrecognised spatial_kernel parameter.")
 }
@@ -76,6 +76,114 @@ dev.off()
 
 }else{
   
+}
+
+##We export a map of the UK LTLAs and shaded with the value of their zetas
+if(spatial_kernel == "neighbours"){
+load("Boundaries_Data.RData")
+load("model_data.RData")
+dir.create("Case_Outputs\\Zeta_maps")
+
+#Remove to just the indices I've modelled:
+areaCodes_used <- unique(Case_Rates_Data$areaCode)
+Boundaries_reduced <- filter(Boundaries, CODE %in% areaCodes_used)
+
+#CAN DO THIS BETTER:
+zetas_mean <- get_posterior_mean(stanfit, pars = 'zetas')
+zetas_mean <- as.data.frame(zetas_mean[,5])
+
+Boundaries_reduced$zetas <- as.numeric(zetas_mean[,1]) 
+
+gb_cities <- read.csv("gb_cities.csv")
+#Manually trim off the ones we don't want.
+gb_cities <- gb_cities[1:30,]
+gb_cities <- gb_cities[-c(6,7,9,16,17,18,19,21,22,24,25,27,29,30),]
+
+gb_cities %>%
+  st_as_sf(coords = c("lng", "lat"), crs = 4326) -> gb_cities
+
+#PLOT standard
+zetas_map <- ggplot(Boundaries_reduced) +
+  geom_sf(aes(fill = zetas)) +
+  scale_fill_gradient2() +
+  ggtitle("LTLAs, nearest neighbor model")
+
+London_zetas <- ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
+  geom_sf(aes(fill = zetas)) +
+  scale_fill_gradient2()
+
+combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
+
+png(file="Case_Outputs\\Zeta_maps\\zetas.png",
+    width=1440, height=1080, res = 150)
+plot(combined_plot)
+dev.off()
+
+zetas_map <- zetas_map + geom_sf_label(data = gb_cities[1:30,], aes( label = city), alpha = 0.25, size = 3) +
+  xlab("") + ylab("")
+
+combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
+
+png(file="Case_Outputs\\Zeta_maps\\zetas_w_cities.png",
+    width=1440, height=1080, res = 150)
+plot(combined_plot)
+dev.off()
+
+#PLOT standard capped
+zetas_map <- ggplot(Boundaries_reduced) +
+  geom_sf(aes(fill = zetas)) +
+  scale_fill_gradient2(limits = c(0,1), midpoint = 0.05) +
+  ggtitle("LTLAs, nearest neighbor model") 
+
+London_zetas <- ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
+  geom_sf(aes(fill = zetas)) +
+  scale_fill_gradient2(limits = c(0,1), midpoint = 0.05)
+
+combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
+
+png(file="Case_Outputs\\Zeta_maps\\zetas_capped.png",
+    width=1440, height=1080, res = 150)
+plot(combined_plot)
+dev.off()
+
+zetas_map <- zetas_map + geom_sf_label(data = gb_cities[1:30,], aes( label = city), alpha = 0.25, size = 3) +
+  xlab("") + ylab("")
+
+combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
+
+png(file="Case_Outputs\\Zeta_maps\\zetas_capped_w_cities.png",
+    width=1440, height=1080, res = 150)
+plot(combined_plot)
+dev.off()
+
+#PLOT log
+zetas_map <- ggplot(Boundaries_reduced) +
+  geom_sf(aes(fill = log(zetas))) +
+  scale_fill_gradient2() +
+  ggtitle("LTLAs, nearest neighbor model")
+
+London_zetas <- ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
+  geom_sf(aes(fill = log(zetas))) +
+  scale_fill_gradient2()
+
+combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
+
+png(file="Case_Outputs\\Zeta_maps\\zetas_log.png",
+    width=1440, height=1080, res = 150)
+plot(combined_plot)
+dev.off()
+
+zetas_map <- zetas_map + geom_sf_label(data = gb_cities[1:30,], aes( label = city), alpha = 0.25, size = 3) +
+  xlab("") + ylab("")
+
+combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
+
+png(file="Case_Outputs\\Zeta_maps\\zetas_log_w_cities.png",
+    width=1440, height=1080, res = 150)
+plot(combined_plot)
+dev.off()
+
+
 }
 
 #Save a plot of the hospital beta trajectories

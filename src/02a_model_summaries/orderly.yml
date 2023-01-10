@@ -135,6 +135,9 @@ parameters:
 packages:
   - tidyverse
   - rstan
+  - sf
+  - spdep
+  - gridExtra
 
 # Source files, in addition to the script.  Typically these will
 # contain function definitions.  These will be sourced after loading
@@ -153,7 +156,8 @@ packages:
 # to list files already listed in "sources" here, or any .sql files
 # referenced in "views" or "data"
 #
-# resources:
+resources:
+  - gb_cities.csv
 
 # Optional name of a variable to make the SQL connection available to
 # the script.  Use this with care and avoid using any queries that
@@ -187,3 +191,7 @@ depends:
       use:
         stanfit.RData: Outputs/stanfit.RData
         model_data.RData: Outputs/model_data.RData
+  - 00_case_data:
+      id: latest
+      use:
+        Boundaries_Data.RData: Outputs/Boundaries_Data.RData

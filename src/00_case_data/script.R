@@ -1943,4 +1943,5 @@ rm(LTLA_funding, Region_funding)
 save(hospital_admissions, file = 'Outputs/Hospitalisations_Data.RData')
 save(LTLA_to_region_matrix, file = 'Outputs/LTLA_to_region_matrix.RData')
 write.csv(hospital_admissions, file = 'Outputs/Hospitalisations_Data.csv')
+save(Boundaries, file = 'Outputs/Boundaries_Data.RData')
 
