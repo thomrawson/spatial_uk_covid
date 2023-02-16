@@ -129,7 +129,7 @@ orderly::orderly_commit(model_fit_no_hosp)
 # 02 - Assessing the model fits
 model_assessment <- orderly::orderly_run("02a_model_summaries",
                                          parameters = list(tree_depth = 14,
-                                                           scale_by_susceptible_pool = FALSE,
+                                                           scale_by_susceptible_pool = TRUE,
                                                            spatial_kernel = "neighbours"),
                                          use_draft = "newer")
 
@@ -143,3 +143,12 @@ orderly::orderly_develop_start("02a_model_summaries",
                                        scale_by_susceptible_pool = FALSE,
                                        spatial_kernel = "neighbours"),
                      use_draft = "newer")
+
+model_assessment <- orderly::orderly_run("02a_model_summaries",
+                                         parameters = list(tree_depth = 14,
+                                                           scale_by_susceptible_pool = TRUE,
+                                                           spatial_kernel = "neighbours"),
+                                         use_draft = "newer")
+
+
+orderly::orderly_commit(model_assessment)

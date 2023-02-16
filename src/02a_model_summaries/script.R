@@ -334,10 +334,10 @@ betas_hosp_variant <- plot(stanfit, pars = sprintf('betas_hosp[%s]',7:14))
 #ci_level: 0.8 (80% intervals)
 #outer_level: 0.95 (95% intervals)
 betas_hosp_variant <- betas_hosp_variant + scale_y_continuous(breaks = c(8:1),
-                                                          labels = c("13) Alpha", "14) Delta", 
-                                                                     "15) Delta_AY_4_2", "16) Omicron_BA_1",
-                                                                     "17) Omicron_BA_2", "18) Omicron_BA_4",
-                                                                     "19) Omicron_BA_5", "20) Other variants")) +
+                                                          labels = c("7) Alpha", "8) Delta", 
+                                                                     "9) Delta_AY_4_2", "10) Omicron_BA_1",
+                                                                     "11) Omicron_BA_2", "12) Omicron_BA_4",
+                                                                     "13) Omicron_BA_5", "14) Other variants")) +
   geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Hospital Covariate coefficients")
 
 png(file="Hospital_Outputs\\betas_variants.png",
@@ -363,13 +363,132 @@ sampler_params <- get_sampler_params(stanfit, inc_warmup = FALSE)
 #the sapply function is useful as it will apply the same function to each component 
 #of sampler_params:
 mean_accept_stat_by_chain <- sapply(sampler_params, function(x) mean(x[, "accept_stat__"]))
-print(mean_accept_stat_by_chain)
-
+write.table(as.character(mean_accept_stat_by_chain), file = "mean_accept_stat_by_chain.txt", sep = "\t",
+            row.names = FALSE)
 
 #Investigate how good the model fit is against real data
-#load(model_data.RData)
+load("model_data.RData")
 #y is the REAL "next week cases". 103 (time) x 306 (LTLAs)
+#E is the "current" weeks cases.  i.e. E[2] = y[1]
 
+
+if(spatial_kernel == "neighbours"){
+ 
+  dir.create("Case_Outputs//Goodness_of_fit")
+  dir.create("Case_Outputs//Goodness_of_fit//trajectories")
+  
+  #Script model definition:
+  #y[,i] ~ poisson_log(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
+  #y_hosp[,i+average_hosp_lag] ~ poisson_log(log(LTLA_to_region*y_as_matrix[,i]) + beta0_hosp + x_hosp[i]*betas_hosp + theta_hosp);
+  
+  model_betas <- as.numeric(get_posterior_mean(stanfit, pars = 'betas')[,5])
+  model_beta0 <- as.numeric(get_posterior_mean(stanfit, pars = 'beta0')[,5])
+  model_zetas <- as.numeric(get_posterior_mean(stanfit, pars = 'zetas')[,5])
+  model_theta <- as.numeric(get_posterior_mean(stanfit, pars = 'theta')[,5])
+  model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
+  model_theta_sd <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_sd')[,5])
+  
+  model_approx_y <- array(0, dim = c(103,306)) #
+  for(i in 1:103){
+  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + model_beta0 + x[i,,]%*%model_betas + model_theta
+  }
+  model_approx_y <- exp(model_approx_y)
+  
+  REAL_week_difference <- abs(y - E)
+  MODEL_week_difference <- abs(model_approx_y - E)
+  
+  #Is the model better than just assuming the same rate of increase from the week previous?
+  basic_approx_y <- array(0, dim = c(103,306))
+  for(i in 3:103){
+    for(j in 1:306){
+      basic_approx_y[i,j] <- y[i-1,j]*(y[i-1,j]/y[i-2,j])
+    }
+  }
+  
+  #First thing we'll make, is a plot for each of the 306 LTLAs showing the real data against the model approx data.
+  #In 34 3x3 plots
+  LTLAs_by_Index <- unique(Case_Rates_Data[,c(1,3,5)])
+  LTLAs_by_Index <- LTLAs_by_Index[order(LTLAs_by_Index$INDEX),]
+  AllDates <- unique(Case_Rates_Data$date_begin)
+  for(i in 1:(306/9)){
+    Indices_to_plot <- seq(((9*i)-8),(9*i)) 
+    myplots <- list()
+    for(j in Indices_to_plot){
+      k <- j - ((i-1)*9)
+      areaCode_plot <- LTLAs_by_Index$areaCode[j]
+      areaName_plot <- LTLAs_by_Index$areaName[j]
+      
+      dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                             areaCode = rep(areaCode_plot, 306),
+                             areaName = rep(areaName_plot, 306),
+                             Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                             Cases = c(y[1:102,j],model_approx_y[1:102,j],basic_approx_y[1:102,j]),
+                             LineType = c(rep("1",204), rep("2",102))
+                             )
+      dataHold$date <- as.Date(dataHold$Date)
+    
+      ggplot(dataHold) +
+        geom_line(aes(x = Date, y = log(Cases), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+        scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+        ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+        scale_linetype(guide = "none") -> plotHold
+    
+      if(k %in% c(1,4)){
+        myplots[[k]] <- plotHold + xlab(NULL)
+      } else if(k ==7){
+        myplots[[k]] <- plotHold
+      } else if(k %in% c(8,9)){
+        myplots[[k]] <- plotHold + ylab(NULL)
+      } else{
+        myplots[[k]] <- plotHold + ylab(NULL) + xlab(NULL)
+      }
+      
+      
+    }
+    
+    plot_combined <- plot_grid(myplots[[1]] + theme(legend.position="none"),
+                               myplots[[2]] + theme(legend.position="none"),
+                               myplots[[3]] + theme(legend.position="none"),
+                               myplots[[4]] + theme(legend.position="none"),
+                               myplots[[5]] + theme(legend.position="none"),
+                               myplots[[6]] + theme(legend.position="none"),
+                               myplots[[7]] + theme(legend.position="none"),
+                               myplots[[8]] + theme(legend.position="none"),
+                               myplots[[9]] + theme(legend.position="none"),
+                               align = "vh",
+                               nrow = 3)
+    
+    legend <- get_legend(
+      # create some space to the left of the legend
+      myplots[[1]] + theme(legend.box.margin = margin(0, 0, 0, 12))
+    )
+  
+    plot_combined <- plot_grid(plot_combined, legend, rel_widths = c(3, .4))
+      
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plot_combined)
+    dev.off()
+    
+  }
+  
+  
+  plot(REAL_week_difference, MODEL_week_difference)
+  #What if we just do y ~ poisson
+  plot(y[,2], model_approx_y[,2])
+  
+  
+
+    
+  our_model_error <- abs(y - model_approx_y)
+  basic_error <- abs(y - basic_approx_y)
+  
+  plot(log(our_model_error[,20]), log(basic_error[,20]))
+  abline(a=0, b=1, col = "red")      
+}
 
 
 #test <- get_posterior_mean(stanfit, pars = 'betas[2]')
