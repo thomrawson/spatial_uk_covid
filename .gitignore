@@ -6,7 +6,6 @@
 .Renviron
 .ssh
 orderly.sqlite
-data/
 archive/
 draft/
 contexts/
