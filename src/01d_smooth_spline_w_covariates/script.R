@@ -329,6 +329,7 @@ Consts <- list(n = length(Reduced_Data$Week_Cases), m = ncol(X))
 Model <- nimbleCode({ 
   # u = spatial smooth term (using basis funtions)
   u[1:n] <- X[1:n, 2:m] %*% b[2:m] #b is the coefficients, beta
+  covariate_addition[1:n] <- betas_covariates[1:26] %*% covar_x[1:26,1:n]
   
   for (i in 1:n) { 
     # y = number of cases
@@ -341,9 +342,9 @@ Model <- nimbleCode({
     v[i] ~ dnorm(0, sd = sig_re)
   } 
   
-  for(i in 1:306){
-    covariate_addition[i] <- betas_covariates%*%covar_x[,i][1,1]
-  }
+  #for(i in 1:306){
+  #  covariate_addition[i] <- inprod(betas_covariates[1:26]%*%covar_x[,i])
+  #}
   
   # Priors
   # Random effect SD
@@ -413,7 +414,7 @@ nimbleData <- list(y = Reduced_Data$Week_Cases, X = X, zero = jd_smooth$jags.dat
 #Maybe try starting from the b of the gam fit...
  inits <- list(b = colMeans(X), lambda = c(3, 3), 
                sig_re = runif(1), v = rnorm(nrow(Reduced_Data), 1),
-               betas_covariates = matrix(rnorm(26,sd=1), nrow = 1, ncol = 26))
+               betas_covariates = rnorm(26,sd=1))
 ##Doing this did help a LOT actually
 
 
@@ -438,7 +439,7 @@ compiled_model <- compileNimble(nimbleModel)
 compiled_model_MCMC <- compileNimble(modelMCMC, project = nimbleModel)
 
 results <- runMCMC(compiled_model_MCMC, thin = 100, 
-                   niter = 200000, nburnin = 10000, 
+                   niter = 2000000, nburnin = 100000, 
                    nchains = 3, inits=inits, progressBar = T, 
                    samplesAsCodaMCMC = T, WAIC = TRUE)
 
@@ -461,6 +462,12 @@ GR_diag_over_1_point_1$GR_over_point1[i] <-  sum(GR.diag$psrf[, "Point est."] > 
 png(sprintf("outputs/posterior_plots/b_lambda_Week_%s.png",Week_isolated)) 
 # 2. Create a plot
 plot(results$samples[ , c("b[2]","lambda[2]")]) 
+# Close the png file
+dev.off() 
+
+png(sprintf("outputs/posterior_plots/beta_covariates_Week_%s.png",Week_isolated)) 
+# 2. Create a plot
+plot(results$samples[ , c("betas_covariates[1]","betas_covariates[2]")]) 
 # Close the png file
 dev.off() 
 
@@ -494,6 +501,25 @@ b_est <- data.table(b_est = mean(b_sim),
 Intercept_estimate$Week[i] <- Week_isolated
 Intercept_estimate$intercept_b1[i] <- b_est$b_format
 
+#### Extract predicted beta covariates from models ####
+
+## Extract simulations of the intercept
+beta_estimates <- data.table(beta_est = rep(NA,26), 
+                             beta_lq = rep(NA,26),
+                             beta_uq = rep(NA,26),
+                             beta_format = rep(NA,26))
+for(i in 1:26){
+beta_sim <- do.call(rbind, results$samples)[ , sprintf("betas_covariates[%s]",i)]
+
+# Return mean and 95% credible interval & format 
+beta_estimates$beta_est[i] = mean(beta_sim)
+beta_estimates$beta_lq[i] = quantile(beta_sim, .025)
+beta_estimates$beta_uq[i] = quantile(beta_sim, .975)
+beta_estimates$beta_format[i] = paste0(round(mean(beta_sim), 3), " (",
+                                      round(quantile(beta_sim, .025), 3), 
+                                      ", ", round(quantile(beta_sim, .975), 3), ")")
+
+}
 #### Extract estimates for phi/mixing parameters ####
 n <- nrow(Boundaries)
 
@@ -631,6 +657,10 @@ write.csv(WAIC, "outputs/WAIC.csv", row.names=FALSE)
 saveRDS(WAIC, file = "outputs/WAIC.rds")
 write.csv(MAE_estimate, "outputs/MAE_estimate.csv", row.names=FALSE)
 saveRDS(MAE_estimate, file = "outputs/MAE_estimate.rds")
+
+write.csv(beta_estimates, "outputs/covar_beta_estimates.csv", row.names=FALSE)
+saveRDS(beta_estimates, file = "outputs/covar_beta_estimates.rds")
+
 
 dir.create("outputs/estimates_plots_over_all_weeks")
 
