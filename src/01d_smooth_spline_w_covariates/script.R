@@ -132,8 +132,8 @@ any(is.na(Case_Rates_Data))
 #Let's say Week 50; (very low cases) Week 85 for very high.
 #We will loop over all weeks
 #Goes from 2 - 129
-#Weeks_to_assess <- unique(Case_Rates_Data$Week)
-Weeks_to_assess <- c(85)
+Weeks_to_assess <- unique(Case_Rates_Data$Week)
+#Weeks_to_assess <- c(2, 85,86,87)
 
 #Data files I'll fill up as we go:
 sp_k_10_smoothing_parameters <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
@@ -153,6 +153,15 @@ WAIC <- data.frame(Week = rep(NA,length(Weeks_to_assess)),
                    WAIC = rep(NA,length(Weeks_to_assess)))
 MAE_estimate <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
                    mae = rep(NA,length(Weeks_to_assess)))
+
+#The beta covariate estimates
+beta_estimates <- data.table(beta_est = rep(NA,26*length(Weeks_to_assess)), 
+                             beta_lq = rep(NA,26*length(Weeks_to_assess)),
+                             beta_uq = rep(NA,26*length(Weeks_to_assess)),
+                             beta_format = rep(NA,26*length(Weeks_to_assess)),
+                             Week = rep(Weeks_to_assess, each = 26),
+                             param = rep(1:26, length(Weeks_to_assess))
+)
 
 dir.create("outputs")
 dir.create("outputs/plots")
@@ -331,15 +340,15 @@ Model <- nimbleCode({
   u[1:n] <- X[1:n, 2:m] %*% b[2:m] #b is the coefficients, beta
   covariate_addition[1:n] <- betas_covariates[1:26] %*% covar_x[1:26,1:n]
   
-  for (i in 1:n) { 
+  for (I in 1:n) { 
     # y = number of cases
-    y[i] ~ dpois(mu[i]) 
+    y[I] ~ dpois(mu[I]) 
     
-    log(mu[i]) <- b[1] + u[i] + v[i] + covariate_addition[i] + log(e[i])
+    log(mu[I]) <- b[1] + u[I] + v[I] + covariate_addition[I] + log(e[I])
     #betas_covar = 1x26
     #covar_x = 26x306
     # v = iid random effect
-    v[i] ~ dnorm(0, sd = sig_re)
+    v[I] ~ dnorm(0, sd = sig_re)
   } 
   
   #for(i in 1:306){
@@ -363,9 +372,9 @@ Model <- nimbleCode({
   b[2:m] ~ dmnorm(zero[2:m], K1[1:(m-1), 1:(m-1)]) 
   
   ## smoothing parameter priors 
-  for (i in 1:2) {
+  for (I in 1:2) {
     # truncate lambdas to avoid simulations getting stuck
-    lambda[i] ~ T(dgamma(.05, .005), 0, 5)
+    lambda[I] ~ T(dgamma(.05, .005), 0, 5)
   }
 } )
 
@@ -439,15 +448,13 @@ compiled_model <- compileNimble(nimbleModel)
 compiled_model_MCMC <- compileNimble(modelMCMC, project = nimbleModel)
 
 results <- runMCMC(compiled_model_MCMC, thin = 100, 
-                   niter = 2000000, nburnin = 100000, 
+                   niter = 5000000, nburnin = 500000, 
                    nchains = 3, inits=inits, progressBar = T, 
                    samplesAsCodaMCMC = T, WAIC = TRUE)
 
-#20min:40secs to run thin = 100, 
-#niter = 1250000, nburnin = 250000,
+#1h:21mins to run thin = 100, 
+#niter = 1000000, nburnin = 100000,
 
-#34min:40secs to run thin = 100, 
-#niter = 2000000, nburnin = 100000,
 
 ## Check convergence using Gelman-Rubin diagnostics with coda 
 GR.diag <- gelman.diag(results$samples, multivariate = F)
@@ -465,11 +472,15 @@ plot(results$samples[ , c("b[2]","lambda[2]")])
 # Close the png file
 dev.off() 
 
-png(sprintf("outputs/posterior_plots/beta_covariates_Week_%s.png",Week_isolated)) 
+dir.create("outputs/posterior_plots/beta_covariates")
+
+for(j in c(1,3,5,7,9,11,13,15,17,19,21,23,25)){
+png(sprintf("outputs/posterior_plots/beta_covariates/beta_covariates%s_Week_%s.png",j, Week_isolated)) 
 # 2. Create a plot
-plot(results$samples[ , c("betas_covariates[1]","betas_covariates[2]")]) 
+plot(results$samples[ , c(sprintf("betas_covariates[%s]",i),sprintf("betas_covariates[%s]",(j+1)))]) 
 # Close the png file
 dev.off() 
+}
 
 png(sprintf("outputs/posterior_plots/sig_re_lambda_Week_%s.png",Week_isolated)) 
 plot(results$samples[ , c("sig_re","lambda[1]")]) 
@@ -504,24 +515,21 @@ Intercept_estimate$intercept_b1[i] <- b_est$b_format
 #### Extract predicted beta covariates from models ####
 
 ## Extract simulations of the intercept
-beta_estimates <- data.table(beta_est = rep(NA,26), 
-                             beta_lq = rep(NA,26),
-                             beta_uq = rep(NA,26),
-                             beta_format = rep(NA,26))
-for(i in 1:26){
-beta_sim <- do.call(rbind, results$samples)[ , sprintf("betas_covariates[%s]",i)]
 
+for(J in 1:26){
+beta_sim <- do.call(rbind, results$samples)[ , sprintf("betas_covariates[%s]",J)]
+j <- ((i-1)*26)+ J
 # Return mean and 95% credible interval & format 
-beta_estimates$beta_est[i] = mean(beta_sim)
-beta_estimates$beta_lq[i] = quantile(beta_sim, .025)
-beta_estimates$beta_uq[i] = quantile(beta_sim, .975)
-beta_estimates$beta_format[i] = paste0(round(mean(beta_sim), 3), " (",
+beta_estimates$beta_est[j] = mean(beta_sim)
+beta_estimates$beta_lq[j] = quantile(beta_sim, .025)
+beta_estimates$beta_uq[j] = quantile(beta_sim, .975)
+beta_estimates$beta_format[j] = paste0(round(mean(beta_sim), 3), " (",
                                       round(quantile(beta_sim, .025), 3), 
                                       ", ", round(quantile(beta_sim, .975), 3), ")")
 
 }
 #### Extract estimates for phi/mixing parameters ####
-n <- nrow(Boundaries)
+n <- nrow(Reduced_Data)
 
 ## Spatial smooth model
 # Return column numbers with structured random effect simulations
@@ -698,3 +706,43 @@ ggplot(data = sp_k_40_smoothing_parameters) +
 ggsave(sp_k_40_plot, 
        filename = "outputs/estimates_plots_over_all_weeks/sp_k_40_plot.png")
 
+titles <- c("cumVaccPercentage_FirstDose",
+            "cumVaccPercentage_SecondDose",
+            "cumVaccPercentage_ThirdDose",
+            "prop_white_british",
+            "prop_asian",
+            "prop_black_afr_car",
+            "IMD_Average_score",
+            "prop_o65",
+            "Median_annual_income",
+            "workplaces_percent_change_from_baseline",
+            "residential_percent_change_from_baseline",
+            "transit_stations_percent_change_from_baseline",
+            "Alpha_proportion",
+            "Delta_proportion",
+            "Delta_AY_4_2_proportion",
+            "Omicron_BA_1_proportion",
+            "Omicron_BA_2_proportion",
+            "Omicron_BA_4_proportion",
+            "Omicron_BA_5_proportion",
+            "Other_proportion",
+            "Core_services_funding_by_weighted",
+            "Primary_care_funding_by_weighted",
+            "Specialised_services_by_weighted",
+            "unringfenced_by_Population",
+            "contain_outbreak_management_by_Population",
+            "ASC_infection_control_fund_by_Population"
+)
+dir.create("outputs/estimates_plots_over_all_weeks/beta_covariates")
+for(i in 1:26){
+  reduced_b_est <- filter(beta_estimates, param == i)
+  ggplot(data = reduced_b_est) +
+    geom_point(aes(x = Week, y = beta_est)) +
+    geom_errorbar(aes(x = Week, ymin=beta_lq,ymax=beta_uq)) +
+    geom_hline(yintercept = 0, color = "red", lty = "dashed") +
+    ylab(sprintf("beta_%s",i)) +
+    ggtitle(titles[i]) -> plot
+  ggsave(plot, 
+         filename = sprintf("outputs/estimates_plots_over_all_weeks/beta_covariates/beta_%s_plot.png",i))
+  
+}
