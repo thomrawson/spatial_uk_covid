@@ -332,10 +332,10 @@ stanfit = stan(model_code = Stan_model_string,
                data=modelData,
                algorithm = "NUTS",
                chains = 3,
-               warmup=250000, 
-               iter=1250000,
-               thin = 100,
-               init = inits,
+               warmup=2500, 
+               iter=12500,
+               #thin = 100,
+               #init = inits,
                control = list(max_treedepth = 10))
 
 
