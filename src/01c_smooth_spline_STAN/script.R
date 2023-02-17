@@ -269,7 +269,7 @@ data {
   
   matrix[N, M] X;                 // basis functions matrix
   matrix[M-1, 2*(M-1)] S1;        // Penalty matrices
-  zero
+  vector[M] zero;
 
 
 }
@@ -284,27 +284,27 @@ parameters {
   
 }
 transformed parameters {
-matrix[M-1, M-1] K1 = (S1[1:(M-1), 1:(M-1)] * lambda[1]) + (S1[1:(M-1), M:(2*(M-1))] * lambda[2])
-
+matrix[M-1, M-1] K1 = (S1[1:(M-1), 1:(M-1)] * lambda[1]) + (S1[1:(M-1), M:(2*(M-1))] * lambda[2]);
+vector[N] u = X[1:N, 2:M] * b[2:M];
 }
 model {
 for(i in 1:N){
   y[i] ~ poisson_log(b[1] + u[i] + v[i] + log(e[i]));  // 
-  v[i] ~ normal(0, sd = sig_re);
+  v[i] ~ normal(0, sig_re);
 }
   
   //PRIORS
   sig_re ~ exponential(0.1);
   // Intercept
-  b[1] ~ normal(0, sd = 5);
+  b[1] ~ normal(0, 5);
   
   // Prior for smooth coefficients
-  b[2:M] ~ multi_normal_prec(zero[2:M], K1) 
+  b[2:M] ~ multi_normal_prec(zero[2:M], K1);
 
-  ## smoothing parameter priors 
+  // smoothing parameter priors 
   for (i in 1:2) {
-    # truncate lambdas to avoid simulations getting stuck
-    lambda[i] ~ gamma(.05, .005)
+    // truncate lambdas to avoid simulations getting stuck
+    lambda[i] ~ gamma(.05, .005);
   }
   
   
