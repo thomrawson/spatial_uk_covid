@@ -53,7 +53,7 @@ artefacts:
         - outputs/plots/Cases_by_population_via_smooth_spline/Week_2_k_10.png
         - outputs/plots/Combined/Week_2.png
         - outputs/fitted_spatial_components/Week_2_distance_based_u.png
-        - outputs/model_fits/Week_2_results.rds
+        - outputs/model_fits/Week_2_stanfit.rds
         
         
 # dir.create("outputs")
