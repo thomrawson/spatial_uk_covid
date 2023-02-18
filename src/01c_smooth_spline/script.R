@@ -86,7 +86,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = Week_Cases), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s Cases", Week_isolated)) +
-  theme_void() -> Cases_plot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Cases_plot
 
 ggsave(Cases_plot, 
        filename = sprintf("outputs/plots/Cases/Week_%s_cases.png", Week_isolated))
@@ -97,7 +98,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = Week_Cases/Population), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s Cases/Population", Week_isolated)) +
-  theme_void() -> Cases_by_pop_plot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Cases_by_pop_plot
 
 ggsave(Cases_by_pop_plot, 
        filename = sprintf("outputs/plots/Cases_by_population/Week_%s_cases_by_pop.png", Week_isolated))
@@ -111,7 +113,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = GAM_fit/Population), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s GAM k=10 Cases/Population",Week_isolated)) +
-  theme_void() -> Gam_k10_plot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Gam_k10_plot
 
 ggsave(Gam_k10_plot, 
        filename = sprintf("outputs/plots/Cases_by_population_via_smooth_spline/Week_%s_k_10.png", Week_isolated))
@@ -135,7 +138,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = GAM_fit_20/Population), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s GAM k=20 Cases/Population",Week_isolated)) +
-  theme_void() -> Gam_k20_plot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Gam_k20_plot
 
 ggsave(Gam_k20_plot, 
        filename = sprintf("outputs/plots/Cases_by_population_via_smooth_spline/Week_%s_k_20.png", Week_isolated))
@@ -167,7 +171,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = GAM_fit_40/Population), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s GAM k=40 Cases/Population",Week_isolated)) +
-  theme_void() -> Gam_k40_plot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Gam_k40_plot
 
 ggsave(Gam_k40_plot, 
        filename = sprintf("outputs/plots/Cases_by_population_via_smooth_spline/Week_%s_k_40.png", Week_isolated))
@@ -431,7 +436,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = u_mean), lwd =  .05) +
   scale_fill_viridis_c(name = "u_mean") +
-  theme_void() -> uplot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> uplot
 
 ggsave(uplot, 
        filename = sprintf("outputs/fitted_spatial_components/Week_%s_distance_based_u.png", Week_isolated))
@@ -441,7 +447,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = v_mean), lwd =  .05) +
   scale_fill_viridis_c(name = "v_mean") +
-  theme_void() -> vplot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> vplot
 
 ggsave(vplot, 
        filename = sprintf("outputs/fitted_spatial_components/Week_%s_iid_random_v.png", Week_isolated))

@@ -30,7 +30,7 @@ Case_Rates_Data <- Case_Rates_Data %>%
 #We will loop over all weeks
 #Goes from 2 - 129
 #Weeks_to_assess <- unique(Case_Rates_Data$Week)
-Weeks_to_assess <- c(2,11,12)
+Weeks_to_assess <- c(50,85)
 
 #Data files I'll fill up as we go:
 sp_k_10_smoothing_parameters <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
@@ -46,13 +46,12 @@ Intercept_estimate <- data.frame(Week = rep(NA,length(Weeks_to_assess)),
                                      intercept_b1 = rep(NA,length(Weeks_to_assess)))
 Mixing_estimate <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
                                  phi_est = rep(NA,length(Weeks_to_assess)))
-WAIC <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
-                   WAIC = rep(NA,length(Weeks_to_assess)))
 MAE_estimate <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
                    mae = rep(NA,length(Weeks_to_assess)))
 
 dir.create("outputs")
 dir.create("outputs/plots")
+dir.create("outputs/plots/diagnostic_plots")
 dir.create("outputs/plots/Cases")
 dir.create("outputs/plots/Cases_by_population")
 dir.create("outputs/plots/Cases_by_population_via_smooth_spline")
@@ -95,7 +94,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = Week_Cases), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s Cases", Week_isolated)) +
-  theme_void() -> Cases_plot
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Cases_plot
 
 ggsave(Cases_plot, 
        filename = sprintf("outputs/plots/Cases/Week_%s_cases.png", Week_isolated))
@@ -106,7 +106,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = Week_Cases/Population), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s Cases/Population", Week_isolated)) +
-  theme_void() -> Cases_by_pop_plot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Cases_by_pop_plot
 
 ggsave(Cases_by_pop_plot, 
        filename = sprintf("outputs/plots/Cases_by_population/Week_%s_cases_by_pop.png", Week_isolated))
@@ -120,7 +121,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = GAM_fit/Population), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s GAM k=10 Cases/Population",Week_isolated)) +
-  theme_void() -> Gam_k10_plot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Gam_k10_plot
 
 ggsave(Gam_k10_plot, 
        filename = sprintf("outputs/plots/Cases_by_population_via_smooth_spline/Week_%s_k_10.png", Week_isolated))
@@ -144,7 +146,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = GAM_fit_20/Population), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s GAM k=20 Cases/Population",Week_isolated)) +
-  theme_void() -> Gam_k20_plot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Gam_k20_plot
 
 ggsave(Gam_k20_plot, 
        filename = sprintf("outputs/plots/Cases_by_population_via_smooth_spline/Week_%s_k_20.png", Week_isolated))
@@ -176,7 +179,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = GAM_fit_40/Population), lwd =  .05) +
   scale_fill_viridis_c(name = sprintf("Week %s GAM k=40 Cases/Population",Week_isolated)) +
-  theme_void() -> Gam_k40_plot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> Gam_k40_plot
 
 ggsave(Gam_k40_plot, 
        filename = sprintf("outputs/plots/Cases_by_population_via_smooth_spline/Week_%s_k_40.png", Week_isolated))
@@ -312,8 +316,11 @@ for(i in 1:N){
 }
 generated quantities {
   //matrix[N,T] eta = log(E[,i] + zetas .*(Cases_Nbors[,i]./N_Nbors)) + beta0 + x[i] * betas + theta[,i]
-  //matrix[N,T] mu = exp(eta);
+  vector[N] mu;
   
+  for(i in 1:N){
+  mu[i] = exp(b[1] + u[i] + v[i] + log(e[i]));
+  }
 }
 "
 # Convert data into data suitable for stan
@@ -331,48 +338,76 @@ inits <- list(b = colMeans(X), lambda = c(3, 3),
 stanfit = stan(model_code = Stan_model_string,
                data=modelData,
                algorithm = "NUTS",
-               chains = 3,
-               warmup=2500, 
-               iter=12500,
+               chains = 4,
+               #warmup=2500, 
+               iter=2000
                #thin = 100,
                #init = inits,
-               control = list(max_treedepth = 10))
+               #control = list(max_treedepth = 10)
+               )
 
+#9mins:20secs to run iter = 2000 (others default)
 
-#20min:40secs to run thin = 100, 
-#niter = 1250000, nburnin = 250000,
+main_summaries <- summary(stanfit, pars = c("b", "lambda", "sig_re", "u", "v", "mu", "lp__"))
+write.csv(main_summaries$summary,"outputs/main_summaries.csv", row.names = TRUE)
 
-#34min:40secs to run thin = 100, 
-#niter = 2000000, nburnin = 100000,
-
-## Check convergence using Gelman-Rubin diagnostics with coda 
-GR.diag <- gelman.diag(results$samples, multivariate = F)
+## Check convergence using Stan's Rhat
+#
+#The Rhat function produces R-hat convergence diagnostic, 
+#which compares the between- and within-chain estimates for model parameters 
+#and other univariate quantities of interest. If chains have not mixed well 
+#(ie, the between- and within-chain estimates don't agree), R-hat is larger than 1. 
+#We recommend running at least four chains by default and only using the sample 
+#if R-hat is less than #1.05#. Stan reports R-hat which is the maximum of rank 
+#normalized split-R-hat and rank normalized folded-split-R-hat, which works for 
+#thick tailed distributions and is sensitive also to differences in scale.
 
 GR_diag_over_1_point_1$Week[i] <- Week_isolated
-GR_diag_over_1_point_1$GR_over_point1[i] <-  sum(GR.diag$psrf[, "Point est."] > 1.1)
+GR_diag_over_1_point_1$GR_over_point1[i] <-  sum(main_summaries$summary[, "Rhat"] > 1.05)
 
-# Our u definitely did NOT converge! or b, or lambda. Anything but mu basically.
-#This was improved significantly by doing 10* the samples. Only 50 over 1.1 now, compared to 750
-#Let's look at some plots
+#Let's export key traceplots at some plots
 # Open a pdf file
-png(sprintf("outputs/posterior_plots/b_lambda_Week_%s.png",Week_isolated)) 
+png(sprintf("outputs/posterior_plots/b2_Week_%s.png",Week_isolated)) 
 # 2. Create a plot
-plot(results$samples[ , c("b[2]","lambda[2]")]) 
+traceplot(stanfit, pars= sprintf('b[%s]',15:26))
 # Close the png file
+dev.off()
+
+png(sprintf("outputs/posterior_plots/b1_Week_%s.png",Week_isolated)) 
+# 2. Create a plot
+traceplot(stanfit, pars= sprintf('b[%s]',1:14))
+# Close the png file
+dev.off()
+png(sprintf("outputs/posterior_plots/b3_Week_%s.png",Week_isolated)) 
+traceplot(stanfit, pars= sprintf('b[%s]',27:40))
+dev.off()
+
+png(sprintf("outputs/posterior_plots/lambda_Week_%s.png",Week_isolated)) 
+traceplot(stanfit, pars= sprintf('lambda[%s]',1:2))
+dev.off()
+
+png(sprintf("outputs/posterior_plots/sig_re_%s.png",Week_isolated)) 
+traceplot(stanfit, pars= c("sig_re")) 
 dev.off() 
 
-png(sprintf("outputs/posterior_plots/sig_re_lambda_Week_%s.png",Week_isolated)) 
-plot(results$samples[ , c("sig_re","lambda[1]")]) 
+png(sprintf("outputs/posterior_plots/u1_Week_%s.png",Week_isolated)) 
+traceplot(stanfit, pars= sprintf('u[%s]',1:14))
+dev.off() 
+png(sprintf("outputs/posterior_plots/u2_Week_%s.png",Week_isolated)) 
+traceplot(stanfit, pars= sprintf('u[%s]',15:26))
 dev.off() 
 
-png(sprintf("outputs/posterior_plots/u_v_Week_%s.png",Week_isolated)) 
-plot(results$samples[ , c("u[2]","v[2]")]) 
+png(sprintf("outputs/posterior_plots/v1_Week_%s.png",Week_isolated)) 
+traceplot(stanfit, pars= sprintf('v[%s]',1:14))
+dev.off() 
+png(sprintf("outputs/posterior_plots/v2_Week_%s.png",Week_isolated)) 
+traceplot(stanfit, pars= sprintf('v[%s]',15:26))
 dev.off() 
 
 
 # Save the model object
-write_rds(results, 
-          file = sprintf("outputs/model_fits/Week_%s_results.rds", Week_isolated))
+write_rds(stanfit, 
+          file = sprintf("outputs/model_fits/Week_%s_stanfit.rds", Week_isolated))
 
 
 #### Extract predicted intercept from models ####
@@ -380,38 +415,40 @@ write_rds(results,
 
 ## Extract simulations of the intercept
 b_sim <- do.call(rbind, results$samples)[ , "b[1]"]
-
+b_sim <- summary(stanfit, pars = c('b[1]'))
+b_sim <- b_sim$summary
 # Return mean and 95% credible interval & format 
-b_est <- data.table(b_est = mean(b_sim), 
-                    b_lq = quantile(b_sim, .025),
-                    b_uq = quantile(b_sim, .975),
-                    b_format = paste0(round(mean(b_sim), 3), " (",
-                                      round(quantile(b_sim, .025), 3), 
-                                      ", ", round(quantile(b_sim, .975), 3), ")"))
+b_est <- data.table(b_est = b_sim[,"mean"], 
+                    b_lq = b_sim[,"2.5%"],
+                    b_uq = b_sim[,"97.5%"],
+                    b_format = paste0(round(b_sim[,"mean"], 3), " (",
+                                      round(b_sim[,"2.5%"], 3), 
+                                      ", ", round(b_sim[,"97.5%"], 3), ")"))
 Intercept_estimate$Week[i] <- Week_isolated
 Intercept_estimate$intercept_b1[i] <- b_est$b_format
 
 #### Extract estimates for phi/mixing parameters ####
-n <- nrow(Boundaries)
+n <- nrow(Reduced_Data)
 
 ## Spatial smooth model
+matrix_of_draws <- as.matrix(stanfit)
 # Return column numbers with structured random effect simulations
-umin <- which(colnames(results$samples[[1]]) == "u[1]")
-umax <- which(colnames(results$samples[[1]]) == paste0("u[", n, "]"))
+umin <- which(colnames(matrix_of_draws) == "u[1]")
+umax <- which(colnames(matrix_of_draws) == paste0("u[", n, "]"))
 
 # Return column numbers with unstructured random effect simulations
-vmin <- which(colnames(results$samples[[1]]) == "v[1]")
-vmax <- which(colnames(results$samples[[1]]) == paste0("v[", n, "]"))
+vmin <- which(colnames(matrix_of_draws) == "v[1]")
+vmax <- which(colnames(matrix_of_draws) == paste0("v[", n, "]"))
 
 
 # Extract simulations of structured random effect
 # A 28,500 x 356 matrix
-u_mat <- do.call(rbind, results$samples)[, umin:umax]
+u_mat <- matrix_of_draws[, umin:umax]
 # Estimate the variance of each simulation (OVER ROWS)
 u_var <- apply(u_mat, 1, var)
 
 # Extract simulations of unstructured random effect
-v_mat <- do.call(rbind, results$samples)[,vmin:vmax]
+v_mat <- matrix_of_draws[,vmin:vmax]
 # Estimate the variance of each simulation
 v_var <- apply(v_mat, 1, var)
 
@@ -435,11 +472,19 @@ Mixing_estimate$phi_est[i] <- paste0(round(mean(smooth_phi_est$phi_est), 3), " (
                                      ", ", round(smooth_phi_est$phi_uq, 3), ")")
 
 
-#### Calculate model comparison statistics ####
-## WAIC
-## Smooth model
-WAIC$Week[i] <- Week_isolated
-WAIC$WAIC[i] <- results$WAIC$WAIC
+#### Calculate model diagnostic statistics
+diag_plot <- stan_diag(stanfit)
+ggsave(diag_plot, 
+       filename = sprintf("outputs/plots/diagnostic_plots/Week_%s_stan_diag.png", Week_isolated))
+
+rhat_plot <- stan_rhat(stanfit)
+ggsave(rhat_plot, 
+       filename = sprintf("outputs/plots/diagnostic_plots/Week_%s_stan_rhat.png", Week_isolated))
+
+mcse_plot <- stan_mcse(stanfit)
+ggsave(mcse_plot, 
+       filename = sprintf("outputs/plots/diagnostic_plots/Week_%s_stan_mcse.png", Week_isolated))
+
 
 
 
@@ -448,11 +493,11 @@ WAIC$WAIC[i] <- results$WAIC$WAIC
 # Extract predicted values from smooth model
 
 # Return column numbers with lambda simulations
-lammin <- which(colnames(results$samples[[1]]) == "mu[1]")
-lammax <- which(colnames(results$samples[[1]]) == paste0("mu[", n, "]"))
+lammin <- which(colnames(matrix_of_draws) == "mu[1]")
+lammax <- which(colnames(matrix_of_draws) == paste0("mu[", n, "]"))
 
 ## # Extract simulations of lambda
-lam_mat <- do.call(rbind, results$samples)[ , lammin:lammax]
+lam_mat <- matrix_of_draws[ , lammin:lammax]
 # Estimate mean from each simulation
 lam_mean <- apply(lam_mat, 2, mean)
 
@@ -481,7 +526,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = u_mean), lwd =  .05) +
   scale_fill_viridis_c(name = "u_mean") +
-  theme_void() -> uplot
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> uplot
 
 ggsave(uplot, 
        filename = sprintf("outputs/fitted_spatial_components/Week_%s_distance_based_u.png", Week_isolated))
@@ -491,7 +537,8 @@ Boundaries %>%
   ggplot( ) +
   geom_sf(aes(fill = v_mean), lwd =  .05) +
   scale_fill_viridis_c(name = "v_mean") +
-  theme_void() -> vplot
+  theme_void() +
+  theme(plot.background = element_rect(fill = 'white', color = "white"))-> vplot
 
 ggsave(vplot, 
        filename = sprintf("outputs/fitted_spatial_components/Week_%s_iid_random_v.png", Week_isolated))
@@ -518,14 +565,12 @@ saveRDS(sp_k_20_smoothing_parameters, file = "outputs/sp_k_20_smoothing_paramete
 write.csv(sp_k_40_smoothing_parameters, "outputs/sp_k_40_smoothing_parameters.csv", row.names=FALSE)
 saveRDS(sp_k_40_smoothing_parameters, file = "outputs/sp_k_40_smoothing_parameters.rds")
 
-write.csv(GR_diag_over_1_point_1, "outputs/GR_diag_over_1_point_1.csv", row.names=FALSE)
-saveRDS(GR_diag_over_1_point_1, file = "outputs/GR_diag_over_1_point_1.rds")
+write.csv(GR_diag_over_1_point_1, "outputs/Rhat_diag_over_1_point_05.csv", row.names=FALSE)
+saveRDS(GR_diag_over_1_point_1, file = "outputs/Rhat_diag_over_1_point_05.rds")
 write.csv(Intercept_estimate, "outputs/Intercept_estimate.csv", row.names=FALSE)
 saveRDS(Intercept_estimate, file = "outputs/Intercept_estimate.rds")
 write.csv(Mixing_estimate, "outputs/Mixing_estimate.csv", row.names=FALSE)
 saveRDS(Mixing_estimate, file = "outputs/Mixing_estimate.rds")
-write.csv(WAIC, "outputs/WAIC.csv", row.names=FALSE)
-saveRDS(WAIC, file = "outputs/WAIC.rds")
 write.csv(MAE_estimate, "outputs/MAE_estimate.csv", row.names=FALSE)
 saveRDS(MAE_estimate, file = "outputs/MAE_estimate.rds")
 
@@ -543,10 +588,6 @@ ggplot(data = Mixing_estimate) +
   geom_point(aes(x= Week, y = phi_est)) -> percent_distance_plot
 ggsave(percent_distance_plot, 
        filename = "outputs/estimates_plots_over_all_weeks/Percent_distance_based_spatial.png")
-ggplot(data = WAIC) +
-  geom_point(aes(x= Week, y = WAIC)) -> WAIC_plot
-ggsave(WAIC_plot, 
-       filename = "outputs/estimates_plots_over_all_weeks/WAIC_plot.png")
 ggplot(data = MAE_estimate) +
   geom_point(aes(x= Week, y = mae)) -> MAE_plot
 ggsave(MAE_plot, 
