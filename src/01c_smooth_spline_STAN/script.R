@@ -372,49 +372,57 @@ GR_diag_over_1_point_1$Week[i] <- Week_isolated
 GR_diag_over_1_point_1$GR_over_point1[i] <-  sum(main_summaries$summary[, "Rhat"] > 1.05)
 
 #Let's export key traceplots at some plots
-# Open a pdf file
-png(sprintf("outputs/posterior_plots/b2_Week_%s.png",Week_isolated)) 
-# 2. Create a plot
-traceplot(stanfit, pars= sprintf('b[%s]',15:26))
-# Close the png file
-dev.off()
 
-png(sprintf("outputs/posterior_plots/b1_Week_%s.png",Week_isolated)) 
-# 2. Create a plot
-traceplot(stanfit, pars= sprintf('b[%s]',1:14))
-# Close the png file
-dev.off()
-png(sprintf("outputs/posterior_plots/b3_Week_%s.png",Week_isolated)) 
-traceplot(stanfit, pars= sprintf('b[%s]',27:40))
-dev.off()
+b2_plot <- traceplot(stanfit, pars= sprintf('b[%s]',15:26))
+ggsave(b2_plot, 
+       filename = sprintf("outputs/posterior_plots/b2_Week_%s.png",Week_isolated))
 
-png(sprintf("outputs/posterior_plots/lambda_Week_%s.png",Week_isolated)) 
-traceplot(stanfit, pars= sprintf('lambda[%s]',1:2))
-dev.off()
+b1_plot <- traceplot(stanfit, pars= sprintf('b[%s]',1:14))
+ggsave(b1_plot, 
+       filename = sprintf("outputs/posterior_plots/b1_Week_%s.png",Week_isolated))
 
-png(sprintf("outputs/posterior_plots/sig_re_%s.png",Week_isolated)) 
-traceplot(stanfit, pars= c("sig_re")) 
-dev.off() 
+b3_plot <- traceplot(stanfit, pars= sprintf('b[%s]',27:40))
+ggsave(b3_plot, 
+       filename = sprintf("outputs/posterior_plots/b3_Week_%s.png",Week_isolated))
 
-png(sprintf("outputs/posterior_plots/u1_Week_%s.png",Week_isolated)) 
-traceplot(stanfit, pars= sprintf('u[%s]',1:14))
-dev.off() 
-png(sprintf("outputs/posterior_plots/u2_Week_%s.png",Week_isolated)) 
-traceplot(stanfit, pars= sprintf('u[%s]',15:26))
-dev.off() 
+lambda_plot <- traceplot(stanfit, pars= sprintf('lambda[%s]',1:2))
+ggsave(lambda_plot, 
+       filename = sprintf("outputs/posterior_plots/lambda_Week_%s.png",Week_isolated))
 
-png(sprintf("outputs/posterior_plots/v1_Week_%s.png",Week_isolated)) 
-traceplot(stanfit, pars= sprintf('v[%s]',1:14))
-dev.off() 
-png(sprintf("outputs/posterior_plots/v2_Week_%s.png",Week_isolated)) 
-traceplot(stanfit, pars= sprintf('v[%s]',15:26))
-dev.off() 
+sig_plot <- traceplot(stanfit, pars= c("sig_re")) 
+ggsave(sig_plot, 
+       filename = sprintf("outputs/posterior_plots/sig_re_%s.png",Week_isolated))
+
+u1_plot <- traceplot(stanfit, pars= sprintf('u[%s]',1:14))
+ggsave(u1_plot, 
+       filename = sprintf("outputs/posterior_plots/u1_Week_%s.png",Week_isolated))
+
+u2_plot <- traceplot(stanfit, pars= sprintf('u[%s]',15:26))
+ggsave(u2_plot, 
+       filename = sprintf("outputs/posterior_plots/u2_Week_%s.png",Week_isolated))
+
+u3_plot <- traceplot(stanfit, pars= sprintf('u[%s]',27:40))
+ggsave(u3_plot, 
+       filename = sprintf("outputs/posterior_plots/u3_Week_%s.png",Week_isolated))
+
+
+
+v1_plot <- traceplot(stanfit, pars= sprintf('v[%s]',1:14))
+ggsave(v1_plot, 
+       filename = sprintf("outputs/posterior_plots/v1_Week_%s.png",Week_isolated))
+
+v2_plot <- traceplot(stanfit, pars= sprintf('v[%s]',15:26))
+ggsave(v2_plot, 
+       filename = sprintf("outputs/posterior_plots/v2_Week_%s.png",Week_isolated))
+
+v3_plot <- traceplot(stanfit, pars= sprintf('v[%s]',27:40))
+ggsave(v3_plot, 
+       filename = sprintf("outputs/posterior_plots/u3_Week_%s.png",Week_isolated))
 
 
 # Save the model object
 write_rds(stanfit, 
           file = sprintf("outputs/model_fits/Week_%s_stanfit.rds", Week_isolated))
-
 
 #### Extract predicted intercept from models ####
 ## Spatial smooth model
