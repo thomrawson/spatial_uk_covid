@@ -34,9 +34,15 @@ sp_k_40_smoothing_parameters <- data.frame(Week = rep(NA,length(Weeks_to_assess)
 GR_diag_over_1_point_1 <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
                                      GR_over_point1 = rep(NA,length(Weeks_to_assess)))
 Intercept_estimate <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
-                                     intercept_b1 = rep(NA,length(Weeks_to_assess)))
+                                 intercept_b1 = rep(NA,length(Weeks_to_assess)),
+                                 b1_mean = rep(NA,length(Weeks_to_assess)),
+                                 b1_lq = rep(NA,length(Weeks_to_assess)),
+                                 b1_uq = rep(NA,length(Weeks_to_assess)))
 Mixing_estimate <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
-                                 phi_est = rep(NA,length(Weeks_to_assess)))
+                              phi_est = rep(NA,length(Weeks_to_assess)),
+                              phi_mean = rep(NA,length(Weeks_to_assess)),
+                              phi_lq = rep(NA,length(Weeks_to_assess)),
+                              phi_uq = rep(NA,length(Weeks_to_assess)))
 WAIC <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
                    WAIC = rep(NA,length(Weeks_to_assess)))
 MAE_estimate <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
@@ -345,6 +351,9 @@ b_est <- data.table(b_est = mean(b_sim),
                                       ", ", round(quantile(b_sim, .975), 3), ")"))
 Intercept_estimate$Week[i] <- Week_isolated
 Intercept_estimate$intercept_b1[i] <- b_est$b_format
+Intercept_estimate$b1_mean[i] <- b_est$b_est
+Intercept_estimate$b1_lq[i] <- b_est$b_lq
+Intercept_estimate$b1_uq[i] <- b_est$b_uq
 
 #### Extract estimates for phi/mixing parameters ####
 n <- nrow(Boundaries)
@@ -388,6 +397,9 @@ Mixing_estimate$Week[i] <- Week_isolated
 Mixing_estimate$phi_est[i] <- paste0(round(mean(smooth_phi_est$phi_est), 3), " (",
                                      round(smooth_phi_est$phi_lq, 3), 
                                      ", ", round(smooth_phi_est$phi_uq, 3), ")")
+Mixing_estimate$phi_mean[i] <- smooth_phi_est$phi_est
+Mixing_estimate$phi_lq[i] <- smooth_phi_est$phi_lq
+Mixing_estimate$phi_uq[i] <- smooth_phi_est$phi_uq
 
 
 #### Calculate model comparison statistics ####
@@ -493,11 +505,13 @@ ggplot(data = GR_diag_over_1_point_1) +
 ggsave(GR_plot, 
        filename = "outputs/estimates_plots_over_all_weeks/Gelman_Rubin.png")
 ggplot(data = Intercept_estimate) +
-  geom_point(aes(x= Week, y = intercept_b1)) -> intercept_plot
+  geom_point(aes(x= Week, y = b1_mean)) +
+  geom_errorbar(aes(x=Week, ymin = b1_lq, ymax = b1_uq)) -> intercept_plot
 ggsave(intercept_plot, 
        filename = "outputs/estimates_plots_over_all_weeks/b1_intercept.png")
 ggplot(data = Mixing_estimate) +
-  geom_point(aes(x= Week, y = phi_est)) -> percent_distance_plot
+  geom_point(aes(x= Week, y = phi_mean)) +
+  geom_errorbar(aes(x = Week, ymin = phi_lq, ymax = phi_uq)) -> percent_distance_plot
 ggsave(percent_distance_plot, 
        filename = "outputs/estimates_plots_over_all_weeks/Percent_distance_based_spatial.png")
 ggplot(data = WAIC) +
