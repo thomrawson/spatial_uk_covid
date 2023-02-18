@@ -379,12 +379,15 @@ scenario4_no_hosp_long$log()
 rm(list=ls())
 
 packages_list <- c("tidyverse", "mgcv", "sf", "nimble", "coda",
-                   "mgcViz", "spdep", "data.table", "cowplot")
+                   "mgcViz", "spdep", "data.table", "cowplot", "orderly")
 
 #options(didehpc.cluster = "fi--didemrchnb",
 #        didehpc.template = "GeneralNodes",
 #        didehpc.cores = 4,
 #        didehpc.wholenode = FALSE)
+#options(
+#  didehpc.username = "trawson",
+#  didehpc.home = "~/net/home")
 
 
 root <- "contexts"
@@ -403,10 +406,35 @@ obj$cluster_load(TRUE)
 
 #Like the queue object, obj, task objects are R6 objects that can be used to get 
 #information and results back from the task.
-model_fit <- obj$enqueue(orderly::orderly_run("01c_smooth_spline"))
+spline_fit <- obj$enqueue(orderly::orderly_run("01c_smooth_spline"))
 
 
-model_fit$status()
-model_fit$times()
-model_fit$result()
-model_fit$log()
+spline_fit$status()
+spline_fit$times()
+spline_fit$result()
+spline_fit$log()
+#20230216-180306-9695848f
+
+#STAN 01c
+packages_list2 <- c("tidyverse", "mgcv", "sf", "nimble", "coda", "orderly",
+                   "mgcViz", "spdep", "data.table", "cowplot", "rstan",
+                   "BH",
+                   "StanHeaders", "RcppEigen")
+
+
+
+ctx2 <- context::context_save(root, packages = packages_list2)
+
+
+obj2 <- didehpc::queue_didehpc(ctx2, config = cfg)
+obj2$cluster_load(TRUE)
+
+spline_stan_fit <- obj2$enqueue(orderly::orderly_run("01c_smooth_spline_STAN"))
+
+
+spline_stan_fit$status()
+spline_stan_fit$times()
+spline_stan_fit$result()
+spline_stan_fit$log()
+
+

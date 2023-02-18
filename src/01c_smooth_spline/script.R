@@ -20,8 +20,8 @@ Case_Rates_Data <- Case_Rates_Data %>%
 #Let's say Week 50; (very low cases) Week 85 for very high.
 #We will loop over all weeks
 #Goes from 2 - 129
-#Weeks_to_assess <- unique(Case_Rates_Data$Week)
-Weeks_to_assess <- c(2,11,12)
+Weeks_to_assess <- unique(Case_Rates_Data$Week)
+#Weeks_to_assess <- c(2,11,12)
 
 #Data files I'll fill up as we go:
 sp_k_10_smoothing_parameters <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
@@ -296,7 +296,7 @@ compiled_model <- compileNimble(nimbleModel)
 compiled_model_MCMC <- compileNimble(modelMCMC, project = nimbleModel)
 
 results <- runMCMC(compiled_model_MCMC, thin = 100, 
-                   niter = 2000000, nburnin = 100000, 
+                   niter = 4000000, nburnin = 100000, 
                    nchains = 3, inits=inits, progressBar = T, 
                    samplesAsCodaMCMC = T, WAIC = TRUE)
 
