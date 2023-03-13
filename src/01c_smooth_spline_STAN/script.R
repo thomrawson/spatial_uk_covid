@@ -29,8 +29,8 @@ Case_Rates_Data <- Case_Rates_Data %>%
 #Let's say Week 50; (very low cases) Week 85 for very high.
 #We will loop over all weeks
 #Goes from 2 - 129
-#Weeks_to_assess <- unique(Case_Rates_Data$Week)
-Weeks_to_assess <- c(2,11,12)
+Weeks_to_assess <- unique(Case_Rates_Data$Week)
+#Weeks_to_assess <- c(2,11,12)
 
 #Data files I'll fill up as we go:
 sp_k_10_smoothing_parameters <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
@@ -576,6 +576,8 @@ ggsave(combined_plot,
        filename = sprintf("outputs/plots/Combined/Week_%s.png", Week_isolated),
        width = 10.82, height = 9.52, units = c("in"))
 
+#Remove stanfit to aid memory
+rm(stanfit)
 }
 
 #Finally, save all the generated data_files
