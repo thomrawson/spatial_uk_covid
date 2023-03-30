@@ -29,8 +29,8 @@ Case_Rates_Data <- Case_Rates_Data %>%
 #Let's say Week 50; (very low cases) Week 85 for very high.
 #We will loop over all weeks
 #Goes from 2 - 129
-Weeks_to_assess <- unique(Case_Rates_Data$Week)
-#Weeks_to_assess <- c(2,11,12)
+#Weeks_to_assess <- unique(Case_Rates_Data$Week)
+Weeks_to_assess <- c(2,11,12)
 
 #Data files I'll fill up as we go:
 sp_k_10_smoothing_parameters <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
@@ -341,7 +341,7 @@ modelData <- list(N = length(Reduced_Data$Week_Cases), M = ncol(X),
 inits <- list(b = colMeans(X), lambda = c(3, 3), 
               sig_re = runif(1), v = rnorm(nrow(Reduced_Data), 1))
 
-stanfit = stan(model_code = Stan_model_string,
+stanfit = rstan::stan(model_code = Stan_model_string,
                data=modelData,
                algorithm = "NUTS",
                chains = 4,
@@ -352,6 +352,8 @@ stanfit = stan(model_code = Stan_model_string,
                #control = list(max_treedepth = 10)
                )
 
+#############################
+
 #9mins:20secs to run iter = 2000 (others default)
 
 main_summaries <- summary(stanfit, pars = c("b", "lambda", "sig_re", "u", "v", "mu", "lp__"))
@@ -359,13 +361,13 @@ write.csv(main_summaries$summary,"outputs/main_summaries.csv", row.names = TRUE)
 
 ## Check convergence using Stan's Rhat
 #
-#The Rhat function produces R-hat convergence diagnostic, 
-#which compares the between- and within-chain estimates for model parameters 
-#and other univariate quantities of interest. If chains have not mixed well 
-#(ie, the between- and within-chain estimates don't agree), R-hat is larger than 1. 
-#We recommend running at least four chains by default and only using the sample 
-#if R-hat is less than #1.05#. Stan reports R-hat which is the maximum of rank 
-#normalized split-R-hat and rank normalized folded-split-R-hat, which works for 
+#The Rhat function produces R-hat convergence diagnostic,
+#which compares the between- and within-chain estimates for model parameters
+#and other univariate quantities of interest. If chains have not mixed well
+#(ie, the between- and within-chain estimates don't agree), R-hat is larger than 1.
+#We recommend running at least four chains by default and only using the sample
+#if R-hat is less than #1.05#. Stan reports R-hat which is the maximum of rank
+#normalized split-R-hat and rank normalized folded-split-R-hat, which works for
 #thick tailed distributions and is sensitive also to differences in scale.
 
 GR_diag_over_1_point_1$Week[i] <- Week_isolated
@@ -373,56 +375,56 @@ GR_diag_over_1_point_1$GR_over_point1[i] <-  sum(main_summaries$summary[, "Rhat"
 
 #Let's export key traceplots at some plots
 
-b2_plot <- traceplot(stanfit, pars= sprintf('b[%s]',15:26))
-ggsave(b2_plot, 
+b2_plot <- rstan::traceplot(stanfit, pars= sprintf('b[%s]',15:26))
+ggsave(b2_plot,
        filename = sprintf("outputs/posterior_plots/b2_Week_%s.png",Week_isolated))
 
-b1_plot <- traceplot(stanfit, pars= sprintf('b[%s]',1:14))
-ggsave(b1_plot, 
+b1_plot <- rstan::traceplot(stanfit, pars= sprintf('b[%s]',1:14))
+ggsave(b1_plot,
        filename = sprintf("outputs/posterior_plots/b1_Week_%s.png",Week_isolated))
 
-b3_plot <- traceplot(stanfit, pars= sprintf('b[%s]',27:40))
-ggsave(b3_plot, 
+b3_plot <- rstan::traceplot(stanfit, pars= sprintf('b[%s]',27:40))
+ggsave(b3_plot,
        filename = sprintf("outputs/posterior_plots/b3_Week_%s.png",Week_isolated))
 
-lambda_plot <- traceplot(stanfit, pars= sprintf('lambda[%s]',1:2))
-ggsave(lambda_plot, 
+lambda_plot <- rstan::traceplot(stanfit, pars= sprintf('lambda[%s]',1:2))
+ggsave(lambda_plot,
        filename = sprintf("outputs/posterior_plots/lambda_Week_%s.png",Week_isolated))
 
-sig_plot <- traceplot(stanfit, pars= c("sig_re")) 
-ggsave(sig_plot, 
+sig_plot <- rstan::traceplot(stanfit, pars= c("sig_re"))
+ggsave(sig_plot,
        filename = sprintf("outputs/posterior_plots/sig_re_%s.png",Week_isolated))
 
-u1_plot <- traceplot(stanfit, pars= sprintf('u[%s]',1:14))
-ggsave(u1_plot, 
+u1_plot <- rstan::traceplot(stanfit, pars= sprintf('u[%s]',1:14))
+ggsave(u1_plot,
        filename = sprintf("outputs/posterior_plots/u1_Week_%s.png",Week_isolated))
 
-u2_plot <- traceplot(stanfit, pars= sprintf('u[%s]',15:26))
-ggsave(u2_plot, 
+u2_plot <- rstan::traceplot(stanfit, pars= sprintf('u[%s]',15:26))
+ggsave(u2_plot,
        filename = sprintf("outputs/posterior_plots/u2_Week_%s.png",Week_isolated))
 
-u3_plot <- traceplot(stanfit, pars= sprintf('u[%s]',27:40))
-ggsave(u3_plot, 
+u3_plot <- rstan::traceplot(stanfit, pars= sprintf('u[%s]',27:40))
+ggsave(u3_plot,
        filename = sprintf("outputs/posterior_plots/u3_Week_%s.png",Week_isolated))
 
 
 
-v1_plot <- traceplot(stanfit, pars= sprintf('v[%s]',1:14))
-ggsave(v1_plot, 
+v1_plot <- rstan::traceplot(stanfit, pars= sprintf('v[%s]',1:14))
+ggsave(v1_plot,
        filename = sprintf("outputs/posterior_plots/v1_Week_%s.png",Week_isolated))
 
-v2_plot <- traceplot(stanfit, pars= sprintf('v[%s]',15:26))
-ggsave(v2_plot, 
+v2_plot <- rstan::traceplot(stanfit, pars= sprintf('v[%s]',15:26))
+ggsave(v2_plot,
        filename = sprintf("outputs/posterior_plots/v2_Week_%s.png",Week_isolated))
 
-v3_plot <- traceplot(stanfit, pars= sprintf('v[%s]',27:40))
-ggsave(v3_plot, 
+v3_plot <- rstan::traceplot(stanfit, pars= sprintf('v[%s]',27:40))
+ggsave(v3_plot,
        filename = sprintf("outputs/posterior_plots/u3_Week_%s.png",Week_isolated))
 
 
 # Save the model object
-write_rds(stanfit, 
-          file = sprintf("outputs/model_fits/Week_%s_stanfit.rds", Week_isolated))
+ write_rds(stanfit,
+           file = sprintf("outputs/model_fits/Week_%s_stanfit.rds", Week_isolated))
 
 #### Extract predicted intercept from models ####
 ## Spatial smooth model
@@ -431,12 +433,12 @@ write_rds(stanfit,
 #b_sim <- do.call(rbind, results$samples)[ , "b[1]"]
 b_sim <- summary(stanfit, pars = c('b[1]'))
 b_sim <- b_sim$summary
-# Return mean and 95% credible interval & format 
-b_est <- data.table(b_est = b_sim[,"mean"], 
+# Return mean and 95% credible interval & format
+b_est <- data.table(b_est = b_sim[,"mean"],
                     b_lq = b_sim[,"2.5%"],
                     b_uq = b_sim[,"97.5%"],
                     b_format = paste0(round(b_sim[,"mean"], 3), " (",
-                                      round(b_sim[,"2.5%"], 3), 
+                                      round(b_sim[,"2.5%"], 3),
                                       ", ", round(b_sim[,"97.5%"], 3), ")"))
 Intercept_estimate$Week[i] <- Week_isolated
 Intercept_estimate$intercept_b1[i] <- b_est$b_format
@@ -472,12 +474,12 @@ v_var <- apply(v_mat, 1, var)
 # Calculate the proportion of variance explained by the structured term
 propn_spat <- u_var/(u_var + v_var)
 
-re_vars <- data.table(spat_var = u_var, 
+re_vars <- data.table(spat_var = u_var,
                       iid_var = v_var,
                       propn_var = propn_spat)
 
 ## Combine the estimated phi from each model and calculate mean and 95% CI
-smooth_phi_est <- re_vars %>% 
+smooth_phi_est <- re_vars %>%
   summarise(phi_est = mean(propn_var),
             phi_lq = quantile(propn_var, .025),
             phi_uq = quantile(propn_var, .975))
@@ -485,7 +487,7 @@ smooth_phi_est <- re_vars %>%
 #Cool, so estimated that ~ 42.5% of the "noise" is spatial!
 Mixing_estimate$Week[i] <- Week_isolated
 Mixing_estimate$phi_est[i] <- paste0(round(mean(smooth_phi_est$phi_est), 3), " (",
-                                     round(smooth_phi_est$phi_lq, 3), 
+                                     round(smooth_phi_est$phi_lq, 3),
                                      ", ", round(smooth_phi_est$phi_uq, 3), ")")
 Mixing_estimate$phi_mean[i] <- smooth_phi_est$phi_est
 Mixing_estimate$phi_lq[i] <- smooth_phi_est$phi_lq
@@ -494,16 +496,16 @@ Mixing_estimate$phi_uq[i] <- smooth_phi_est$phi_uq
 
 #### Calculate model diagnostic statistics
 
-png(sprintf("outputs/plots/diagnostic_plots/Week_%s_stan_diag.png", Week_isolated)) 
+png(sprintf("outputs/plots/diagnostic_plots/Week_%s_stan_diag.png", Week_isolated))
 stan_diag(stanfit)
-dev.off() 
+dev.off()
 
 rhat_plot <- stan_rhat(stanfit)
-ggsave(rhat_plot, 
+ggsave(rhat_plot,
        filename = sprintf("outputs/plots/diagnostic_plots/Week_%s_stan_rhat.png", Week_isolated))
 
 mcse_plot <- stan_mcse(stanfit)
-ggsave(mcse_plot, 
+ggsave(mcse_plot,
        filename = sprintf("outputs/plots/diagnostic_plots/Week_%s_stan_mcse.png", Week_isolated))
 
 
@@ -542,26 +544,26 @@ plot_data$u_mean <- exp_u_mean
 plot_data$v_mean <- exp_v_mean
 colnames(plot_data) <- c("CODE", "Population", "Week_Cases", "u_mean", "v_mean")
 
-Boundaries %>% 
-  inner_join(plot_data, by = "CODE") %>% 
+Boundaries %>%
+  inner_join(plot_data, by = "CODE") %>%
   ggplot( ) +
   geom_sf(aes(fill = u_mean), lwd =  .05) +
   scale_fill_viridis_c(name = "u_mean") +
   theme_void()+
   theme(plot.background = element_rect(fill = 'white', color = "white")) -> uplot
 
-ggsave(uplot, 
+ggsave(uplot,
        filename = sprintf("outputs/fitted_spatial_components/Week_%s_distance_based_u.png", Week_isolated))
 
-Boundaries %>% 
-  inner_join(plot_data, by = "CODE") %>% 
+Boundaries %>%
+  inner_join(plot_data, by = "CODE") %>%
   ggplot( ) +
   geom_sf(aes(fill = v_mean), lwd =  .05) +
   scale_fill_viridis_c(name = "v_mean") +
   theme_void() +
   theme(plot.background = element_rect(fill = 'white', color = "white"))-> vplot
 
-ggsave(vplot, 
+ggsave(vplot,
        filename = sprintf("outputs/fitted_spatial_components/Week_%s_iid_random_v.png", Week_isolated))
 
 plot_grid(Cases_by_pop_plot + theme(legend.title= element_blank()),
@@ -572,12 +574,15 @@ plot_grid(Cases_by_pop_plot + theme(legend.title= element_blank()),
           scale = 0.9) -> combined_plot
 
 
-ggsave(combined_plot, 
+ggsave(combined_plot,
        filename = sprintf("outputs/plots/Combined/Week_%s.png", Week_isolated),
        width = 10.82, height = 9.52, units = c("in"))
 
 #Remove stanfit to aid memory
 rm(stanfit)
+
+############################################
+
 }
 
 #Finally, save all the generated data_files

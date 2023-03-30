@@ -421,10 +421,17 @@ packages_list2 <- c("tidyverse", "mgcv", "sf", "nimble", "coda", "orderly",
                    "BH",
                    "StanHeaders", "RcppEigen")
 
-
+#ctx <- context::context_save("contexts", packages = character())
+#obj <- didehpc::queue_didehpc(ctx)
+#obj_new$install_packages(c("StanHeaders", "rstan"), repos = "https://mc-stan.org/r-packages/")
 
 ctx2 <- context::context_save(root, packages = packages_list2)
 
+cfg <- didehpc::didehpc_config(cluster = "covid",
+                               template = 'AllNodes',
+                               cores = 32)
+
+#obj2$install_packages(c("StanHeaders", "rstan"), repos = "https://mc-stan.org/r-packages/")
 
 obj2 <- didehpc::queue_didehpc(ctx2, config = cfg)
 obj2$cluster_load(TRUE)
@@ -437,4 +444,31 @@ spline_stan_fit$times()
 spline_stan_fit$result()
 spline_stan_fit$log()
 
+#NEW CLUSTER
+#wpia-hn
+root <- "contexts"
+packages_list2 <- c("tidyverse", "mgcv", "sf", "nimble", "coda", "orderly",
+                    "mgcViz", "spdep", "data.table", "cowplot", "rstan",
+                    "BH",
+                    "StanHeaders", "RcppEigen",
+                    "V8") #V8 added when I went to R 4.2.3
 
+ctx2 <- context::context_save(root, packages = packages_list2)
+
+cfg_new <- didehpc::didehpc_config(cluster = "wpia-hn",
+                               template = 'AllNodes',
+                               cores = 32)
+
+
+obj_new <- didehpc::queue_didehpc(ctx2, config = cfg_new)
+obj_new$cluster_load(TRUE)
+
+spline_stan_fit_new <- obj_new$enqueue(orderly::orderly_run("01c_smooth_spline_STAN"))
+
+
+spline_stan_fit_new$status()
+spline_stan_fit_new$times()
+spline_stan_fit_new$result()
+spline_stan_fit_new$log()
+
+obj$unsubmit(spline_stan_fit_new$id)
