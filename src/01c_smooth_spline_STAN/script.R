@@ -29,8 +29,8 @@ Case_Rates_Data <- Case_Rates_Data %>%
 #Let's say Week 50; (very low cases) Week 85 for very high.
 #We will loop over all weeks
 #Goes from 2 - 129
-#Weeks_to_assess <- unique(Case_Rates_Data$Week)
-Weeks_to_assess <- c(2,11,12)
+Weeks_to_assess <- unique(Case_Rates_Data$Week)
+#Weeks_to_assess <- c(2,11,12)
 
 #Data files I'll fill up as we go:
 sp_k_10_smoothing_parameters <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 

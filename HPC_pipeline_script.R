@@ -463,6 +463,7 @@ cfg_new <- didehpc::didehpc_config(cluster = "wpia-hn",
 obj_new <- didehpc::queue_didehpc(ctx2, config = cfg_new)
 obj_new$cluster_load(TRUE)
 
+#This is the 2000 iterations, 10 tree depth
 spline_stan_fit_new <- obj_new$enqueue(orderly::orderly_run("01c_smooth_spline_STAN"))
 
 
@@ -471,4 +472,15 @@ spline_stan_fit_new$times()
 spline_stan_fit_new$result()
 spline_stan_fit_new$log()
 
-obj$unsubmit(spline_stan_fit_new$id)
+#This is 4000 iterations, 12 tree depth
+#20230330-134604-2770a45d
+spline_stan_fit_4000 <- obj_new$enqueue(orderly::orderly_run("01c_smooth_spline_STAN"))
+
+
+spline_stan_fit_4000$status()
+spline_stan_fit_4000$times()
+spline_stan_fit_4000$result()
+spline_stan_fit_4000$log()
+############
+
+obj_new$unsubmit(spline_stan_fit_4000$id)
