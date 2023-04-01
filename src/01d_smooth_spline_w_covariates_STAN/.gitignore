@@ -1,0 +1,4 @@
+*.png
+outputs/
+*.RData
+

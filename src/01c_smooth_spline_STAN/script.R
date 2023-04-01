@@ -65,6 +65,7 @@ dir.create("outputs/posterior_plots")
 dir.create("outputs/fitted_spatial_components")
 dir.create("outputs/model_fits")
 dir.create("outputs/plots/Combined")
+dir.create("outputs/main_summaries")
 
 for(i in 1:length(Weeks_to_assess)){
 
@@ -89,7 +90,7 @@ sp_check_10 <- gam(Week_Cases ~  s(y_scale, x_scale, k = 10, bs = "tp"), offset 
 #sp_check_10$sp
 #~ 0.48, which is quite high, but not weird or anything.
 sp_k_10_smoothing_parameters$Week[i] <- Week_isolated
-sp_k_10_smoothing_parameters$sp <- sp_check_10$sp
+sp_k_10_smoothing_parameters$sp[i] <- sp_check_10$sp
 
 #Let's just plot the cases first:
 plot_data <- Reduced_Data[,c(1,4,8)]
@@ -143,7 +144,7 @@ sp_check_20 <- gam(Week_Cases ~  s(y_scale, x_scale, k = 20, bs = "tp"), offset 
 #Significant...
 #sp_check_20$sp
 sp_k_20_smoothing_parameters$Week[i] <- Week_isolated
-sp_k_20_smoothing_parameters$sp <- sp_check_20$sp
+sp_k_20_smoothing_parameters$sp[i] <- sp_check_20$sp
 #~ 0.235, which makes sense, twice the penalty, with double the basis functions
 plot_data$GAM_fit_20 <- sp_check_20$fitted.values
 
@@ -175,7 +176,7 @@ sp_check_40 <- gam(Week_Cases ~  s(y_scale, x_scale, k = 40, bs = "tp"), offset 
 #sp_check_40$sp
 #~ 0.235, which makes sense, twice the penalty, with double the basis functions
 sp_k_40_smoothing_parameters$Week[i] <- Week_isolated
-sp_k_40_smoothing_parameters$sp <- sp_check_40$sp
+sp_k_40_smoothing_parameters$sp[i] <- sp_check_40$sp
 
 
 plot_data$GAM_fit_40 <- sp_check_40$fitted.values
@@ -289,7 +290,7 @@ transformed data {
 parameters {
   vector[M] b;       // basis covariates
   vector<lower = 0, upper = 5>[2] lambda;       //penalty parameters
-  real sig_re;        // hierarchical sd parameter for the iid noise (v)
+  real<lower = 0> sig_re;        // hierarchical sd parameter for the iid noise (v)
   vector[N] v;        // iid noise
   
 }
@@ -357,7 +358,7 @@ stanfit = rstan::stan(model_code = Stan_model_string,
 #9mins:20secs to run iter = 2000 (others default)
 
 main_summaries <- summary(stanfit, pars = c("b", "lambda", "sig_re", "u", "v", "mu", "lp__"))
-write.csv(main_summaries$summary,"outputs/main_summaries.csv", row.names = TRUE)
+write.csv(main_summaries$summary,sprintf("outputs/main_summaries/main_summaries_%s.csv", Week_isolated), row.names = TRUE)
 
 ## Check convergence using Stan's Rhat
 #
