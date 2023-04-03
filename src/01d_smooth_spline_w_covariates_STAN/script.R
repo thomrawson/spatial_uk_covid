@@ -131,6 +131,7 @@ for(i in 1:length(missing_data$areaCode)){
   
 }
 any(is.na(Case_Rates_Data))
+rm(Neighbor_hold, missing_data, Week_hold, transit_mean_hold, Rutland_neighbors)
 #No more missing data!
 ################################################################################
 
@@ -175,6 +176,7 @@ dir.create("outputs/posterior_plots")
 dir.create("outputs/fitted_spatial_components")
 dir.create("outputs/model_fits")
 dir.create("outputs/plots/Combined")
+dir.create("outputs/plots/betas_plots")
 
 #Make an array to hold our basis function covariates
 X_basis <- array(0, dim = c(length(Weeks_to_assess),306, 40))
@@ -222,6 +224,52 @@ S1_data[i,,] <- S1_hold
 }
 #End the Loop here. 
 
+#Make an array to hold our covariate data!
+
+K <- 26 #Number of covariates
+
+X_covariates <- array(0, dim = c(length(Weeks_to_assess), length(unique(Case_Rates_Data$areaCode)), K))
+
+for(i in 2:max(Weeks_to_assess)){
+  j <- i-1
+  
+  Reduced_Data <- filter(Case_Rates_Data, Week == i)
+  #Don't use this line to re-order, but can be handy to remember how.
+  #Reduced_Data <- Reduced_Data[order(Reduced_Data$INDEX),]
+  #scale() will fail if all variables are the same value (i.e. if sd = 0)
+  
+  #For now I will not scale the percentages, I'll just give them from 0 to 1
+  
+  X_covariates[j,,1] <- Reduced_Data$cumVaccPercentage_FirstDose/100
+  X_covariates[j,,2] <- Reduced_Data$cumVaccPercentage_SecondDose/100
+  X_covariates[j,,3] <- Reduced_Data$cumVaccPercentage_ThirdDose/100
+  X_covariates[j,,4] <- scale(Reduced_Data$prop_white_british)
+  X_covariates[j,,5] <- scale(Reduced_Data$prop_asian)
+  X_covariates[j,,6] <- scale(Reduced_Data$prop_black_afr_car)
+  X_covariates[j,,7] <- scale(Reduced_Data$IMD_Average_score)   
+  X_covariates[j,,8] <- scale(Reduced_Data$prop_o65) 
+  X_covariates[j,,9] <- scale(Reduced_Data$Median_annual_income) 
+  X_covariates[j,,10] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
+  X_covariates[j,,11] <- scale(Reduced_Data$residential_percent_change_from_baseline)
+  X_covariates[j,,12] <- scale(Reduced_Data$transit_stations_percent_change_from_baseline)
+  X_covariates[j,,13] <- Reduced_Data$Alpha_proportion/100
+  X_covariates[j,,14] <- Reduced_Data$Delta_proportion/100
+  X_covariates[j,,15] <- Reduced_Data$Delta_AY_4_2_proportion/100
+  X_covariates[j,,16] <- Reduced_Data$Omicron_BA_1_proportion/100
+  X_covariates[j,,17] <- Reduced_Data$Omicron_BA_2_proportion/100
+  X_covariates[j,,18] <- Reduced_Data$Omicron_BA_4_proportion/100
+  X_covariates[j,,19] <- Reduced_Data$Omicron_BA_5_proportion/100
+  X_covariates[j,,20] <- Reduced_Data$Other_proportion/100
+  X_covariates[j,,21] <- scale(Reduced_Data$Core_services_funding_by_weighted)
+  X_covariates[j,,22] <- scale(Reduced_Data$Primary_care_funding_by_weighted)
+  X_covariates[j,,23] <- scale(Reduced_Data$Specialised_services_by_weighted)
+  X_covariates[j,,24] <- scale(Reduced_Data$unringfenced/Reduced_Data$Population)
+  X_covariates[j,,25] <- scale(Reduced_Data$contain_outbreak_management/Reduced_Data$Population)
+  X_covariates[j,,26] <- scale(Reduced_Data$ASC_infection_control_fund/Reduced_Data$Population)
+  
+}
+
+
 ### Write model formula
 
 
@@ -233,12 +281,14 @@ data {
 
 
   int<lower=0> y[N, T];              // count outcomes (current week's cases)
-  //int<lower=1> K;                 // num covariates 
+  int<lower=1> K;                 // num covariates 
   int<lower=0> e[N];              // offset (LTLA population)
   
   matrix[N, M] X[T];                 // basis functions matrix
   matrix[M-1, 2*(M-1)] S1[T];        // Penalty matrices
   vector[M] zero;
+  
+  matrix[N, K] X_covariates[T];  //Covariates matrix
 
 
 }
@@ -246,11 +296,13 @@ transformed data {
   //matrix[N,T] log_E = log(E + E_neighbours); #kept as formatting reminder
 }
 parameters {
-  //matrix[M,T] b;       // basis covariates
-  vector[M] b[T];       // basis covariates
+  //matrix[M,T] b;       // basis coefficients
+  vector[M] b[T];       // basis coefficients
   vector<lower = 0, upper = 5>[2] lambda[T];       //penalty parameters
   real<lower = 0> sig_re[T];        // hierarchical sd parameter for the iid noise (v)
   vector[N] v[T];        // iid noise
+  
+  vector[K] betas;       // covariates coefficients
   
 }
 transformed parameters {
@@ -265,7 +317,7 @@ u[t] = X[t,1:N, 2:M] * b[t,2:M];
 model {
 for(t in 1:T){
 for(i in 1:N){
-  y[i,t] ~ poisson_log(b[t,1] + u[t][i] + v[t][i] + log(e[i]));  // 
+  y[i,t] ~ poisson_log(b[t,1] + u[t][i] + v[t][i] + (X_covariates[t,i,] * betas) + log(e[i]));  // 
   v[t][i] ~ normal(0, sig_re[t]);
 }
 }
@@ -285,6 +337,9 @@ for(i in 1:N){
     lambda[t][i] ~ gamma(.05, .005);
   }
   
+  //Covariate coefficients
+  betas ~ normal(0.0, 1.0);
+  
   }
   
   
@@ -295,7 +350,7 @@ generated quantities {
   
   for(t in 1:T){
   for(i in 1:N){
-  mu[t,i] = exp(b[t,1] + u[t][i] + v[t][i] + log(e[i]));
+  mu[t,i] = exp(b[t,1] + u[t][i] + v[t][i] + (X_covariates[t,i,] * betas) + log(e[i]));
   }
   }
 }
@@ -313,8 +368,10 @@ for(i in 1:length(Weeks_to_assess)){
 modelData <- list(N = length(unique(Case_Rates_Data$areaCode)), 
                   M = ncol(X_basis[1,,]),
                   T = length(Weeks_to_assess),
-                  y = y_data, X = X_basis, zero = jd_smooth$jags.data$zero, 
-                   S1 = S1_data, e = Reduced_Data$Population)
+                  y = y_data, K = K, 
+                  X = X_basis, zero = jd_smooth$jags.data$zero, 
+                   S1 = S1_data, e = Reduced_Data$Population,
+                  X_covariates = X_covariates)
 
 
 stanfit = rstan::stan(model_code = Stan_model_string,
@@ -332,8 +389,11 @@ stanfit = rstan::stan(model_code = Stan_model_string,
 
 #9mins:20secs to run iter = 2000 (others default)
 
-main_summaries <- summary(stanfit, pars = c("b", "lambda", "sig_re", "u", "v", "mu", "lp__"))
+main_summaries <- summary(stanfit, pars = c("b", "lambda", "sig_re", "u", "v", "mu", "betas", "lp__"))
 write.csv(main_summaries$summary,"outputs/main_summaries.csv", row.names = TRUE)
+
+betas_summaries <- summary(stanfit, pars = c("betas"))
+write.csv(betas_summaries$summary,"outputs/betas_summaries.csv", row.names = TRUE)
 
 ## Check convergence using Stan's Rhat
 #
@@ -356,7 +416,8 @@ for(t in 1:length(Weeks_to_assess)){
                        sprintf("sig_re\\[%s\\]", t),
                        sprintf("u\\[%s,", t),
                        sprintf("v\\[%s,", t),
-                       sprintf("mu\\[%s,", t)
+                       sprintf("mu\\[%s,", t),
+                       sprintf("betas\\[%s\\]", t)
                        )
 
   data_hold2 <- data_hold[grep(paste(strings_to_keep,collapse="|"), rownames(data_hold)),]
@@ -366,6 +427,10 @@ for(t in 1:length(Weeks_to_assess)){
   
   
 }
+
+betas_GR_over_1_point_05 <-  data_hold[grep("betas", rownames(data_hold)),]
+betas_GR_over_1_point_05 <-  sum(betas_GR_over_1_point_05[, "Rhat"] > 1.05)
+GR_diag_over_1_point_1$GR_over_point1 <- GR_diag_over_1_point_1$GR_over_point1 + betas_GR_over_1_point_05
 
 
 
@@ -419,6 +484,573 @@ ggsave(v3_plot,
        filename = sprintf("outputs/posterior_plots/u3_Week_%s.png",Week_isolated))
 
 }
+
+#betas traceplots
+betas_plot <- rstan::traceplot(stanfit, pars= sprintf('betas[%s]',1:26))
+ggsave(betas_plot,
+       filename = "outputs/plots/betas_plots/betas_traceplot.png")
+
+#Also want to plot the posterior distribution for each betas param
+########################################################################
+#Next we have a look at how good our fit is
+betas_1_12 <- plot(stanfit, pars = sprintf('betas[%s]',1:12))
+#ci_level: 0.8 (80% intervals)
+#outer_level: 0.95 (95% intervals)
+betas_1_12 <- betas_1_12 + scale_y_continuous(breaks = c(12:1),
+                                              labels = c("1) CumVacc_1dose", 
+                                                         "2) CumVacc_2dose", "3) CumVacc_3dose",
+                                                         "4) prop_white_british", "5) prop_asian",
+                                                         "6) prop_black_afr", "7) IMD_Average_score",
+                                                         "8) prop_o65", "9) Median_annual_income",
+                                                         "10) workplaces_movement",
+                                                         "11) residential_movement", "12) transit_movement")) +
+  geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Covariate coefficients")
+
+png(file="outputs/plots/betas_plots/betas_1_12.png",
+    width=1440, height=1080, res = 150)
+plot(betas_1_12)
+dev.off()
+
+
+betas_13_20 <- plot(stanfit, pars = sprintf('betas[%s]',13:20))
+#ci_level: 0.8 (80% intervals)
+#outer_level: 0.95 (95% intervals)
+betas_13_20 <- betas_13_20 + scale_y_continuous(breaks = c(8:1),
+                                                labels = c("13) Alpha", "14) Delta", 
+                                                           "15) Delta_AY_4_2", "16) Omicron_BA_1",
+                                                           "17) Omicron_BA_2", "18) Omicron_BA_4",
+                                                           "19) Omicron_BA_5", "20) Other variants")) +
+  geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Variant proportion coefficients")
+
+png(file="outputs/plots/betas_plots/betas_13_20.png",
+    width=1440, height=1080, res = 150)
+plot(betas_13_20)
+dev.off()
+
+betas_21_26 <- plot(stanfit, pars = sprintf('betas[%s]',21:26))
+#ci_level: 0.8 (80% intervals)
+#outer_level: 0.95 (95% intervals)
+betas_21_26 <- betas_21_26 + scale_y_continuous(breaks = c(6:1),
+                                                labels = c("21) Core Services", "22) Primary Care", 
+                                                           "23) Specialised Services", "24) Unringfenced",
+                                                           "25) Outbreak Management", "26) ASC infection control")) +
+  geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Funding coefficients")
+
+png(file="outputs/plots/betas_plots/betas_21_26.png",
+    width=1440, height=1080, res = 150)
+plot(betas_21_26)
+dev.off()
+
+### We also plot the spatial plot of all the covariates themselves
+#X_covariates[j,,1] <- Reduced_Data$cumVaccPercentage_FirstDose/100
+#X_covariates[j,,2] <- Reduced_Data$cumVaccPercentage_SecondDose/100
+#X_covariates[j,,3] <- Reduced_Data$cumVaccPercentage_ThirdDose/100
+
+dir.create("outputs/plots/covariate_plots")
+dir.create("outputs/plots/covariate_plots/FirstDose")
+dir.create("outputs/plots/covariate_plots/SecondDose")
+dir.create("outputs/plots/covariate_plots/ThirdDose")
+
+dir.create("outputs/plots/covariate_plots/Alpha")
+dir.create("outputs/plots/covariate_plots/Delta")
+dir.create("outputs/plots/covariate_plots/Delta_AY_4_2")
+dir.create("outputs/plots/covariate_plots/Omicron_BA_1")
+dir.create("outputs/plots/covariate_plots/Omicron_BA_2")
+dir.create("outputs/plots/covariate_plots/Omicron_BA_4")
+dir.create("outputs/plots/covariate_plots/Omicron_BA_5")
+dir.create("outputs/plots/covariate_plots/Other_variant")
+dir.create("outputs/plots/covariate_plots/workplace")
+dir.create("outputs/plots/covariate_plots/residential")
+dir.create("outputs/plots/covariate_plots/transit")
+
+for(i in 1:length(Weeks_to_assess)){
+  
+  Week_isolated <- Weeks_to_assess[i]  
+  Reduced_Data <- filter(Case_Rates_Data, Week == Week_isolated)
+  
+  
+  
+plot_data <- Reduced_Data[,c(1,10,11,12)]
+colnames(plot_data) <- c("CODE", "First_dose", "Second_dose", "Third_dose")
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = First_dose), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s First Dose uptake", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> firstdose_plot
+
+ggsave(firstdose_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/FirstDose/Week_%s_First_Dose.png", Week_isolated))
+
+##################
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Second_dose), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Second Dose uptake", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> seconddose_plot
+
+ggsave(seconddose_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/SecondDose/Week_%s_Second_Dose.png", Week_isolated))
+
+##################
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Third_dose), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Third Dose uptake", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> thirddose_plot
+
+ggsave(thirddose_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/ThirdDose/Week_%s_Third_Dose.png", Week_isolated))
+
+##############################
+
+plot_data <- Reduced_Data[,c(1,23,24,25,26,27,28,29,30)]
+names(plot_data)[names(plot_data) == 'areaCode'] <- 'CODE'
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Alpha_proportion), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Alpha Proportion", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> alpha_plot
+
+ggsave(alpha_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/Alpha/Week_%s_Alpha.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Delta_proportion), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Delta Proportion", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> delta_plot
+
+ggsave(delta_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/Delta/Week_%s_Delta.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Delta_AY_4_2_proportion), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Delta AY 4 2 Proportion", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> delta_plot
+
+ggsave(delta_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/Delta_AY_4_2/Week_%s_Delta_AY42.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Omicron_BA_1_proportion), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Omicron BA 1 Proportion", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> omicron_plot
+
+ggsave(omicron_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/Omicron_BA_1/Week_%s_Omicron_BA1.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Omicron_BA_1_proportion), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Omicron BA 1 Proportion", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> omicron_plot
+
+ggsave(omicron_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/Omicron_BA_1/Week_%s_Omicron_BA1.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Omicron_BA_2_proportion), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Omicron BA 2 Proportion", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> omicron_plot
+
+ggsave(omicron_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/Omicron_BA_2/Week_%s_Omicron_BA2.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Omicron_BA_4_proportion), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Omicron BA 4 Proportion", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> omicron_plot
+
+ggsave(omicron_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/Omicron_BA_4/Week_%s_Omicron_BA4.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Omicron_BA_5_proportion), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Omicron BA 5 Proportion", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> omicron_plot
+
+ggsave(omicron_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/Omicron_BA_5/Week_%s_Omicron_BA5.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Other_proportion), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Other Variant Proportion", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> other_plot
+
+ggsave(other_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/Other_variant/Week_%s_Other.png", Week_isolated))
+
+##################
+plot_data <- Reduced_Data[,c(1,20, 21, 22)]
+names(plot_data)[names(plot_data) == 'areaCode'] <- 'CODE'
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = workplaces_percent_change_from_baseline), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s Workplace percent", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> other_plot
+
+ggsave(other_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/workplace/Week_%s_workplace.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = residential_percent_change_from_baseline), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s residential percent", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> other_plot
+
+ggsave(other_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/residential/Week_%s_residential.png", Week_isolated))
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = transit_stations_percent_change_from_baseline), lwd =  .05) +
+  scale_fill_viridis_c(name = sprintf("Week %s transit percent", Week_isolated)) +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> other_plot
+
+ggsave(other_plot, 
+       filename = sprintf("outputs/plots/covariate_plots/transit/Week_%s_transit.png", Week_isolated))
+
+##################
+
+}
+
+
+plot_data <- Case_Rates_Data[,c(1,13:19)]
+plot_data2 <- Reduced_Data[,c(1,13:19)]
+names(plot_data)[names(plot_data) == 'areaCode'] <- 'CODE'
+names(plot_data2)[names(plot_data2) == 'areaCode'] <- 'CODE'
+
+Boundaries %>% 
+  inner_join(plot_data2, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = prop_white_british), lwd =  .05) +
+  scale_fill_viridis_c(name = "Proportion White British") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/Prop_White_British.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data2, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = prop_asian), lwd =  .05) +
+  scale_fill_viridis_c(name = "Proportion Asian") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/Prop_Asian.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data2, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = prop_black_afr_car), lwd =  .05) +
+  scale_fill_viridis_c(name = "Proportion Black Afr Car") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/Prop_Black_Afr_Car.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data2, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = prop_o65), lwd =  .05) +
+  scale_fill_viridis_c(name = "Proportion Over 65") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/Prop_White_British.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data2, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = IMD_Average_score), lwd =  .05) +
+  scale_fill_viridis_c(name = "IMD Average score") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/IMD_average_score.png")
+
+##################
+plot_data <- Case_Rates_Data[,c(1,2,19)]
+names(plot_data)[names(plot_data) == 'areaCode'] <- 'CODE'
+plot_data$tax_year <- plot_data$Week > 49
+
+plot_data2 <- filter(plot_data, !tax_year)
+plot_data3 <- filter(plot_data2, Week == 5)
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Median_annual_income), lwd =  .05) +
+  scale_fill_viridis_c(name = "Median income 20/21") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/Median_income_1.png")
+
+##################
+
+plot_data2 <- filter(plot_data, tax_year)
+plot_data3 <- filter(plot_data2, Week == 60)
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Median_annual_income), lwd =  .05) +
+  scale_fill_viridis_c(name = "Median income 21/22") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/Median_income_2.png")
+
+##################
+plot_data <- Case_Rates_Data[,c(1,2,4,33:38)]
+names(plot_data)[names(plot_data) == 'areaCode'] <- 'CODE'
+plot_data$tax_year <- plot_data$Week > 49
+
+plot_data2 <- filter(plot_data, !tax_year)
+plot_data3 <- filter(plot_data2, Week == 5)
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Core_services_funding_by_weighted), lwd =  .05) +
+  scale_fill_viridis_c(name = "Core services (weighted) 20/21") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/core_services_1.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Primary_care_funding_by_weighted), lwd =  .05) +
+  scale_fill_viridis_c(name = "Primary Care (weighted) 20/21") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/primary_care_1.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Specialised_services_by_weighted), lwd =  .05) +
+  scale_fill_viridis_c(name = "Specialised services \n (weighted) 20/21") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/specialised_services_1.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = unringfenced/Population), lwd =  .05) +
+  scale_fill_viridis_c(name = "Unringfenced \n (weighted) 20/21") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/unringfenced_1.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = contain_outbreak_management/Population), lwd =  .05) +
+  scale_fill_viridis_c(name = "Contain outbreak \n (weighted) 20/21") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/contain_outbreak_1.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = ASC_infection_control_fund/Population), lwd =  .05) +
+  scale_fill_viridis_c(name = "infection control \n (weighted) 20/21") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/infection_control_1.png")
+
+##################
+plot_data2 <- filter(plot_data, tax_year)
+plot_data3 <- filter(plot_data2, Week == 60)
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Core_services_funding_by_weighted), lwd =  .05) +
+  scale_fill_viridis_c(name = "Core services (weighted) 21/22") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/core_services_2.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Primary_care_funding_by_weighted), lwd =  .05) +
+  scale_fill_viridis_c(name = "Primary Care (weighted) 21/22") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/primary_care_2.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = Specialised_services_by_weighted), lwd =  .05) +
+  scale_fill_viridis_c(name = "Specialised services \n (weighted) 21/22") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/specialised_services_2.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = unringfenced/Population), lwd =  .05) +
+  scale_fill_viridis_c(name = "Unringfenced \n (weighted) 21/22") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/unringfenced_2.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = contain_outbreak_management/Population), lwd =  .05) +
+  scale_fill_viridis_c(name = "Contain outbreak \n (weighted) 21/22") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/contain_outbreak_2.png")
+
+##################
+
+Boundaries %>% 
+  inner_join(plot_data3, by = "CODE") %>% 
+  ggplot( ) +
+  geom_sf(aes(fill = ASC_infection_control_fund/Population), lwd =  .05) +
+  scale_fill_viridis_c(name = "infection control \n (weighted) 21/22") +
+  theme_void()+
+  theme(plot.background = element_rect(fill = 'white', color = "white")) -> prop_plot
+
+ggsave(prop_plot, 
+       filename = "outputs/plots/covariate_plots/infection_control_2.png")
+
+##################
+
+#X_covariates[j,,21] <- scale(Reduced_Data$Core_services_funding_by_weighted)
+#X_covariates[j,,22] <- scale(Reduced_Data$Primary_care_funding_by_weighted)
+#X_covariates[j,,23] <- scale(Reduced_Data$Specialised_services_by_weighted)
+#X_covariates[j,,24] <- scale(Reduced_Data$unringfenced/Reduced_Data$Population)
+#X_covariates[j,,25] <- scale(Reduced_Data$contain_outbreak_management/Reduced_Data$Population)
+#X_covariates[j,,26] <- scale(Reduced_Data$ASC_infection_control_fund/Reduced_Data$Population)
+
+########################################################################
 
 # Save the model object
  write_rds(stanfit,
