@@ -89,8 +89,8 @@ connect_coords <- connect_coords %>%
 #Let's say Week 50; (very low cases) Week 85 for very high.
 #We will loop over all weeks
 #Goes from 2 - 129
-#Weeks_to_assess <- unique(Case_Rates_Data$Week)
-Weeks_to_assess <- c(2,11,12)
+Weeks_to_assess <- unique(Case_Rates_Data$Week)
+#Weeks_to_assess <- c(2,11,12)
 
 #Data files I'll fill up as we go:
 sp_k_10_smoothing_parameters <- data.frame(Week = rep(NA,length(Weeks_to_assess)), 
@@ -454,15 +454,16 @@ modelData <- list(N = length(Reduced_Data$Week_Cases), M = (ncol(X_dist)+ncol(X_
 #              sig_re = runif(1), v = rnorm(nrow(Reduced_Data), 1))
 
 stanfit = rstan::stan(model_code = Stan_model_string,
-                      data=modelData,
-                      algorithm = "NUTS",
-                      chains = 4,
-                      #warmup=2500, 
-                      iter=400
-                      #thin = 100,
-                      #init = inits,
-                      #control = list(max_treedepth = 10)
-)
+               data=modelData,
+               algorithm = "NUTS",
+               chains = 4,
+               #warmup=2500, 
+               iter=4000,
+               #thin = 100,
+               #init = inits,
+               control = list(max_treedepth = 12)
+               )
+
 
 #############################
 
@@ -853,14 +854,29 @@ ggsave(MAE_plot,
        filename = "outputs/estimates_plots_over_all_weeks/MAE_estimate.png")
 
 ggplot(data = sp_k_10_smoothing_parameters) +
-  geom_point(aes(x= Week, y = sp)) -> sp_k_10_plot
+  geom_point(aes(x= Week, y = sp_distance)) -> sp_k_10_plot
 ggsave(sp_k_10_plot, 
-       filename = "outputs/estimates_plots_over_all_weeks/sp_k_10_plot.png")
+       filename = "outputs/estimates_plots_over_all_weeks/sp_distance_k_10_plot.png")
 ggplot(data = sp_k_20_smoothing_parameters) +
-  geom_point(aes(x= Week, y = sp)) -> sp_k_20_plot
+  geom_point(aes(x= Week, y = sp_distance)) -> sp_k_20_plot
 ggsave(sp_k_20_plot, 
-       filename = "outputs/estimates_plots_over_all_weeks/sp_k_20_plot.png")
+       filename = "outputs/estimates_plots_over_all_weeks/sp_distance_k_20_plot.png")
 ggplot(data = sp_k_40_smoothing_parameters) +
-  geom_point(aes(x= Week, y = sp)) -> sp_k_40_plot
+  geom_point(aes(x= Week, y = sp_distance)) -> sp_k_40_plot
+ggsave(sp_k_40_plot,
+       filename = "outputs/estimates_plots_over_all_weeks/sp_distance_k_40_plot.png")
+
+
+ggplot(data = sp_k_10_smoothing_parameters) +
+  geom_point(aes(x= Week, y = sp_connected)) -> sp_k_10_plot
+ggsave(sp_k_10_plot, 
+       filename = "outputs/estimates_plots_over_all_weeks/sp_connected_k_10_plot.png")
+ggplot(data = sp_k_20_smoothing_parameters) +
+  geom_point(aes(x= Week, y = sp_connected)) -> sp_k_20_plot
+ggsave(sp_k_20_plot, 
+       filename = "outputs/estimates_plots_over_all_weeks/sp_connected_k_20_plot.png")
+ggplot(data = sp_k_40_smoothing_parameters) +
+  geom_point(aes(x= Week, y = sp_connected)) -> sp_k_40_plot
 ggsave(sp_k_40_plot, 
-       filename = "outputs/estimates_plots_over_all_weeks/sp_k_40_plot.png")
+       filename = "outputs/estimates_plots_over_all_weeks/sp_connected_k_40_plot.png")
+
