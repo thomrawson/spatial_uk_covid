@@ -416,8 +416,9 @@ for(t in 1:length(Weeks_to_assess)){
                        sprintf("sig_re\\[%s\\]", t),
                        sprintf("u\\[%s,", t),
                        sprintf("v\\[%s,", t),
-                       sprintf("mu\\[%s,", t),
-                       sprintf("betas\\[%s\\]", t)
+                       sprintf("mu\\[%s,", t)
+                       #,
+                       #sprintf("betas\\[%s\\]", t)
                        )
 
   data_hold2 <- data_hold[grep(paste(strings_to_keep,collapse="|"), rownames(data_hold)),]
@@ -1298,7 +1299,7 @@ plot_grid(Cases_by_pop_plot + theme(legend.title= element_blank()),
           Gam_k40_plot + theme(legend.title= element_blank()), uplot, vplot,
           nrow = 2, labels = c(sprintf("Real cases/pop - Week %s", Week_isolated), "GAM k40 fit",
                                sprintf("Bayesian u - %s percent", Mixing_estimate$phi_est[t]),
-                               sprintf("Bayesian v - iid noise - %s bad GRs", GR_diag_over_1_point_1$GR_over_point1[i])),
+                               sprintf("Bayesian v - iid noise - %s bad GRs", GR_diag_over_1_point_1$GR_over_point1[t])),
           scale = 0.9) -> combined_plot
 
 

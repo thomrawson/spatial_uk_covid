@@ -402,8 +402,8 @@ parameters {
 transformed parameters {
 matrix[M_dist, M_dist] K1 = (S1[1:M_dist, 1:M_dist] * lambda[1]) + (S1[1:M_dist, (M_dist+1):(2*(M_dist))] * lambda[2]);
 matrix[M_human, M_human] K2 = (S2[1:M_human, 1:M_human] * lambda[3]) + (S2[1:M_human, (M_human+1):(2*(M_human))] * lambda[4]);
-vector[N] u_dist = X_dist[1:N, 1:M_dist] * b[2:M_dist+1];
-vector[N] u_human = X_human[1:N, 1:M_human] * b[M_dist+2:M+1];
+vector[N] u_dist = X_dist[1:N, 1:M_dist] * b[2:(M_dist+1)];
+vector[N] u_human = X_human[1:N, 1:M_human] * b[(M_dist+2):(M+1)];
 }
 model {
 for(i in 1:N){
@@ -417,8 +417,8 @@ for(i in 1:N){
   b[1] ~ normal(0, 5);
   
   // Prior for smooth coefficients
-  b[2:M_dist+1] ~ multi_normal_prec(zero[2:M_dist+1], K1);
-  b[M_dist+2:M+1] ~ multi_normal_prec(zero[2:M_human+1], K2);
+  b[2:(M_dist+1)] ~ multi_normal_prec(zero[2:(M_dist+1)], K1);
+  b[(M_dist+2):(M+1)] ~ multi_normal_prec(zero[2:(M_human+1)], K2);
 
   // smoothing parameter priors 
   for (i in 1:4) {
@@ -458,10 +458,10 @@ stanfit = rstan::stan(model_code = Stan_model_string,
                algorithm = "NUTS",
                chains = 4,
                #warmup=2500, 
-               iter=4000,
+               iter=2000
                #thin = 100,
                #init = inits,
-               control = list(max_treedepth = 12)
+               #control = list(max_treedepth = 12)
                )
 
 
