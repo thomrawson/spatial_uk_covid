@@ -205,7 +205,7 @@ Reduced_Data <- filter(Case_Rates_Data, Week == Week_isolated)
 
 # Use mgcv to extract basis functions for the smooth term
 jd_smooth <- jagam(Week_Cases ~  s(y_scale, x_scale, k = 40, bs = "tp"),
-                   offset = log(Population),
+                   offset = log(previous_week_cases),
                    # Save JAGS code to create model
                    file = "jagam_ten.txt", 
                    # Set prior for smoothing function (in this case, the spatial smooth)
