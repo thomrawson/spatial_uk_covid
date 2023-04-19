@@ -252,7 +252,7 @@ msd_scale <- cmdscale(Distance_matrix, eig = T, k = 2)
 connect_coords <-  as.data.frame(msd_scale$points)
 names(connect_coords) <- c("connect_coord1", "connect_coord2")
 connect_coords$areaName <- gravity_hold_data$areaName
-
+#Scale them to be between 0 and 1
 connect_coords <- connect_coords %>% 
   mutate(connect_coord1_scale = (connect_coord1 - min(connect_coord1))/(max(connect_coord1) - min(connect_coord1)),
          connect_coord2_scale = (connect_coord2 - min(connect_coord2))/(max(connect_coord2) - min(connect_coord2)))
@@ -283,6 +283,7 @@ Reduced_Data$connect_coord2_scale <- connect_coords$connect_coord2_scale
 ## effect in NIMBLE to data 
 
 # Use mgcv to extract basis functions for the smooth term
+#Note that in this version of the code we're using the previous week's cases as an offset.
 jd_smooth <- jagam(Week_Cases ~  s(y_scale, x_scale, k = 40, bs = "tp")
                    + s(connect_coord1_scale, connect_coord2_scale, k = 40, bs = "tp"),
                    offset = log(previous_week_cases),
@@ -297,7 +298,7 @@ jd_smooth <- jagam(Week_Cases ~  s(y_scale, x_scale, k = 40, bs = "tp")
                    data = Reduced_Data)
 
 # Extract basis functions to use as linear predictors in the model
-X_hold <- jd_smooth$jags.data$X[,2:40]
+X_hold <- jd_smooth$jags.data$X[,2:40] #(306 x 39)
 X_dist[i,,] <- X_hold
 m_dist <- ncol(X_hold)
 
