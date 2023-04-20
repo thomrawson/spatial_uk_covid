@@ -230,9 +230,9 @@ generated quantities {
   //matrix[N,T] eta = log(E[,i] + zetas .*(Cases_Nbors[,i]./N_Nbors)) + beta0 + x[i] * betas + theta[,i]
   //matrix[N,T] mu = exp(eta);
   
-  matrix<lower=0>[N,T] y_approx
+  matrix<lower=0>[N,T] y_approx;
   for(i in 1:T){
-  y_approx[,i] = log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + beta0 + x[i] * betas + theta
+  y_approx[,i] = exp(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + beta0 + x[i] * betas + theta);
   
   }
 }
