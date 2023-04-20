@@ -179,7 +179,7 @@ parameters {
 
   vector[N] theta;       // heterogeneous effects
   real theta_mu; //hierarchical hyperparameter for drawing theta
-  real theta_sd; //hierarchical hyperparameter for drawing theta
+  real<lower=0> theta_sd; //hierarchical hyperparameter for drawing theta
   
   //Coupled Hospitalisation parameters
   //real<lower=0,upper=3> average_hosp_lag; //The number of weeks hospitalisations lag behind cases
@@ -189,7 +189,7 @@ parameters {
   vector[K_hosp] betas_hosp;
   vector[N_hosp] theta_hosp;       // heterogeneous effects
   real theta_hosp_mu; //hierarchical hyperparameter for drawing theta
-  real theta_hosp_sd; //hierarchical hyperparameter for drawing theta
+  real<lower=0> theta_hosp_sd; //hierarchical hyperparameter for drawing theta
 }
 transformed parameters {
 
@@ -264,6 +264,9 @@ data {
   
   //Distance between LTLAs
   matrix<lower=0>[N,N] Distance_matrix;
+  
+  //Populations of LTLAs (scaled between 0 and 1)
+  real<lower=0> Populations[N];
 
 }
 transformed data {
@@ -275,13 +278,13 @@ parameters {
 
   vector[N] theta;       // heterogeneous effects
   real theta_mu; //hierarchical hyperparameter for drawing theta
-  real theta_sd; //hierarchical hyperparameter for drawing theta
+  real<lower=0> theta_sd; //hierarchical hyperparameter for drawing theta
   
   real beta0_hosp; //intercept
   vector[K_hosp] betas_hosp;
   vector[N_hosp] theta_hosp;       // heterogeneous effects
   real theta_hosp_mu; //hierarchical hyperparameter for drawing theta
-  real theta_hosp_sd; //hierarchical hyperparameter for drawing theta
+  real<lower=0> theta_hosp_sd; //hierarchical hyperparameter for drawing theta
   
   real<lower=0> distance_alpha;
   real<lower=0> distance_gamma;
@@ -291,7 +294,8 @@ transformed parameters {
 matrix<lower=0>[N,N] smoothed_distance_matrix;
   for(i in 1:N){
   for(j in 1:N){
-  smoothed_distance_matrix[i,j] = 1/((1 + (Distance_matrix[i,j]/distance_alpha))^distance_gamma);
+ 
+  smoothed_distance_matrix[i,j] = (Populations[i]*Populations[j])/((1 + (Distance_matrix[i,j]/distance_alpha))^distance_gamma);
   }
   }
 
@@ -415,15 +419,25 @@ Week_50_data <- filter(Case_Rates_Data, Week == 50)
 Week_50_data <- Week_50_data[,c(4,5,41,42)]
 Week_50_data <- Week_50_data[order(Week_50_data$INDEX),]
 
+Week_50_data <- Week_50_data %>% 
+  mutate(y_scale = (centroid_y - min(centroid_y))/(max(centroid_y) - min(centroid_y)),
+         x_scale = (centroid_x - min(centroid_x))/(max(centroid_x) - min(centroid_x)))
+
+
 Distance_matrix <- array(0, dim = c(N,N))
+Populations <- rep(0, length(Week_50_data$Population))
 for(i in 1:306){
+  Populations[i] <- Week_50_data$Population[i]
   for(j in 1:306){
     location_i <- Week_50_data[i,]
     location_j <- Week_50_data[j,]
-    euclid_distance <- sqrt((location_i$centroid_x - location_j$centroid_x)^2 + (location_i$centroid_y - location_j$centroid_y)^2)
-    Distance_matrix[i,j] <- (euclid_distance/1e+16)*location_i$Population*location_j$Population
+    euclid_distance <- sqrt((location_i$x_scale - location_j$x_scale)^2 + (location_i$y_scale - location_j$y_scale)^2)
+    Distance_matrix[i,j] <- (euclid_distance)
   }
 }
+
+#Let's scale Populations to be between 0 and 1 too.
+Populations <- Populations/max(Populations)
 #################################################################################
 
 
@@ -495,7 +509,8 @@ stanfit = stan(model_code = Stan_model_string,
                          Distance_matrix = Distance_matrix,
                          y_as_matrix = t(y),
                          susceptible_proxy = susceptible_proxy,
-                         LTLA_to_region = t(LTLA_to_region_matrix)),
+                         LTLA_to_region = t(LTLA_to_region_matrix),
+                         Populations = Populations),
                algorithm = algorithm,
                warmup=warmup_iterations, iter=total_iterations,
                control = list(max_treedepth = tree_depth));
@@ -513,7 +528,8 @@ stanfit = stan(model_code = Stan_model_string,
                            Distance_matrix = Distance_matrix,
                            y_as_matrix = t(y),
                            susceptible_proxy = susceptible_proxy,
-                           LTLA_to_region = t(LTLA_to_region_matrix)),
+                           LTLA_to_region = t(LTLA_to_region_matrix),
+                           Populations = Populations),
                  algorithm = algorithm,
                  warmup=warmup_iterations, iter=total_iterations);
 } else{
