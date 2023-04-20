@@ -39,13 +39,13 @@ write.csv(theta_summaries_hosp$summary,"Hospital_Outputs/theta_summaries_hosp.cs
 
 
 #Save a plot of the beta trajectories
-beta_trajectories1 <- traceplot(stanfit, pars=c('beta0', sprintf('betas[%s]',1:14)), nrow = 3)
+beta_trajectories1 <- rstan::traceplot(stanfit, pars=c('beta0', sprintf('betas[%s]',1:14)), nrow = 3)
 png(file="Case_Outputs\\beta_trajectories1.png",
     width=1440, height=1080, res = 150)
 plot(beta_trajectories1)
 dev.off()
 
-beta_trajectories2 <- traceplot(stanfit, pars= sprintf('betas[%s]',15:26))
+beta_trajectories2 <- rstan::traceplot(stanfit, pars= sprintf('betas[%s]',15:26))
 png(file="Case_Outputs\\beta_trajectories2.png",
     width=1440, height=1080, res = 150)
 plot(beta_trajectories2)
@@ -55,20 +55,20 @@ dev.off()
 if(spatial_kernel == "neighbours"){
 dir.create("Case_Outputs\\zeta_plots")
 for(i in 1:19){
-  zeta_trajectories <- traceplot(stanfit, pars =sprintf('zetas[%s]',((i-1)*16 + 1):(16*i)))
+  zeta_trajectories <- rstan::traceplot(stanfit, pars =sprintf('zetas[%s]',((i-1)*16 + 1):(16*i)))
   png(file=sprintf("Case_Outputs\\zeta_plots\\zeta_trajectories_%s.png", i),
       width=1440, height=1080, res = 150)
   plot(zeta_trajectories)
   dev.off()
 }
 
-zeta_trajectories <- traceplot(stanfit, pars =sprintf('zetas[%s]',304:306))
+zeta_trajectories <- rstan::traceplot(stanfit, pars =sprintf('zetas[%s]',304:306))
 png(file=sprintf("Case_Outputs\\zeta_plots\\zeta_trajectories_%s.png", 20),
     width=1440, height=1080, res = 150)
 plot(zeta_trajectories)
 dev.off()
 } else if(spatial_kernel == "gravity"){
-  distance_trajectories <- traceplot(stanfit, pars =c("distance_alpha", "distance_gamma"))
+  distance_trajectories <- rstan::traceplot(stanfit, pars =c("distance_alpha", "distance_gamma"))
   png(file="Case_Outputs\\distance_trajectories.png",
       width=1440, height=1080, res = 150)
   plot(distance_trajectories)
@@ -187,13 +187,13 @@ dev.off()
 }
 
 #Save a plot of the hospital beta trajectories
-beta_trajectories1 <- traceplot(stanfit, pars=c('beta0_hosp', sprintf('betas_hosp[%s]',1:8)), nrow = 3)
+beta_trajectories1 <- rstan::traceplot(stanfit, pars=c('beta0_hosp', sprintf('betas_hosp[%s]',1:8)), nrow = 3)
 png(file="Hospital_Outputs\\beta_trajectories1.png",
     width=1440, height=1080, res = 150)
 plot(beta_trajectories1)
 dev.off()
 
-beta_trajectories2 <- traceplot(stanfit, pars= sprintf('betas_hosp[%s]',9:17), nrow = 3)
+beta_trajectories2 <- rstan::traceplot(stanfit, pars= sprintf('betas_hosp[%s]',9:17), nrow = 3)
 png(file="Hospital_Outputs\\beta_trajectories2.png",
     width=1440, height=1080, res = 150)
 plot(beta_trajectories2)
@@ -201,7 +201,7 @@ dev.off()
 
 
 #Save a plot of the theta hyperparameters
-theta_trajectories <- traceplot(stanfit, pars=c("theta_mu", "theta_sd", "theta_hosp_mu", "theta_hosp_sd"), nrow = 2)
+theta_trajectories <- rstan::traceplot(stanfit, pars=c("theta_mu", "theta_sd", "theta_hosp_mu", "theta_hosp_sd"), nrow = 2)
 png(file="Hospital_Outputs\\theta_trajectories.png",
     width=1440, height=1080, res = 150)
 plot(theta_trajectories)
