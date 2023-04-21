@@ -326,49 +326,7 @@ for(i in 1:length(Weeks_to_assess)){
   m <- m_dist + m_human
   
   ### Write model formula
-  Model <- nimbleCode({ 
-    
-    # u = spatial smooth term (using basis funtions)
-    u[1:n] <- X[1:n, 2:m] %*% b[2:m] #b is the coefficients, beta
-    
-    # u_dist = spatial smooth term based on distance
-    u_dist[1:n] <- X_dist[1:n, 1:m_dist] %*% b[2:(m_dist + 1)] 
-    
-    # u_human = spatial smooth term based on human movement
-    u_human[1:n] <- X_human[1:n, 1:m_human] %*% b[(m_dist + 2):(m + 1)] 
-    
-    
-    for (i in 1:n) { 
-      # y = number of cases
-      y[i] ~ dpois(mu[i]) 
-      
-      log(mu[i]) <- b[1] + u[i] + v[i] + log(e[i])
-      
-      # v = iid random effect
-      v[i] ~ dnorm(0, sd = sig_re)
-    } 
-    
-    # Priors
-    # Random effect SD
-    sig_re ~ dexp(.1)
-    
-    # Intercept
-    b[1] ~ dnorm(0, sd = 5) 
-    
-    ## prior for sd(smooth function)
-    K1[1:(m-1), 1:(m-1)] <- S1[1:(m-1), 1:(m-1)] * lambda[1] + 
-      S1[1:(m-1), m:(2*(m-1))] * lambda[2]
-    
-    # Prior for smooth coefficients
-    b[2:m] ~ dmnorm(zero[2:m], K1[1:(m-1), 1:(m-1)]) 
-    
-    ## smoothing parameter priors 
-    for (i in 1:2) {
-      # truncate lambdas to avoid simulations getting stuck
-      lambda[i] ~ T(dgamma(.05, .005), 0, 5)
-    }
-  } )
-  
+
   Stan_model_string = "
 data {
   int<lower=0> N; // Number of areas
