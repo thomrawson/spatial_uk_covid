@@ -366,6 +366,13 @@ mean_accept_stat_by_chain <- sapply(sampler_params, function(x) mean(x[, "accept
 write.table(as.character(mean_accept_stat_by_chain), file = "mean_accept_stat_by_chain.txt", sep = "\t",
             row.names = FALSE)
 
+rhat_plot <- stan_rhat(stanfit)+ ggtitle(sprintf("%s parameters - %s have Rhat over 1.1", nrow(main_summaries$summary), sum(main_summaries$summary[, "Rhat"] > 1.1)))
+ggsave(rhat_plot,
+       filename = "stan_rhat.png") 
+rm(rhat_plot)
+
+#sum(main_summaries$summary[, "Rhat"] > 1.1)
+
 #Investigate how good the model fit is against real data
 load("model_data.RData")
 #y is the REAL "next week cases". 103 (time) x 306 (LTLAs)
@@ -375,7 +382,19 @@ load("model_data.RData")
 if(spatial_kernel == "neighbours"){
  
   dir.create("Case_Outputs//Goodness_of_fit")
+  dir.create("Case_Outputs//Goodness_of_fit//basic_comparison_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//log_basic_comparison_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//basic_comparison_trajectories_grid")
+  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_trajectories_grid")
+  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories_grid")
+  dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_basic_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_basic_trajectories_grid")
   dir.create("Case_Outputs//Goodness_of_fit//trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//log_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//errors")
   
   #Script model definition:
   #y[,i] ~ poisson_log(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
@@ -404,10 +423,11 @@ if(spatial_kernel == "neighbours"){
       basic_approx_y[i,j] <- y[i-1,j]*(y[i-1,j]/y[i-2,j])
     }
   }
+  BASIC_week_difference <- abs(basic_approx_y - E)
   
   #First thing we'll make, is a plot for each of the 306 LTLAs showing the real data against the model approx data.
   #In 34 3x3 plots
-  LTLAs_by_Index <- unique(Case_Rates_Data[,c(1,3,5)])
+  LTLAs_by_Index <- unique(Case_Rates_Data[,c(1,3,4,5)])
   LTLAs_by_Index <- LTLAs_by_Index[order(LTLAs_by_Index$INDEX),]
   AllDates <- unique(Case_Rates_Data$date_begin)
   for(i in 1:(306/9)){
@@ -468,7 +488,7 @@ if(spatial_kernel == "neighbours"){
     plot_combined <- plot_grid(plot_combined, legend, rel_widths = c(3, .4))
       
     
-    png(file=sprintf("Case_Outputs//Goodness_of_fit//trajectories//trajectories_%s.png", i),
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//basic_comparison_trajectories_grid//trajectories_%s.png", i),
         width=1440, height=1080, res = 150)
     plot(plot_combined)
     dev.off()
@@ -479,16 +499,868 @@ if(spatial_kernel == "neighbours"){
   plot(REAL_week_difference, MODEL_week_difference)
   #What if we just do y ~ poisson
   plot(y[,2], model_approx_y[,2])
+  ############################################################################
   
-  
+  for(i in 1:(306)){
 
+      j <- i
+      areaCode_plot <- LTLAs_by_Index$areaCode[j]
+      areaName_plot <- LTLAs_by_Index$areaName[j]
+      
+      dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                             areaCode = rep(areaCode_plot, 306),
+                             areaName = rep(areaName_plot, 306),
+                             Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                             Cases = c(y[1:102,j],model_approx_y[1:102,j],basic_approx_y[1:102,j]),
+                             LineType = c(rep("1",204), rep("2",102))
+      )
+      dataHold$date <- as.Date(dataHold$Date)
+      
+      ggplot(dataHold) +
+        geom_line(aes(x = Date, y = log(Cases), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+        scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+        ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+        scale_linetype(guide = "none") -> plotHold
+      
+      
+      
+  
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_basic_comparison_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
     
+  }
+  #############################################################################
+  ############################################################################
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+                           areaCode = rep(areaCode_plot, 204),
+                           areaName = rep(areaName_plot, 204),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
+                           Cases = c(y[1:102,j],model_approx_y[1:102,j]),
+                           LineType = c(rep("1",204))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = Cases, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  #############################################################################
+  ############################################################################
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+                           areaCode = rep(areaCode_plot, 204),
+                           areaName = rep(areaName_plot, 204),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
+                           Cases = c(y[1:102,j],model_approx_y[1:102,j]),
+                           LineType = c(rep("1",204))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = log(Cases), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  #############################################################################
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                           areaCode = rep(areaCode_plot, 306),
+                           areaName = rep(areaName_plot, 306),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j],BASIC_week_difference[1:102,j]),
+                           LineType = c(rep("1",204), rep("2",102))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = log(Week_to_Week_Difference), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_week_to_week_basic_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                           areaCode = rep(areaCode_plot, 306),
+                           areaName = rep(areaName_plot, 306),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j],BASIC_week_difference[1:102,j]),
+                           LineType = c(rep("1",204), rep("2",102))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = Week_to_Week_Difference, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  #############################################################################
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+                           areaCode = rep(areaCode_plot, 204),
+                           areaName = rep(areaName_plot, 204),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j]),
+                           LineType = c(rep("1",204))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = Week_to_Week_Difference, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//week_to_week_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  
+  #############################################################################
+  #############################################################################
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+                           areaCode = rep(areaCode_plot, 204),
+                           areaName = rep(areaName_plot, 204),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j]),
+                           LineType = c(rep("1",204))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = log(Week_to_Week_Difference), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_week_to_week_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  
+  #############################################################################
+  #Plot the week to week difference
+  for(i in 1:(306/9)){
+    Indices_to_plot <- seq(((9*i)-8),(9*i)) 
+    myplots <- list()
+    for(j in Indices_to_plot){
+      k <- j - ((i-1)*9)
+      areaCode_plot <- LTLAs_by_Index$areaCode[j]
+      areaName_plot <- LTLAs_by_Index$areaName[j]
+      
+      dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                             areaCode = rep(areaCode_plot, 306),
+                             areaName = rep(areaName_plot, 306),
+                             Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                             Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j],BASIC_week_difference[1:102,j]),
+                             LineType = c(rep("1",204), rep("2",102))
+      )
+      dataHold$date <- as.Date(dataHold$Date)
+      
+      ggplot(dataHold) +
+        geom_line(aes(x = Date, y = Week_to_Week_Difference, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+        scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+        ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+        scale_linetype(guide = "none") -> plotHold
+      
+      if(k %in% c(1,4)){
+        myplots[[k]] <- plotHold + xlab(NULL)
+      } else if(k ==7){
+        myplots[[k]] <- plotHold
+      } else if(k %in% c(8,9)){
+        myplots[[k]] <- plotHold + ylab(NULL)
+      } else{
+        myplots[[k]] <- plotHold + ylab(NULL) + xlab(NULL)
+      }
+      
+      
+    }
+    
+    plot_combined <- plot_grid(myplots[[1]] + theme(legend.position="none"),
+                               myplots[[2]] + theme(legend.position="none"),
+                               myplots[[3]] + theme(legend.position="none"),
+                               myplots[[4]] + theme(legend.position="none"),
+                               myplots[[5]] + theme(legend.position="none"),
+                               myplots[[6]] + theme(legend.position="none"),
+                               myplots[[7]] + theme(legend.position="none"),
+                               myplots[[8]] + theme(legend.position="none"),
+                               myplots[[9]] + theme(legend.position="none"),
+                               align = "vh",
+                               nrow = 3)
+    
+    legend <- get_legend(
+      # create some space to the left of the legend
+      myplots[[1]] + theme(legend.box.margin = margin(0, 0, 0, 12))
+    )
+    
+    plot_combined <- plot_grid(plot_combined, legend, rel_widths = c(3, .4))
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories_grid//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plot_combined)
+    dev.off()
+    
+  }
+  #############################################################################
+  png(file="Case_Outputs//Goodness_of_fit//log_week_to_week_difference.png",
+      width=1440, height=1080, res = 150)
+  plot(log(REAL_week_difference), log(MODEL_week_difference))
+  abline(a=0, b=1, col = "red") 
+  dev.off()
+  
+  png(file="Case_Outputs//Goodness_of_fit//week_to_week_difference.png",
+      width=1440, height=1080, res = 150)
+  plot(REAL_week_difference, MODEL_week_difference)
+  abline(a=0, b=1, col = "red") 
+  dev.off()
+  #############################################################################  
+  our_model_error <- abs(y - model_approx_y)
+  basic_error <- abs(y - basic_approx_y)
+
+  #Plot all times per LTLA  
+  
+  plot(log(our_model_error[,50]), log(basic_error[,50]))
+  abline(a=0, b=1, col = "red")      
+  
+  #Plot all LTLAs per week
+  plot(log(our_model_error[50,]), log(basic_error[50,]))
+  abline(a=0, b=1, col = "red") 
+  
+  #Make a plot of boxplots for each week, showing the population adjusted error for each LTLA (so boxplot shows 306 LTLAs)
+  #Make the data
+  Error_data <- data.frame(Time = rep(as.Date("01/01/1999"),31518),
+                           Pop_Adj_Error = rep(0,31518))
+  for(i in 1:103){
+    Error_data$Time[(((i-1)*306)+1):((i)*306)] <- AllDates[i]
+    Error_data$Pop_Adj_Error[(((i-1)*306)+1):((i)*306)] <- our_model_error[i,]/LTLAs_by_Index$Population
+  }
+
+  total_error <- sum(Error_data$Pop_Adj_Error)
+  
+  ggplot(Error_data, aes(x=Time, y=Pop_Adj_Error, group = Time)) + 
+    geom_boxplot(alpha = 0.2) + ylab("Population Adjusted Error across all LTLAs") +
+    ylim(c(0,0.1)) + ggtitle(sprintf("Total Error: %s",total_error)) + theme_bw() -> error_box
+    
+  png(file="Case_Outputs//Goodness_of_fit/Boxplot_error.png",
+      width=1440, height=1080, res = 150)
+  plot(error_box)
+  dev.off()
+  
+  Mean_Weekly_Pop_error <- aggregate(Error_data, list(Error_data$Time), mean)
+
+  ggplot(Mean_Weekly_Pop_error) +
+    geom_line(aes(x = Time, y = Pop_Adj_Error), size = 1) + theme_minimal() +
+    ylab("Weekly Mean Population Adjusted Error") -> Mean_error_plot
+
+  png(file="Case_Outputs//Goodness_of_fit/Mean_Weekly_Error.png",
+      width=1440, height=1080, res = 150)
+  plot(Mean_error_plot)
+  dev.off()
+      
+}
+
+
+##############################################################################
+if(spatial_kernel == "gravity"){
+  
+  dir.create("Case_Outputs//Goodness_of_fit")
+  dir.create("Case_Outputs//Goodness_of_fit//basic_comparison_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//log_basic_comparison_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//basic_comparison_trajectories_grid")
+  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_trajectories_grid")
+  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories_grid")
+  dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_basic_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_basic_trajectories_grid")
+  dir.create("Case_Outputs//Goodness_of_fit//trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//log_trajectories")
+  dir.create("Case_Outputs//Goodness_of_fit//errors")
+  
+  #Script model definition:
+  #smoothed_distance_matrix[i,j] = (Populations[i]*Populations[j])/((1 + (Distance_matrix[i,j]/distance_alpha))^distance_gamma);
+  
+  model_betas <- as.numeric(get_posterior_mean(stanfit, pars = 'betas')[,5])
+  model_beta0 <- as.numeric(get_posterior_mean(stanfit, pars = 'beta0')[,5])
+  model_distance_alpha <- as.numeric(get_posterior_mean(stanfit, pars = 'distance_alpha')[,5])
+  model_distance_gamma <- as.numeric(get_posterior_mean(stanfit, pars = 'distance_gamma')[,5])
+  model_theta <- as.numeric(get_posterior_mean(stanfit, pars = 'theta')[,5])
+  model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
+  model_theta_sd <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_sd')[,5])
+  
+  LTLAs_by_Index <- unique(Case_Rates_Data[,c(1,3,4,5)])
+  LTLAs_by_Index <- LTLAs_by_Index[order(LTLAs_by_Index$INDEX),]
+  AllDates <- unique(Case_Rates_Data$date_begin)
+  
+  smoothed_distance_matrix <- matrix(data = 0, nrow = 306, ncol = 306)
+  for(i in 1:306){
+    for(j in 1:306){
+      smoothed_distance_matrix[i,j] <- ((LTLAs_by_Index$Population[i]/max(LTLAs_by_Index$Population))*(LTLAs_by_Index$Population[j]/max(LTLAs_by_Index$Population)))/((1 + (Distance_matrix[i,j]/model_distance_alpha))^model_distance_gamma)
+    }
+  }
+  
+  #y[,i] ~ poisson_log(log(susceptible_proxy[,i].*((smoothed_distance_matrix*E[,i]))) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
+  model_approx_y <- array(0, dim = c(103,306)) #
+  E_transpose <- t(E)
+  for(i in 1:103){
+    model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(smoothed_distance_matrix%*%E_transpose[,i]))) + model_beta0 + x[i,,]%*%model_betas + model_theta
+  }
+  model_approx_y <- exp(model_approx_y)
+  
+  REAL_week_difference <- abs(y - E)
+  MODEL_week_difference <- abs(model_approx_y - E)
+  
+  #Is the model better than just assuming the same rate of increase from the week previous?
+  basic_approx_y <- array(0, dim = c(103,306))
+  for(i in 3:103){
+    for(j in 1:306){
+      basic_approx_y[i,j] <- y[i-1,j]*(y[i-1,j]/y[i-2,j])
+    }
+  }
+  BASIC_week_difference <- abs(basic_approx_y - E)
+  
+  #First thing we'll make, is a plot for each of the 306 LTLAs showing the real data against the model approx data.
+  #In 34 3x3 plots
+  for(i in 1:(306/9)){
+    Indices_to_plot <- seq(((9*i)-8),(9*i)) 
+    myplots <- list()
+    for(j in Indices_to_plot){
+      k <- j - ((i-1)*9)
+      areaCode_plot <- LTLAs_by_Index$areaCode[j]
+      areaName_plot <- LTLAs_by_Index$areaName[j]
+      
+      dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                             areaCode = rep(areaCode_plot, 306),
+                             areaName = rep(areaName_plot, 306),
+                             Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                             Cases = c(y[1:102,j],model_approx_y[1:102,j],basic_approx_y[1:102,j]),
+                             LineType = c(rep("1",204), rep("2",102))
+      )
+      dataHold$date <- as.Date(dataHold$Date)
+      
+      ggplot(dataHold) +
+        geom_line(aes(x = Date, y = log(Cases), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+        scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+        ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+        scale_linetype(guide = "none") -> plotHold
+      
+      if(k %in% c(1,4)){
+        myplots[[k]] <- plotHold + xlab(NULL)
+      } else if(k ==7){
+        myplots[[k]] <- plotHold
+      } else if(k %in% c(8,9)){
+        myplots[[k]] <- plotHold + ylab(NULL)
+      } else{
+        myplots[[k]] <- plotHold + ylab(NULL) + xlab(NULL)
+      }
+      
+      
+    }
+    
+    plot_combined <- plot_grid(myplots[[1]] + theme(legend.position="none"),
+                               myplots[[2]] + theme(legend.position="none"),
+                               myplots[[3]] + theme(legend.position="none"),
+                               myplots[[4]] + theme(legend.position="none"),
+                               myplots[[5]] + theme(legend.position="none"),
+                               myplots[[6]] + theme(legend.position="none"),
+                               myplots[[7]] + theme(legend.position="none"),
+                               myplots[[8]] + theme(legend.position="none"),
+                               myplots[[9]] + theme(legend.position="none"),
+                               align = "vh",
+                               nrow = 3)
+    
+    legend <- get_legend(
+      # create some space to the left of the legend
+      myplots[[1]] + theme(legend.box.margin = margin(0, 0, 0, 12))
+    )
+    
+    plot_combined <- plot_grid(plot_combined, legend, rel_widths = c(3, .4))
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//basic_comparison_trajectories_grid//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plot_combined)
+    dev.off()
+    
+  }
+  
+  
+  plot(REAL_week_difference, MODEL_week_difference)
+  #What if we just do y ~ poisson
+  plot(y[,2], model_approx_y[,2])
+  ############################################################################
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                           areaCode = rep(areaCode_plot, 306),
+                           areaName = rep(areaName_plot, 306),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                           Cases = c(y[1:102,j],model_approx_y[1:102,j],basic_approx_y[1:102,j]),
+                           LineType = c(rep("1",204), rep("2",102))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = log(Cases), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_basic_comparison_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  #############################################################################
+  ############################################################################
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+                           areaCode = rep(areaCode_plot, 204),
+                           areaName = rep(areaName_plot, 204),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
+                           Cases = c(y[1:102,j],model_approx_y[1:102,j]),
+                           LineType = c(rep("1",204))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = Cases, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  #############################################################################
+  ############################################################################
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+                           areaCode = rep(areaCode_plot, 204),
+                           areaName = rep(areaName_plot, 204),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
+                           Cases = c(y[1:102,j],model_approx_y[1:102,j]),
+                           LineType = c(rep("1",204))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = log(Cases), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  #############################################################################
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                           areaCode = rep(areaCode_plot, 306),
+                           areaName = rep(areaName_plot, 306),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j],BASIC_week_difference[1:102,j]),
+                           LineType = c(rep("1",204), rep("2",102))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = log(Week_to_Week_Difference), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_week_to_week_basic_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                           areaCode = rep(areaCode_plot, 306),
+                           areaName = rep(areaName_plot, 306),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j],BASIC_week_difference[1:102,j]),
+                           LineType = c(rep("1",204), rep("2",102))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = Week_to_Week_Difference, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  #############################################################################
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+                           areaCode = rep(areaCode_plot, 204),
+                           areaName = rep(areaName_plot, 204),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j]),
+                           LineType = c(rep("1",204))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = Week_to_Week_Difference, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//week_to_week_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  
+  #############################################################################
+  #############################################################################
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+                           areaCode = rep(areaCode_plot, 204),
+                           areaName = rep(areaName_plot, 204),
+                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j]),
+                           LineType = c(rep("1",204))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = log(Week_to_Week_Difference), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_week_to_week_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  
+  #############################################################################
+  #Plot the week to week difference
+  for(i in 1:(306/9)){
+    Indices_to_plot <- seq(((9*i)-8),(9*i)) 
+    myplots <- list()
+    for(j in Indices_to_plot){
+      k <- j - ((i-1)*9)
+      areaCode_plot <- LTLAs_by_Index$areaCode[j]
+      areaName_plot <- LTLAs_by_Index$areaName[j]
+      
+      dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+                             areaCode = rep(areaCode_plot, 306),
+                             areaName = rep(areaName_plot, 306),
+                             Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
+                             Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j],BASIC_week_difference[1:102,j]),
+                             LineType = c(rep("1",204), rep("2",102))
+      )
+      dataHold$date <- as.Date(dataHold$Date)
+      
+      ggplot(dataHold) +
+        geom_line(aes(x = Date, y = Week_to_Week_Difference, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+        scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+        ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+        scale_linetype(guide = "none") -> plotHold
+      
+      if(k %in% c(1,4)){
+        myplots[[k]] <- plotHold + xlab(NULL)
+      } else if(k ==7){
+        myplots[[k]] <- plotHold
+      } else if(k %in% c(8,9)){
+        myplots[[k]] <- plotHold + ylab(NULL)
+      } else{
+        myplots[[k]] <- plotHold + ylab(NULL) + xlab(NULL)
+      }
+      
+      
+    }
+    
+    plot_combined <- plot_grid(myplots[[1]] + theme(legend.position="none"),
+                               myplots[[2]] + theme(legend.position="none"),
+                               myplots[[3]] + theme(legend.position="none"),
+                               myplots[[4]] + theme(legend.position="none"),
+                               myplots[[5]] + theme(legend.position="none"),
+                               myplots[[6]] + theme(legend.position="none"),
+                               myplots[[7]] + theme(legend.position="none"),
+                               myplots[[8]] + theme(legend.position="none"),
+                               myplots[[9]] + theme(legend.position="none"),
+                               align = "vh",
+                               nrow = 3)
+    
+    legend <- get_legend(
+      # create some space to the left of the legend
+      myplots[[1]] + theme(legend.box.margin = margin(0, 0, 0, 12))
+    )
+    
+    plot_combined <- plot_grid(plot_combined, legend, rel_widths = c(3, .4))
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories_grid//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plot_combined)
+    dev.off()
+    
+  }
+  #############################################################################
+  png(file="Case_Outputs//Goodness_of_fit//log_week_to_week_difference.png",
+      width=1440, height=1080, res = 150)
+  plot(log(REAL_week_difference), log(MODEL_week_difference))
+  abline(a=0, b=1, col = "red") 
+  dev.off()
+  
+  png(file="Case_Outputs//Goodness_of_fit//week_to_week_difference.png",
+      width=1440, height=1080, res = 150)
+  plot(REAL_week_difference, MODEL_week_difference)
+  abline(a=0, b=1, col = "red") 
+  dev.off()
+  #############################################################################  
   our_model_error <- abs(y - model_approx_y)
   basic_error <- abs(y - basic_approx_y)
   
-  plot(log(our_model_error[,20]), log(basic_error[,20]))
+  #Plot all times per LTLA  
+  
+  plot(log(our_model_error[,50]), log(basic_error[,50]))
   abline(a=0, b=1, col = "red")      
+  
+  #Plot all LTLAs per week
+  plot(log(our_model_error[50,]), log(basic_error[50,]))
+  abline(a=0, b=1, col = "red") 
+  
+  #Make a plot of boxplots for each week, showing the population adjusted error for each LTLA (so boxplot shows 306 LTLAs)
+  #Make the data
+  Error_data <- data.frame(Time = rep(as.Date("01/01/1999"),31518),
+                           Pop_Adj_Error = rep(0,31518))
+  for(i in 1:103){
+    Error_data$Time[(((i-1)*306)+1):((i)*306)] <- AllDates[i]
+    Error_data$Pop_Adj_Error[(((i-1)*306)+1):((i)*306)] <- our_model_error[i,]/LTLAs_by_Index$Population
+  }
+  
+  total_error <- sum(Error_data$Pop_Adj_Error)
+  
+  ggplot(Error_data, aes(x=Time, y=Pop_Adj_Error, group = Time)) + 
+    geom_boxplot(alpha = 0.2) + ylab("Population Adjusted Error across all LTLAs") +
+    #ylim(c(0,0.1)) + 
+    ggtitle(sprintf("Total Error: %s",total_error)) + theme_bw() -> error_box
+  
+  png(file="Case_Outputs//Goodness_of_fit/Boxplot_error.png",
+      width=1440, height=1080, res = 150)
+  plot(error_box)
+  dev.off()
+  
+  Mean_Weekly_Pop_error <- aggregate(Error_data, list(Error_data$Time), mean)
+  
+  ggplot(Mean_Weekly_Pop_error) +
+    geom_line(aes(x = Time, y = Pop_Adj_Error), size = 1) + theme_minimal() +
+    ylab("Weekly Mean Population Adjusted Error") -> Mean_error_plot
+  
+  png(file="Case_Outputs//Goodness_of_fit/Mean_Weekly_Error.png",
+      width=1440, height=1080, res = 150)
+  plot(Mean_error_plot)
+  dev.off()
+  
 }
+##############################################################################
+
 
 
 #test <- get_posterior_mean(stanfit, pars = 'betas[2]')
@@ -505,3 +1377,6 @@ if(spatial_kernel == "neighbours"){
 #stan_diag(stanfit)
 #stan_rhat(stanfit)
 #stan_mcse(stanfit)
+
+
+
