@@ -444,7 +444,7 @@ if(spatial_kernel == "neighbours"){
 
 
 #Save a plot of the theta hyperparameters
-theta_trajectories <- rstan::traceplot(stanfit, pars=c("theta_mu", "theta_sd", "theta_hosp_mu", "theta_hosp_sd"), nrow = 2)
+theta_trajectories <- rstan::traceplot(stanfit, pars=c("theta_mu", "theta_sd"), nrow = 2)
 png(file="Case_Outputs\\theta_trajectories.png",
     width=1440, height=1080, res = 150)
 plot(theta_trajectories)

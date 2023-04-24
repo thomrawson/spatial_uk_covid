@@ -144,9 +144,9 @@ orderly::orderly_develop_start("02a_model_summaries",
                                        spatial_kernel = "neighbours"),
                      use_draft = "newer")
 
-model_assessment <- orderly::orderly_run("02a_model_summaries",
+model_assessment <- orderly::orderly_run("02b_model_summaries_no_hospital",
                                          parameters = list(tree_depth = 14,
-                                                           scale_by_susceptible_pool = TRUE,
+                                                           scale_by_susceptible_pool = FALSE,
                                                            spatial_kernel = "neighbours"),
                                          use_draft = "newer")
 
