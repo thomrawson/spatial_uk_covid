@@ -347,10 +347,10 @@ stanfit = rstan::stan(model_code = Stan_model_string,
                algorithm = "NUTS",
                chains = 4,
                #warmup=2500, 
-               iter=2000
+               iter=2000,
                #thin = 100,
                #init = inits,
-               #control = list(max_treedepth = 10)
+               control = list(max_treedepth = 12)
                )
 
 #############################
