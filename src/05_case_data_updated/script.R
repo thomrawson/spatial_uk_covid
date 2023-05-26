@@ -2015,7 +2015,7 @@ rm(LTLA_variant, Region_variant)
 
 #Weighted NHS funding
 #"Core_services_funding_by_weighted"                 
-LTLA_funding <- distinct(Case_Rates_Data[,c(1,2,4,52)])
+LTLA_funding <- distinct(Case_Rates_Data[,c(1,2,4,which(colnames(Case_Rates_Data) == "Core_services_funding_by_weighted"))])
 LTLA_funding$total_funding <- LTLA_funding$Population*LTLA_funding$Core_services_funding_by_weighted
 
 LTLA_funding <- merge(LTLA_funding, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2030,7 +2030,7 @@ hospital_admissions <- hospital_admissions[,-23]
 rm(LTLA_funding, Region_funding)
 
 #"Primary_care_funding_by_weighted"
-LTLA_funding <- distinct(Case_Rates_Data[,c(1,2,4,53)])
+LTLA_funding <- distinct(Case_Rates_Data[,c(1,2,4,which(colnames(Case_Rates_Data) == "Primary_care_funding_by_weighted"))])
 LTLA_funding$total_funding <- LTLA_funding$Population*LTLA_funding$Primary_care_funding_by_weighted
 
 LTLA_funding <- merge(LTLA_funding, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2045,7 +2045,7 @@ hospital_admissions <- hospital_admissions[,-24]
 rm(LTLA_funding, Region_funding)
 
 #"Specialised_services_by_weighted"  
-LTLA_funding <- distinct(Case_Rates_Data[,c(1,2,4,54)])
+LTLA_funding <- distinct(Case_Rates_Data[,c(1,2,4,which(colnames(Case_Rates_Data) == "Specialised_services_by_weighted"))])
 LTLA_funding$total_funding <- LTLA_funding$Population*LTLA_funding$Specialised_services_by_weighted
 
 LTLA_funding <- merge(LTLA_funding, LTLA_to_region[,c(2,5)], by = c("areaCode"))
