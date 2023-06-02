@@ -8,6 +8,18 @@ load('Cases_Data.RData')
 load('W.RData')
 
 
+###################
+################################################################################
+#When running this code originally with just the cumulative vaccination numbers,
+#there was an odd trend where it would punish the uptick of second jabs. I think
+#this is because it allows for an additive impact of respective jabs which doesn't quite make sense
+
+#Instead we change our cumulative vaccination, to PROPORTION vaccination,
+#i.e. if you sum prop_no_dose, prop_1_dose, prop_2_dose, prop_3_dose for every i,j, it'll equal 1.
+#Quickly added in this switch to deal with that:
+PROP_vacc <- TRUE
+################################################################################
+
 #if you are using rstan locally on a multicore machine and have plenty of RAM to
 #estimate your model in parallel, at this point execute
 options(mc.cores = parallel::detectCores())
@@ -123,7 +135,14 @@ for(i in 1:length(missing_data$areaCode)){
   
 }
 
+##############################################################################
+if(PROP_vacc){
+  Case_Rates_Data$prop_one_dose <- Case_Rates_Data$cumVaccPercentage_FirstDose - Case_Rates_Data$cumVaccPercentage_SecondDose
+  Case_Rates_Data$prop_two_dose <- Case_Rates_Data$cumVaccPercentage_SecondDose - Case_Rates_Data$cumVaccPercentage_ThirdDose
+  Case_Rates_Data$prop_three_dose <- Case_Rates_Data$cumVaccPercentage_ThirdDose
+}
 
+###################
 
 ###################
 #Begin STAN fit
@@ -243,9 +262,15 @@ for(i in 2:final_week){
   
   #For now I will not scale the percentages, I'll just give them from 0 to 1
   
-  x[j,,1] <- Reduced_Data$cumVaccPercentage_FirstDose/100
-  x[j,,2] <- Reduced_Data$cumVaccPercentage_SecondDose/100
-  x[j,,3] <- Reduced_Data$cumVaccPercentage_ThirdDose/100
+  if(PROP_vacc){
+    x[j,,1] <- Reduced_Data$prop_one_dose/100
+    x[j,,2] <- Reduced_Data$prop_two_dose/100
+    x[j,,3] <- Reduced_Data$prop_three_dose/100
+  }else{
+    x[j,,1] <- Reduced_Data$cumVaccPercentage_FirstDose/100
+    x[j,,2] <- Reduced_Data$cumVaccPercentage_SecondDose/100
+    x[j,,3] <- Reduced_Data$cumVaccPercentage_ThirdDose/100
+  }
   x[j,,4] <- scale(Reduced_Data$prop_white_british)
   x[j,,5] <- scale(Reduced_Data$prop_asian)
   x[j,,6] <- scale(Reduced_Data$prop_black_afr_car)
