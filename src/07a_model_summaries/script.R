@@ -772,7 +772,8 @@ load("model_data.RData")
   png(file="Case_Outputs//Goodness_of_fit/Mean_Weekly_Error.png",
       width=1440, height=1080, res = 150)
   plot(Mean_error_plot)
-  dev.off()
+  #dev.off()
+  while (!is.null(dev.list()))  dev.off()
       
 ##############################################################################
 
