@@ -2,6 +2,16 @@
 load("stanfit.RData")
 dir.create("Case_Outputs")
 
+################################################################################
+#When running this code originally with just the cumulative vaccination numbers,
+#there was an odd trend where it would punish the uptick of second jabs. I think
+#this is because it allows for an additive impact of respective jabs which doesn't quite make sense
+
+#Instead we change our cumulative vaccination, to PROPORTION vaccination,
+#i.e. if you sum prop_no_dose, prop_1_dose, prop_2_dose, prop_3_dose for every i,j, it'll equal 1.
+#Quickly added in this switch to deal with that:
+PROP_vacc <- TRUE
+################################################################################
 
 #Our parameters and priors:
 #beta0 ~ normal(0.0, 1.0);
@@ -209,19 +219,32 @@ dev.off()
 #20 - contain_outbreak_management
 #21 - ASC_infection_control_fund
 
+#######################################
+if(PROP_vacc){
+  labels_hold <- c("1) Prop_1dose", 
+                   "2) Prop_2dose", "3) Prop_3dose",
+                   "4) prop_white_british", "5) prop_asian",
+                   "6) prop_black_afr", "7) IMD_Average_score",
+                   "8) prop_o65", "9) Median_annual_income",
+                   "10) workplaces_movement",
+                   "11) residential_movement", "12) transit_movement")
+}else{
+  labels_hold <- c("1) CumVacc_1dose", 
+    "2) CumVacc_2dose", "3) CumVacc_3dose",
+    "4) prop_white_british", "5) prop_asian",
+    "6) prop_black_afr", "7) IMD_Average_score",
+    "8) prop_o65", "9) Median_annual_income",
+    "10) workplaces_movement",
+    "11) residential_movement", "12) transit_movement")
+}
+
 beta_summaries <- main_summaries$summary
 #Next we have a look at how good our fit is
 betas_1_12 <- plot(stanfit, pars = sprintf('betas[%s]',1:12))
 #ci_level: 0.8 (80% intervals)
 #outer_level: 0.95 (95% intervals)
 betas_1_12 <- betas_1_12 + scale_y_continuous(breaks = c(12:1),
-                                labels = c("1) CumVacc_1dose", 
-                                         "2) CumVacc_2dose", "3) CumVacc_3dose",
-                                         "4) prop_white_british", "5) prop_asian",
-                                         "6) prop_black_afr", "7) IMD_Average_score",
-                                         "8) prop_o65", "9) Median_annual_income",
-                                         "10) workplaces_movement",
-                                         "11) residential_movement", "12) transit_movement")) +
+                                labels = labels_hold) +
   geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Covariate coefficients")
 
 png(file="Case_Outputs\\betas_1_12.png",
