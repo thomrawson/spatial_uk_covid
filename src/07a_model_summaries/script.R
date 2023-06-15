@@ -361,6 +361,33 @@ load("model_data.RData")
   }
   BASIC_week_difference <- abs(basic_approx_y - E)
   
+  ##
+  #Let's quickly plot the random walks too.
+  dates_hold <- unique(Case_Rates_Data[,c(2,7)])
+  random_walk_plot <- data.frame(date = as.Date(dates_hold$date_begin), random_walk_value = model_beta_random_walk)
+  
+  ggplot(data = random_walk_plot) +
+    geom_line(aes(x = date, y = random_walk_value)) ->random_walk_p1
+  
+  png(file="Case_Outputs//random_walk_values.png",
+      width=1440, height=1080, res = 150)
+  plot(random_walk_p1)
+  dev.off()
+  
+  #And also plot the differences
+  random_walk_differences <- random_walk_plot[-1,]
+  random_walk_differences$random_walk_value <- model_beta_random_walk[2:103] - model_beta_random_walk[1:102]
+  
+  ggplot(data = random_walk_differences) +
+    geom_line(aes(x = date, y = random_walk_value)) +
+    ylab("Random walk difference terms (rw[i] - rw[i-1])") -> random_walk_p2
+  
+  png(file="Case_Outputs//random_walk_differences.png",
+      width=1440, height=1080, res = 150)
+  plot(random_walk_p2)
+  dev.off()
+  ##
+  
   #First thing we'll make, is a plot for each of the 306 LTLAs showing the real data against the model approx data.
   #In 34 3x3 plots
   LTLAs_by_Index <- unique(Case_Rates_Data[,c(1,3,4,5)])

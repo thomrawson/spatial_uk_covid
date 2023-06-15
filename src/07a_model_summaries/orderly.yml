@@ -54,6 +54,8 @@ artefacts:
         - Case_Outputs/beta_trajectories2.png
         - Case_Outputs/main_summaries.csv
         - Case_Outputs/theta_summaries.csv
+        - Case_Outputs//random_walk_differences.png
+        - Case_Outputs//random_walk_values.png
 #        - Case_Outputs/zeta_plots/zeta_trajectories_1.png
 #        - Case_Outputs/zeta_plots/zeta_trajectories_2.png
 #        - Case_Outputs/zeta_plots/zeta_trajectories_3.png
