@@ -26,6 +26,14 @@ rstan_options(auto_write = TRUE)
 #i.e. if you sum prop_no_dose, prop_1_dose, prop_2_dose, prop_3_dose for every i,j, it'll equal 1.
 #Quickly added in this switch to deal with that:
 PROP_vacc <- TRUE
+
+#Additionally, I have the option to choose between two options for variant data
+#
+use_SGTF_data <- FALSE
+#if TRUE, data is unique for each LTLA, but is based on yes/no SGTF data, which
+#is built from less information and so is arguably less reliable
+#if FALSE, data is from the dashboard at NHS region level (with a bit of VAM)
+#although I have lumped together the Alpha, Delta, and Omicron variants
 ################################################################################
 
 #Prepare Data
@@ -259,10 +267,18 @@ for(i in 2:final_week){
   x[j,,10] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
   x[j,,11] <- scale(Reduced_Data$residential_percent_change_from_baseline)
   x[j,,12] <- scale(Reduced_Data$transit_stations_percent_change_from_baseline)
+  if(use_SGTF_data){
   x[j,,13] <- Reduced_Data$s_Alpha_prop
   x[j,,14] <- Reduced_Data$s_Delta_prop
   x[j,,15] <- Reduced_Data$s_Omicron_prop
 
+  } else{
+    x[j,,13] <- Reduced_Data$Alpha_proportion/100
+    x[j,,14] <- (Reduced_Data$Delta_proportion + Reduced_Data$Delta_AY_4_2_proportion)/100
+    x[j,,15] <- (Reduced_Data$Omicron_BA_1_proportion + Reduced_Data$Omicron_BA_2_proportion + Reduced_Data$Omicron_BA_4_proportion + Reduced_Data$Omicron_BA_5_proportion)/100
+  }
+  
+  
   x[j,,16] <- scale(Reduced_Data$Core_services_funding_by_weighted)
   x[j,,17] <- scale(Reduced_Data$Primary_care_funding_by_weighted)
   x[j,,18] <- scale(Reduced_Data$Specialised_services_by_weighted)
