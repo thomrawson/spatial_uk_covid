@@ -231,6 +231,14 @@ load("model_data.RData")
   model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
   model_theta_sd <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_sd')[,5])
   
+  ###########
+  #I can remove this once I've re-run the task
+  Populations <- unique(Case_Rates_Data[,c(1,3,4,5)])
+  Populations <- Populations[order(Populations$INDEX),]
+  Populations$Population <- Populations$Population/sum(Populations$Population)
+  Populations <- Populations$Population
+  ###########
+  
   #smoothed_distance_matrix[i,j] = (Populations[i]*Populations[j])/((1 + (Distance_matrix[i,j]/distance_alpha))^distance_gamma);
   smoothed_distance_matrix <- matrix(0, nrow = N, ncol = N)
   scaled_distance_matrix <- matrix(0, nrow = N, ncol = N)
@@ -309,6 +317,43 @@ load("model_data.RData")
   plot(diagonal_movement_plot6)
   dev.off()
   
+  #######################################################################################
+  #I'll also output the probability spread for each LTLA
+  dir.create("Case_Outputs\\gravity_probabilities")
+  
+  Names_Index <- unique(Case_Rates_Data[,c(1,3,5)])
+  Names_Index <- Names_Index[order(Names_Index$INDEX),]
+  
+  areaCodes_used <- unique(Case_Rates_Data$areaCode)
+  Boundaries_reduced <- filter(Boundaries, CODE %in% areaCodes_used)
+  
+  for(i in 1:length(Names_Index$areaName)){
+    plot_data <- Names_Index
+    LTLA_hold <- Names_Index$areaName[i]
+    code_hold <- Names_Index$areaCode[i]
+    
+    Names_Index$probabilities <- scaled_distance_matrix[i,]
+    Names_Index$probabilities[i] <- NA
+    
+    Boundaries_reduced$probabilities <- Names_Index$probabilities
+  
+    ggplot(Boundaries_reduced) +
+      geom_sf(aes(fill = probabilities)) +
+      scale_fill_gradient2() +
+      ggtitle(sprintf("%s - Probability of case travel", LTLA_hold)) -> plot_hold
+    
+    #London_plots <- ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
+    #  geom_sf(aes(fill = probabilities)) +
+    #  scale_fill_gradient2()
+    
+    png(file=sprintf("Case_Outputs\\gravity_probabilities\\%s_%s.png", i, LTLA_hold),
+        width=1440, height=1080, res = 150)
+    plot(plot_hold)
+    dev.off()
+      
+  }
+  
+  #######################################################################################
   
   model_approx_y <- array(0, dim = c(103,306)) #
   #y[,1] ~ poisson_log(log(susceptible_proxy[,1].*((scaled_distance_matrix*E[,1]))) + beta0 + (x[1] * betas) + (beta_random_walk[1]) + theta);
