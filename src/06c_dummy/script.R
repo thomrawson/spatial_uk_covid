@@ -181,7 +181,7 @@ transformed data {
 parameters {
   real beta0;            // intercept
   vector[K] betas;       // covariates
-  vector<lower = 0>[N] zetas;       //spatial kernel, but this can't be less than 0
+  vector<lower = 0, upper = 1>[N] zetas;       //spatial kernel, but this can't be less than 0
   vector[T] beta_random_walk; //We add in a random walk error term
 
   vector[N] theta;       // heterogeneous effects
