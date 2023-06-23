@@ -1701,6 +1701,7 @@ first_episodes_data$date <- as.Date(first_episodes_data$date)
 #for now, we just sum up after May 10th
 ###########
 #TODO: Use the official sum numbers
+#Note that, on the one hand, we're missing the first few months this way, but we're then also double-counting the first episodes
 ############
 Case_Rates_Data$total_cases <- NA
 for(i in 1:nrow(Case_Rates_Data)){
