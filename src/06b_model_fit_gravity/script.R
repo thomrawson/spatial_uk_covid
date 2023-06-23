@@ -264,7 +264,7 @@ for(i in 2:final_week){
   
   y[j,] = Reduced_Data$next_week_cases;
   E[j,] = Reduced_Data$Week_Cases;
-  scale_by_recent_cases[j,] = Reduced_Data$total_cases_last25/Reduced_Data$Population
+  scale_by_recent_cases[j,] = Reduced_Data$total_cases/Reduced_Data$Population
   
   #scale() will fail if all variables are the same value (i.e. if sd = 0)
   
