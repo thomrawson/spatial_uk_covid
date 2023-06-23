@@ -29,7 +29,7 @@ PROP_vacc <- TRUE
 
 #Additionally, I have the option to choose between two options for variant data
 #
-use_SGTF_data <- FALSE
+use_SGTF_data <- TRUE
 #if TRUE, data is unique for each LTLA, but is based on yes/no SGTF data, which
 #is built from less information and so is arguably less reliable
 #if FALSE, data is from the dashboard at NHS region level (with a bit of VAM)
