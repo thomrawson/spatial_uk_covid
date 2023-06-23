@@ -1688,12 +1688,25 @@ for(i in 1:356){
 
 Case_Rates_Data <- merge(Case_Rates_Data, LTLA_centroids, by = c('areaCode'), all.x = TRUE)
 
-#We want to keep a tally of the total number of cases in the region for the last... 
-#say... 5 weeks
-Case_Rates_Data$total_cases_last25 <- NA
+###############################################################################
+#We want to keep a tally of the total cumulative number of cases in the region to date... 
+
+#We do this using the cumulative number of "first episodes" from the dashboard. API link:
+#https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=cumFirstEpisodesBySpecimenDate&format=csv
+
+#But we saved a hard copy:
+first_episodes_data <- read.csv("Data/ltla_first_episodes_2023_06_22.csv")
+first_episodes_data$date <- as.Date(first_episodes_data$date)
+#BUT, unfortunately we need to do all the annoying LTLA boundary re-processing again... so,
+#for now, we just sum up after May 10th
+###########
+#TODO: Use the official sum numbers
+############
+Case_Rates_Data$total_cases <- NA
 for(i in 1:nrow(Case_Rates_Data)){
   Week_hold <- Case_Rates_Data$Week[i]
-  Week_start_hold <- max((Week_hold - 5),2)
+  #Week_start_hold <- max((Week_hold - 5),2)
+  Week_start_hold <- 2
   areahold <- Case_Rates_Data$areaCode[i]
   weeks_to_keep <- seq(Week_start_hold, Week_hold)
   
@@ -1702,11 +1715,11 @@ for(i in 1:nrow(Case_Rates_Data)){
     filter(Week %in% weeks_to_keep) -> data_hold
   
   cumCases <- sum(data_hold$Week_Cases)
-  Case_Rates_Data$total_cases_last25[i] <- cumCases
+  Case_Rates_Data$total_cases[i] <- cumCases
     
 }
 
-sum(which(Case_Rates_Data$total_cases_last25 > Case_Rates_Data$Population))
+sum(which(Case_Rates_Data$total_cases > Case_Rates_Data$Population))
 
 #Done for now, export the data
 

@@ -150,6 +150,7 @@ resources:
   - Data\LTLA_to_UTLA_codes.csv
   - Data\hospital_admissions_nhsRegion_2022_12_15.csv
   - Data\s_by_ltla_pillar2_pcr.csv
+  - Data\ltla_first_episodes_2023_06_22.csv
 # Optional name of a variable to make the SQL connection available to
 # the script.  Use this with care and avoid using any queries that
 # modify the database (i.e., use DBI::dbGetQuery with "SELECT" queries
