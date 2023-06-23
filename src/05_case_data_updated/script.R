@@ -12,14 +12,17 @@ Boundaries <- st_read("Data/district_borough_unitary_region.shp")
 
 #Now load daily new COVID cases data at LTLA level
 #Originally this was pulled from the government portal API:
-#Case_Rates_Data<- read.csv('https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=newCasesBySpecimenDateRollingSum&format=csv')
+#Case_Rates_Data<- read.csv('https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=newCasesBySpecimenDate&format=csv')
 
 #But in the interest of re-producibility, we use the hard-saved pull from this API
-#Current source pulled November 10th 2022
-Case_Rates_Data <- read.csv('Data/ltla_cases_10_11_2022.csv')
+#Current source pulled June 22nd 2023
+Case_Rates_Data <- read.csv('Data/ltla_cases_2023_06_22.csv')
 
 #Ensure date is being read as a date
 Case_Rates_Data$date <- as.Date(Case_Rates_Data$date)
+
+#To speed things up, we start by clipping off everything after Nov 10th 2022
+Case_Rates_Data <- filter(Case_Rates_Data, date < as.Date("2022-11-10"))
 
 #Load vaccine uptake proportions
 #These are the live API links used

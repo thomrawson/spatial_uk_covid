@@ -132,7 +132,8 @@ resources:
   - Data\district_borough_unitary_region.prj
   - Data\district_borough_unitary_region.shp
   - Data\district_borough_unitary_region.shx
-  - Data\ltla_cases_10_11_2022.csv
+  - Data\ltla_rolling_average_cases_10_11_2022.csv
+  - Data\ltla_cases_2023_06_22.csv
   - Data\ltla_cum_1dose_vaccine_percentage_10_11_2022.csv
   - Data\ltla_cum_2dose_vaccine_percentage_10_11_2022.csv
   - Data\ltla_cum_3dose_vaccine_percentage_10_11_2022.csv
