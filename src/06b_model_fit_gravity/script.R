@@ -206,10 +206,10 @@ matrix<lower=0>[N,N] scaled_distance_matrix;
   }
   }
   
-//Lastly, we scale this matrix such that it is a valid probability, by scaling all rows to sum to 1
+//Lastly, we scale this matrix such that it is a valid probability, by scaling all COLUMNS to sum to 1
   
   for(i in 1:N){
-    scaled_distance_matrix[i,] = smoothed_distance_matrix[i,]/sum(smoothed_distance_matrix[i,]);
+    scaled_distance_matrix[,i] = smoothed_distance_matrix[,i]/sum(smoothed_distance_matrix[,i]);
   }
 
 }
