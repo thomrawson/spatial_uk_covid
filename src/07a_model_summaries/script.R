@@ -20,7 +20,7 @@ PROP_vacc <- TRUE
 #theta[,i] ~ normal(0.0, 1.0); #noise
 
 #Output summaries of the mixed chains for all parameters except theta
-main_summaries <- summary(stanfit, pars = c('beta0', 'betas', 'beta_random_walk', 'zetas', 'lp__'))
+main_summaries <- summary(stanfit, pars = c('sqrtQ', 'betas', 'beta_random_walk', 'zetas', 'lp__'))
 write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
 #Theta summaries are big, but we output anyway
 theta_summaries <- summary(stanfit, pars = c('theta_mu', 'theta_sd','theta'))
@@ -29,7 +29,7 @@ write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names 
 
 
 #Save a plot of the beta trajectories
-beta_trajectories1 <- rstan::traceplot(stanfit, pars=c('beta0', sprintf('betas[%s]',1:11)), nrow = 3)
+beta_trajectories1 <- rstan::traceplot(stanfit, pars=c('sqrtQ', sprintf('betas[%s]',1:11)), nrow = 3)
 png(file="Case_Outputs\\beta_trajectories1.png",
     width=1440, height=1080, res = 150)
 plot(beta_trajectories1)
@@ -109,12 +109,12 @@ gb_cities %>%
 #PLOT standard
 zetas_map <- ggplot(Boundaries_reduced) +
   geom_sf(aes(fill = zetas)) +
-  scale_fill_gradient2() +
+  scale_fill_viridis_c() +
   ggtitle("LTLAs, nearest neighbor model")
 
 London_zetas <- ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
   geom_sf(aes(fill = zetas)) +
-  scale_fill_gradient2()
+  scale_fill_viridis_c()
 
 combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
 
@@ -335,7 +335,7 @@ load("model_data.RData")
   #y_hosp[,i+average_hosp_lag] ~ poisson_log(log(LTLA_to_region*y_as_matrix[,i]) + beta0_hosp + x_hosp[i]*betas_hosp + theta_hosp);
   
   model_betas <- as.numeric(get_posterior_mean(stanfit, pars = 'betas')[,5])
-  model_beta0 <- as.numeric(get_posterior_mean(stanfit, pars = 'beta0')[,5])
+  #model_beta0 <- as.numeric(get_posterior_mean(stanfit, pars = 'beta0')[,5])
   model_beta_random_walk <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk')[,5])
   model_zetas <- as.numeric(get_posterior_mean(stanfit, pars = 'zetas')[,5])
   model_theta <- as.numeric(get_posterior_mean(stanfit, pars = 'theta')[,5])
@@ -343,10 +343,11 @@ load("model_data.RData")
   model_theta_sd <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_sd')[,5])
   
   model_approx_y <- array(0, dim = c(103,306)) #
-  model_approx_y[1,] <- as.numeric(log(susceptible_proxy[,1]*(E[1,] + (model_zetas *E_neighbours_scaled[,1])))) + model_beta0 + x[1,,]%*%model_betas + (model_beta_random_walk[1]) + model_theta
-  for(i in 2:103){
-  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + model_beta0 + x[i,,]%*%model_betas + (model_beta_random_walk[i] - model_beta_random_walk[i-1]) + model_theta
+  
+  for(i in 1:103){
+  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
   }
+  
   model_approx_y <- exp(model_approx_y)
   
   REAL_week_difference <- abs(y - E)

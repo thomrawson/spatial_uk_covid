@@ -179,10 +179,13 @@ transformed data {
   //matrix[N,T] log_E = log(E + E_neighbours); #kept as formatting reminder
 }
 parameters {
-  real beta0;            // intercept
+  //real beta0;            // intercept, but we've removed this now.
   vector[K] betas;       // covariates
   vector<lower = 0, upper = 1>[N] zetas;       //spatial kernel, but this can't be less than 0
+  
   vector[T] beta_random_walk; //We add in a random walk error term
+  //real random_walk_init; //The initial point of the random walk
+  real<lower=0> sqrtQ; //Standard deviation of random walk
 
   vector[N] theta;       // heterogeneous effects
   real theta_mu; //hierarchical hyperparameter for drawing theta
@@ -193,17 +196,23 @@ transformed parameters {
 
 }
 model {
-y[,1] ~ poisson_log(log(susceptible_proxy[,1].*(E[,1] + (zetas .*E_neighbours[,1]))) + beta0 + x[1] * betas + (beta_random_walk[1]) + theta);  // extra noise removed removed: + theta[,i]
+y[,1] ~ poisson_log(log(susceptible_proxy[,1].*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) + theta);  // extra noise removed removed: + theta[,i]
 
 for(i in 2:T){
-  y[,i] ~ poisson_log(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + beta0 + x[i] * betas + (beta_random_walk[i] - beta_random_walk[i-1]) + theta);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ poisson_log(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) + theta);  // extra noise removed removed: + theta[,i]
 }
 
 
-  beta0 ~ normal(0.0, 1.0);
+  //beta0 ~ normal(0.0, 1.0);
   betas ~ normal(0.0, 1.0);
   zetas ~ normal(0.05, 1.0);
-  beta_random_walk ~ normal(0.0, 1.0);
+  
+  sqrtQ ~ gamma(1,1);
+  beta_random_walk[1] ~ normal(0, sqrtQ);
+
+  for(i in 2:T){
+  beta_random_walk[i] ~ normal(beta_random_walk[i-1], sqrtQ);
+  }
   
   
   theta ~ normal(theta_mu, theta_sd);

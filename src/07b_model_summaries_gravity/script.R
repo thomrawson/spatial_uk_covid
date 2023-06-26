@@ -20,7 +20,7 @@ PROP_vacc <- TRUE
 #theta[,i] ~ normal(0.0, 1.0); #noise
 
 #Output summaries of the mixed chains for all parameters except theta
-main_summaries <- summary(stanfit, pars = c('beta0', 'betas', 'beta_random_walk', 'distance_alpha', 'distance_gamma', 'lp__'))
+main_summaries <- summary(stanfit, pars = c('sqrtQ', 'betas', 'beta_random_walk', 'distance_alpha', 'distance_gamma', 'lp__'))
 write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
 #Theta summaries are big, but we output anyway
 theta_summaries <- summary(stanfit, pars = c('theta_mu', 'theta_sd','theta'))
@@ -29,7 +29,7 @@ write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names 
 
 
 #Save a plot of the beta trajectories
-beta_trajectories1 <- rstan::traceplot(stanfit, pars=c('beta0', sprintf('betas[%s]',1:11)), nrow = 3)
+beta_trajectories1 <- rstan::traceplot(stanfit, pars=c('sqrtQ', sprintf('betas[%s]',1:11)), nrow = 3)
 png(file="Case_Outputs\\beta_trajectories1.png",
     width=1440, height=1080, res = 150)
 plot(beta_trajectories1)
@@ -223,7 +223,8 @@ load("model_data.RData")
   #y_hosp[,i+average_hosp_lag] ~ poisson_log(log(LTLA_to_region*y_as_matrix[,i]) + beta0_hosp + x_hosp[i]*betas_hosp + theta_hosp);
   
   model_betas <- as.numeric(get_posterior_mean(stanfit, pars = 'betas')[,5])
-  model_beta0 <- as.numeric(get_posterior_mean(stanfit, pars = 'beta0')[,5])
+  #model_beta0 <- as.numeric(get_posterior_mean(stanfit, pars = 'beta0')[,5])
+  
   model_beta_random_walk <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk')[,5])
   model_distance_gamma <- as.numeric(get_posterior_mean(stanfit, pars = 'distance_gamma')[,5])
   model_distance_alpha <- as.numeric(get_posterior_mean(stanfit, pars = 'distance_alpha')[,5])
@@ -358,9 +359,9 @@ load("model_data.RData")
   model_approx_y <- array(0, dim = c(103,306)) #
   #y[,1] ~ poisson_log(log(susceptible_proxy[,1].*((scaled_distance_matrix*E[,1]))) + beta0 + (x[1] * betas) + (beta_random_walk[1]) + theta);
 
-  model_approx_y[1,] <- as.numeric(log(susceptible_proxy[,1]*(scaled_distance_matrix%*%E[1,] ))) + model_beta0 + x[1,,]%*%model_betas + (model_beta_random_walk[1]) + model_theta
+  model_approx_y[1,] <- as.numeric(log(susceptible_proxy[,1]*(scaled_distance_matrix%*%E[1,] ))) + x[1,,]%*%model_betas + (model_beta_random_walk[1]) + model_theta
   for(i in 2:103){
-  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(scaled_distance_matrix%*%E[i,] ))) + model_beta0 + x[i,,]%*%model_betas + (model_beta_random_walk[i] - model_beta_random_walk[i-1]) + model_theta
+  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(scaled_distance_matrix%*%E[i,] ))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
   }
   model_approx_y <- exp(model_approx_y)
   

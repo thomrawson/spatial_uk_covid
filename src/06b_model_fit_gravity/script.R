@@ -184,9 +184,10 @@ data {
 transformed data {
 }
 parameters {
-  real beta0;            // intercept
+  //real beta0;            // intercept
   vector[K] betas;       // covariates
   vector[T] beta_random_walk; //We add in a random walk error term
+  real<lower=0> sqrtQ; //Standard deviation of random walk
 
   vector[N] theta;       // heterogeneous effects
   real theta_mu; //hierarchical hyperparameter for drawing theta
@@ -214,17 +215,21 @@ matrix<lower=0>[N,N] scaled_distance_matrix;
 
 }
 model {
-y[,1] ~ poisson_log(log(susceptible_proxy[,1].*((scaled_distance_matrix*E[,1]))) + beta0 + (x[1] * betas) + (beta_random_walk[1]) + theta);
+y[,1] ~ poisson_log(log(susceptible_proxy[,1].*((scaled_distance_matrix*E[,1]))) + (x[1] * betas) + (beta_random_walk[1]) + theta);
 for(i in 2:T){
-  y[,i] ~ poisson_log(log(susceptible_proxy[,i].*((scaled_distance_matrix*E[,i]))) + beta0 + (x[i] * betas) + (beta_random_walk[i] - beta_random_walk[i-1]) + theta);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ poisson_log(log(susceptible_proxy[,i].*((scaled_distance_matrix*E[,i]))) + (x[i] * betas) + (beta_random_walk[i]) + theta);  // extra noise removed removed: + theta[,i]
 }
 
 
-  beta0 ~ normal(0.0, 1.0);
+  //beta0 ~ normal(0.0, 1.0);
   betas ~ normal(0.0, 1.0);
   //zetas ~ normal(0.05, 1.0);
-  beta_random_walk ~ normal(0.0, 1.0);
   
+  beta_random_walk[1] ~ normal(0.0, sqrtQ);
+  
+  for(i in 2:T){
+  beta_random_walk[i] ~ normal(beta_random_walk[i-1], sqrtQ);
+  }
   
   theta ~ normal(theta_mu, theta_sd);
   theta_mu ~ normal(0.0,1.0);
