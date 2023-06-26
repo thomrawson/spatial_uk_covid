@@ -806,7 +806,7 @@ load("model_data.RData")
   
   ggplot(Error_data, aes(x=Time, y=Pop_Adj_Error, group = Time)) + 
     geom_boxplot(alpha = 0.2) + ylab("Population Adjusted Error across all LTLAs") +
-    ylim(c(0,0.1)) + ggtitle(sprintf("Total Error: %s",total_error)) + theme_bw() -> error_box
+    ylim(c(0,0.04)) + ggtitle(sprintf("Total Error: %s",total_error)) + theme_bw() -> error_box
     
   png(file="Case_Outputs//Goodness_of_fit/Boxplot_error.png",
       width=1440, height=1080, res = 150)
