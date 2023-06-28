@@ -110,6 +110,7 @@ packages:
   - tidyverse
   - gridExtra
   - cowplot
+  - lubridate
 
 # Source files, in addition to the script.  Typically these will
 # contain function definitions.  These will be sourced after loading
@@ -133,6 +134,8 @@ resources:
   - ltla_cases.csv
   - ltla_PCR_only_2023_06_22.csv
   - ltla_LFD_confirmed_PCR_2023_06_22.csv
+  - reduced_linelist.rds
+  - reduced_first_episode_linelist.rds
 
 # Optional name of a variable to make the SQL connection available to
 # the script.  Use this with care and avoid using any queries that

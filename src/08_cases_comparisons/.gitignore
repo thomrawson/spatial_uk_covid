@@ -1,0 +1,7 @@
+*.png
+*.RData
+Outputs/
+Hospital_Outputs/
+Case_Outputs/
+Outputs/*.png
+Outputs/LTLA_plots
