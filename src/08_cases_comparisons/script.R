@@ -9,10 +9,10 @@ cases <- read.csv("ltla_cases_2023_06_22.csv")
 cases_LTLAs <- unique(cases$areaCode)
 cases_names <- unique(cases$areaName)
 
-sum(linelist_LTLAs %in% cases_LTLAs)
-linelist_names[which(!(linelist_LTLAs %in% cases_LTLAs))]
-cases_names[which(!(cases_LTLAs %in% linelist_LTLAs))]
-cases_LTLAs[which(!(cases_LTLAs %in% linelist_LTLAs))]
+#sum(linelist_LTLAs %in% cases_LTLAs)
+#linelist_names[which(!(linelist_LTLAs %in% cases_LTLAs))]
+#cases_names[which(!(cases_LTLAs %in% linelist_LTLAs))]
+#cases_LTLAs[which(!(cases_LTLAs %in% linelist_LTLAs))]
 
 #For simplicity's sake, we'll combine only the ones that exist in both for now.
 

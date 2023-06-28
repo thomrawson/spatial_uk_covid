@@ -131,11 +131,12 @@ packages:
 #
 resources:
   - ltla_pillar_2_2023_06_22.csv
-  - ltla_cases.csv
+  - ltla_cases_2023_06_22.csv
   - ltla_PCR_only_2023_06_22.csv
   - ltla_LFD_confirmed_PCR_2023_06_22.csv
   - reduced_linelist.rds
   - reduced_first_episode_linelist.rds
+  - ltla_LFD_only_2023_06_22.csv
 
 # Optional name of a variable to make the SQL connection available to
 # the script.  Use this with care and avoid using any queries that
