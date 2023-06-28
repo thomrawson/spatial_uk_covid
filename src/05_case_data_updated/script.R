@@ -24,6 +24,74 @@ Case_Rates_Data$date <- as.Date(Case_Rates_Data$date)
 #To speed things up, we start by clipping off everything after Nov 10th 2022
 Case_Rates_Data <- filter(Case_Rates_Data, date < as.Date("2022-11-10"))
 
+#############################################################################
+#############################################################################
+#We now want to also attach multiple other metrics of case counting, starting 
+#with others from the online dashboard:
+
+#First, is a measure of cumulative first episodes:
+FirstEpisodes_Data <- read.csv("Data/ltla_first_episodes_2023_06_22.csv")
+FirstEpisodes_Data$date <- as.Date(FirstEpisodes_Data$date)
+FirstEpisodes_Data <- filter(FirstEpisodes_Data, date < as.Date("2022-11-10"))
+
+#Are all the LTLAs as recorded the same in both datasets?
+new_LTLA_codes <- unique(FirstEpisodes_Data$areaCode)
+CaseRates_LTLA_codes <- unique(Case_Rates_Data$areaCode)
+CaseRates_LTLA_names <- unique(Case_Rates_Data$areaName)
+
+#sum(grepl("E", CaseRates_LTLA_codes))
+#This line shows us that, of the 380 codes, 65 of them are Scotland / Wales
+
+CaseRates_LTLA_names[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
+CaseRates_LTLA_codes[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
+
+#This is a very easy stick together:
+Case_Rates_Data <- full_join(Case_Rates_Data, FirstEpisodes_Data, by=c("areaCode", "areaName", "areaType", "date"))
+
+#############################################################################
+#############################################################################
+#Next, we're going to stick on a different measure of cases:
+#Only the pillar 2, and PCR_only cases from the direct England linelist
+Linelist_Data <- readRDS("Data/reduced_linelist.rds")
+Linelist_Data <- filter(Linelist_Data, specimen_date < as.Date("2022-11-10"))
+
+new_LTLA_codes <- unique(Linelist_Data$ltla_code)
+new_LTLA_names <- unique(Linelist_Data$ltla_name)
+CaseRates_LTLA_names[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
+CaseRates_LTLA_codes[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
+
+#The linelist does not have data for 4 of the English LTLAs in the dashboard
+#(It also doesn't have any of the 65 devolved nations info):
+#E07000006 - South Bucks
+#E07000004 - Aylesbury Vale
+#E07000005 - Chiltern
+#E07000007 - Wycombe
+
+new_LTLA_names[which(!(new_LTLA_codes %in% CaseRates_LTLA_codes))]
+new_LTLA_codes[which(!(new_LTLA_codes %in% CaseRates_LTLA_codes))]
+
+#Likewise, the dashboard data does not have info on three of the linelist LTLAs:
+#E06000053 - Isles of Scilly
+#E06000060 - Buckinghamshire
+#E09000001 - City of London
+
+#Firstly, in the dashboard data, it combines Hackney AND City of London under (E09000012)
+#Let's go ahead and combine these in the linelist data now:
+
+
+#Similarly, in the dashboard data, Isles of Scilly are rolled in with Cornwall under E06000052 (just Cornwall for linelist)
+#
+
+
+#Lastly,
+##Buckinghamshire = South Bucks, Aylesbury Vale, Chiltern, Wycombe, 
+#Later on, we're going to collapse these 4 regions into for the Case Rates Data
+
+#############################################################################
+#############################################################################
+
+
+
 #Load vaccine uptake proportions
 #These are the live API links used
 #First_Vaccine_Data <- read.csv('https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=cumVaccinationFirstDoseUptakeByVaccinationDatePercentage&format=csv')
