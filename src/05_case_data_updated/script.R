@@ -42,8 +42,9 @@ CaseRates_LTLA_names <- unique(Case_Rates_Data$areaName)
 #sum(grepl("E", CaseRates_LTLA_codes))
 #This line shows us that, of the 380 codes, 65 of them are Scotland / Wales
 
-CaseRates_LTLA_names[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
-CaseRates_LTLA_codes[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
+#These lines show us that there is no mismatch between LTLA codes
+#CaseRates_LTLA_names[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
+#CaseRates_LTLA_codes[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
 
 #This is a very easy stick together:
 Case_Rates_Data <- full_join(Case_Rates_Data, FirstEpisodes_Data, by=c("areaCode", "areaName", "areaType", "date"))
@@ -61,7 +62,7 @@ CaseRates_LTLA_names[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
 CaseRates_LTLA_codes[which(!(CaseRates_LTLA_codes %in% new_LTLA_codes))]
 
 #The linelist does not have data for 4 of the English LTLAs in the dashboard
-#(It also doesn't have any of the 65 devolved nations info):
+#(It also doesn't have any of the 65 devolved nations LTLAs info):
 #E07000006 - South Bucks
 #E07000004 - Aylesbury Vale
 #E07000005 - Chiltern
@@ -77,15 +78,29 @@ new_LTLA_codes[which(!(new_LTLA_codes %in% CaseRates_LTLA_codes))]
 
 #Firstly, in the dashboard data, it combines Hackney AND City of London under (E09000012)
 #Let's go ahead and combine these in the linelist data now:
-
+Linelist_Data$ltla_code[which(Linelist_Data$ltla_code == "E09000001")] <- "E09000012"
+Linelist_Data$ltla_name[which(Linelist_Data$ltla_code == "E09000012")] <- "Hackney and City of London"
 
 #Similarly, in the dashboard data, Isles of Scilly are rolled in with Cornwall under E06000052 (just Cornwall for linelist)
-#
+Linelist_Data$ltla_code[which(Linelist_Data$ltla_code == "E06000053")] <- "E06000052"
+Linelist_Data$ltla_name[which(Linelist_Data$ltla_code == "E06000052")] <- "Cornwall and Isles of Scilly"
 
+#Now we aggregate these by date and code:
+Linelist_Data <- aggregate(Linelist_Data$cases,
+                                 by=list(date=Linelist_Data$specimen_date, 
+                                         areaCode = Linelist_Data$ltla_code, 
+                                         areaName = Linelist_Data$ltla_name),
+                                 FUN=sum)
 
 #Lastly,
 ##Buckinghamshire = South Bucks, Aylesbury Vale, Chiltern, Wycombe, 
-#Later on, we're going to collapse these 4 regions into for the Case Rates Data
+#Later on, we're going to collapse these 4 regions into for the Case Rates Data, 
+#but we first need to attach the vaccine data we have for the existing LTLAs as
+#presented in the dashboard data. We do the following in order:
+#1. Attach the vaccine data to the dashboard data
+#2. Collapse the Buckinghamshire LTLAs in the dashboard data, and the other two sets
+#3. Collapse the remaining two re-drawn boundaries for the linelist data
+#4. Combine the two datasets.
 
 #############################################################################
 #############################################################################
@@ -115,13 +130,13 @@ Third_Vaccine_Data$date <- as.Date(Third_Vaccine_Data$date)
 
 #Merge the Case rates data with the vaccinations data
 Case_Rates_Data <- merge(Case_Rates_Data, First_Vaccine_Data, by = c('areaCode','date'), all.x = TRUE)
-Case_Rates_Data <- Case_Rates_Data[,-c(6,7)]
-
-Case_Rates_Data <- merge(Case_Rates_Data, Second_Vaccine_Data, by = c('areaCode','date'), all.x = TRUE)
 Case_Rates_Data <- Case_Rates_Data[,-c(7,8)]
 
-Case_Rates_Data <- merge(Case_Rates_Data, Third_Vaccine_Data, by = c('areaCode','date'), all.x = TRUE)
+Case_Rates_Data <- merge(Case_Rates_Data, Second_Vaccine_Data, by = c('areaCode','date'), all.x = TRUE)
 Case_Rates_Data <- Case_Rates_Data[,-c(8,9)]
+
+Case_Rates_Data <- merge(Case_Rates_Data, Third_Vaccine_Data, by = c('areaCode','date'), all.x = TRUE)
+Case_Rates_Data <- Case_Rates_Data[,-c(9,10)]
 
 #Remove the Northern Ireland data:
 Case_Rates_Data <- filter(Case_Rates_Data, !grepl('N09', areaCode))
@@ -268,6 +283,12 @@ Agg_Case_Rates_Data <- aggregate(Case_Rates_Data$newCasesBySpecimenDate,
                                          areaName = Case_Rates_Data$areaName),
                                  FUN=sum)
 
+Agg_First_Episodes_Data <- aggregate(Case_Rates_Data$cumFirstEpisodesBySpecimenDate,
+                                 by=list(date=Case_Rates_Data$date, 
+                                         areaCode = Case_Rates_Data$areaCode, 
+                                         areaName = Case_Rates_Data$areaName),
+                                 FUN=sum)
+
 #We need to calculate the "mean" vaccination rate across these three agglomerated regions
 #TODO: NEED TO DO THE MEAN VACC RELATIVE TO POPULATION.
 First_Vacc_Mean_Data <- aggregate(Case_Rates_Data$cumVaccPercentage_FirstDose,
@@ -292,22 +313,73 @@ New_Cases2 <- filter(Agg_Case_Rates_Data, areaCode %in% Not_in_Case_Rates2)
 
 #Now we no longer have any overlap
 
-rm(areaChanges, New_Cases, New_Cases2, Old_Cases,
-   Not_in_Boundaries1, Not_in_Boundaries2,
-   Not_in_Case_Rates1, Not_in_Case_Rates2)
+
 
 Agg_Case_Rates_Data$previous_day_cases <- NA
 colnames(Agg_Case_Rates_Data) <- c('date', 'areaCode', 'areaName','Cases', 'previous_day_cases')
+colnames(Agg_First_Episodes_Data) <- c('date', 'areaCode', 'areaName','First_Episodes_Total')
 colnames(First_Vacc_Mean_Data) <- c('date', 'areaCode', 'areaName','cumVaccPercentage_FirstDose')
 colnames(Second_Vacc_Mean_Data) <- c('date', 'areaCode', 'areaName','cumVaccPercentage_SecondDose')
 colnames(Third_Vacc_Mean_Data) <- c('date', 'areaCode', 'areaName','cumVaccPercentage_ThirdDose')
 
-Case_Rates_Data <- merge(Agg_Case_Rates_Data, First_Vacc_Mean_Data, by = c('areaCode', 'areaName', 'date'))
+Case_Rates_Data <- merge(Agg_Case_Rates_Data, Agg_First_Episodes_Data, by = c('areaCode', 'areaName', 'date'))
+Case_Rates_Data <- merge(Case_Rates_Data, First_Vacc_Mean_Data, by = c('areaCode', 'areaName', 'date'))
 Case_Rates_Data <- merge(Case_Rates_Data, Second_Vacc_Mean_Data, by = c('areaCode', 'areaName', 'date'))
 Case_Rates_Data <- merge(Case_Rates_Data, Third_Vacc_Mean_Data, by = c('areaCode', 'areaName', 'date'))
 
 Case_Rates_Data$date <- as.Date(Case_Rates_Data$date)
 
+#########################
+#Now we repeat all these steps with the linelist data, collapsing two of the region sets
+#Now change the areaCode and areaName:
+for(i in 1:length(Linelist_Data[,1])){
+  if(Linelist_Data$areaCode[i] %in% Not_in_Boundaries2){
+    index <- which(areaChanges$from_code == Linelist_Data$areaCode[i])
+    Linelist_Data$areaCode[i] <- areaChanges$to_code[index]
+    Linelist_Data$areaName[i] <- areaChanges$to_name[index]
+  }
+}
+
+New_Cases <- filter(Linelist_Data, areaCode %in% Not_in_Case_Rates2)
+
+colnames(Linelist_Data) <- c("date", "areaCode", "areaName", "Linelist_P2_PCR_cases")
+#Now we aggregate these by date and code:
+Agg_Linelist_Data <- aggregate(Linelist_Data$Linelist_P2_PCR_cases,
+                                 by=list(date=Linelist_Data$date, 
+                                         areaCode = Linelist_Data$areaCode, 
+                                         areaName = Linelist_Data$areaName),
+                                 FUN=sum)
+
+colnames(Agg_Linelist_Data) <- c("date", "areaCode", "areaName", "Linelist_P2_PCR_cases")
+
+#We should now have no mismatch in LTLAs between our two case sets
+Case_Data_Codes <- unique(Case_Rates_Data$areaCode)
+Linelist_Codes <- unique(Agg_Linelist_Data$areaCode)
+
+#sum(!(Linelist_Codes %in% Case_Data_Codes))
+#Case_Data_Codes[which(!(Case_Data_Codes %in% Linelist_Codes))]
+#Correct, it's just the devolved nations we don't have!
+
+#I just want to quickly check how well the names match so there's no nasty surprises
+Case_Data_Codes <- unique(Case_Rates_Data[,c(1,2)])
+Linelist_Codes <- unique(Agg_Linelist_Data[,c(2,3)])
+Compare_Names <- merge(Case_Data_Codes, Linelist_Codes, by = c("areaCode"))
+
+#A perfect match
+Agg_Linelist_Data <- Agg_Linelist_Data[,-3]
+#########################
+#Now merge our two data sets
+Case_Rates_Data <- merge(Case_Rates_Data, Agg_Linelist_Data, all = TRUE, by = c('areaCode', 'date'))
+
+#Replace the NAs in the Linelist cases column with 0s:
+Case_Rates_Data$Linelist_P2_PCR_cases[is.na(Case_Rates_Data$Linelist_P2_PCR_cases)] <- 0
+
+#Cut the junk
+rm(areaChanges, New_Cases, New_Cases2, Old_Cases,
+   Not_in_Boundaries1, Not_in_Boundaries2,
+   Not_in_Case_Rates1, Not_in_Case_Rates2, Agg_First_Episodes_Data,
+   Agg_Linelist_Data, Case_Data_Codes, Compare_Names,
+   Linelist_Codes, Linelist_Data, FirstEpisodes_Data)
 #Now we record, for each LTLA, the case count from the previous day in the row too.
 #This takes a long time, there's probably a...
 #TODO: Make this more efficient!
@@ -355,6 +427,10 @@ rm(Agg_Case_Rates_Data, First_Vacc_Mean_Data, First_Vaccine_Data,
    Second_Vacc_Mean_Data, Second_Vaccine_Data, 
    Third_Vacc_Mean_Data, Third_Vaccine_Data)
 
+#And remove some extra rubbish
+rm(Boundary_Codes, CaseRates_LTLA_codes, CaseRates_LTLA_names,
+   i, index, minimum_date, new_LTLA_codes, new_LTLA_names)
+
 #There's a modeling problem in cases when places have no boundaries
 #TODO: This *could* be fixed by defining custom boundaries, but for now we remove.
 #issues at:
@@ -371,6 +447,7 @@ Boundaries <- filter(Boundaries, !(CODE %in% Error_codes))
 Case_Rates_Data <- filter(Case_Rates_Data, !(areaCode %in% Error_codes))
 
 #Define a column that will say which element of the spatial matrix each row relates to
+#TODO: Can definitely do this without needing a loop. Make more efficient.
 Case_Rates_Data$INDEX <- NA
 for(i in 1:length(Case_Rates_Data$date)){
   hold_code <- Case_Rates_Data$areaCode[i]
@@ -465,20 +542,23 @@ Case_Rates_Data_hold <- drop_na(Case_Rates_Data_hold)
 
 rm(data_hold, areaName_hold, date_hold, i)
 
-#Now we need to add back the vaccination states for that day too. 
-#We currently use the percentage on the date of week beginning but could feasibly...
+#Now we need to add back the vaccination states, and first episodes for that day too. 
+#We currently use the percentage on the date of week ENDING but could feasibly...
 #TODO: SET THIS TO THE WEEKLY MEAN VACC INSTEAD
+Case_Rates_Data_hold$First_Episodes_Total <- NA
 Case_Rates_Data_hold$cumVaccPercentage_FirstDose <- NA
 Case_Rates_Data_hold$cumVaccPercentage_SecondDose <- NA
 Case_Rates_Data_hold$cumVaccPercentage_ThirdDose <- NA
 Case_Rates_Data_hold$date_begin <- as.Date(Case_Rates_Data_hold$date_begin)
 
 for(i in 1:length(Case_Rates_Data_hold$Week)){
-  date_hold <- Case_Rates_Data_hold$date_begin[i]
+  date_hold <- Case_Rates_Data_hold$date_begin[i] + 6
   areaCode_hold <- Case_Rates_Data_hold$areaCode[i]
   
   data_filter <- filter(Case_Rates_Data, date == date_hold)
   data_filter <- filter(data_filter, areaCode == areaCode_hold)
+  
+  Case_Rates_Data_hold$First_Episodes_Total[i] <- data_filter$First_Episodes_Total[1]
   
   Case_Rates_Data_hold$cumVaccPercentage_FirstDose[i] <- data_filter$cumVaccPercentage_FirstDose[1]
   Case_Rates_Data_hold$cumVaccPercentage_SecondDose[i] <- data_filter$cumVaccPercentage_SecondDose[1]
@@ -491,6 +571,7 @@ rm(data_filter, date_hold, areaCode_hold, Case_Rates_Data_hold)
 
 #save(Case_Rates_Data, file = 'Outputs/Weekly_Case_Date_12_01_22.RData')
 
+#GOT TO HERE: NOW NEED TO DO THE SAME BUT FOR THE LINELIST CASES AND RE-ATTACH
 
 
 #We need to investigate the NA's for vaccination:
