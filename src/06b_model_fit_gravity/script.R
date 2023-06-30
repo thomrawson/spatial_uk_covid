@@ -41,11 +41,55 @@ rstan_options(auto_write = TRUE)
 #Prepare Data
   
   #Cut down to the only covariates we're interested in:
-  Case_Rates_Data <- Case_Rates_Data[,-c(5,6,15,16,18,19,22,24,25,28,30,31,32,33,
-                                         43, #Cut Omicron BQ1
-                                         50,53,54,55,64,65,66:80)] #Added 4 to all these indices
-  
-  
+Case_Rates_Data <- Case_Rates_Data[,c("areaCode", "Week", "areaName",
+                                      "Population", "INDEX",
+                                      "date_begin"                                   ,
+                                      "Week_Cases"                                   ,
+                                      "previous_week_cases"                          ,
+                                      "next_week_cases"                              ,
+                                      "Linelist_P2_PCR_Week_Cases",
+                                      "Linelist_P2_PCR_Previous_Week_Cases",
+                                      "Linelist_P2_PCR_Next_Week_Cases",
+                                      "First_Episodes_Total",
+                                      "cumVaccPercentage_FirstDose"                  ,
+                                      "cumVaccPercentage_SecondDose"                 ,
+                                      "cumVaccPercentage_ThirdDose"                  ,
+                                      "prop_white_british"                           ,
+                                      "prop_asian"                                   ,
+                                      "prop_black_afr_car"                           ,
+                                      "IMD_Average_score"                            ,
+                                      "mean_age"                                     ,
+                                      "prop_o65"                                     ,
+                                      "Median_annual_income"                         ,
+                                      "transit_stations_percent_change_from_baseline",
+                                      "workplaces_percent_change_from_baseline"      ,
+                                      "residential_percent_change_from_baseline"     ,
+                                      "Alpha_proportion"                             ,
+                                      "Delta_proportion"                             ,
+                                      "Delta_AY_4_2_proportion"                      ,
+                                      "Omicron_BA_1_proportion"                      ,
+                                      "Omicron_BA_2_proportion"                      ,
+                                      "Other_proportion"                             ,
+                                      "Omicron_BA_4_proportion"                      ,
+                                      "Omicron_BA_5_proportion"                      ,
+                                      "s_Wild_prop"                                  ,
+                                      "s_Alpha_prop"                                 ,
+                                      "s_Delta_prop"                                 ,
+                                      "s_Omicron_prop"                               ,
+                                      "CCG_2019_Name"                                ,
+                                      "NHS_registered_population"                    ,
+                                      "Core_services_funding_by_weighted"            ,
+                                      "Primary_care_funding_by_weighted"             ,
+                                      "Specialised_services_by_weighted"             ,
+                                      "unringfenced"                                 ,
+                                      "contain_outbreak_management"                  ,
+                                      "ASC_infection_control_fund"                   ,
+                                      "ASC_workforce_capacity"                       ,
+                                      "ASC_rapid_testing"                            ,
+                                      "centroid_x"                                   ,
+                                      "centroid_y")] 
+
+
   #Weeks go from 2:130
   #Note, the government stopped providing free LFTs on April 1st 2022
   #This will have, in turn, affected the case data, so let's chop off everything
