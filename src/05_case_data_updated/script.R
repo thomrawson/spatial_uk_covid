@@ -429,7 +429,7 @@ rm(Agg_Case_Rates_Data, First_Vacc_Mean_Data, First_Vaccine_Data,
 
 #And remove some extra rubbish
 rm(Boundary_Codes, CaseRates_LTLA_codes, CaseRates_LTLA_names,
-   i, index, minimum_date, new_LTLA_codes, new_LTLA_names)
+   i, index, new_LTLA_codes, new_LTLA_names)
 
 #There's a modeling problem in cases when places have no boundaries
 #TODO: This *could* be fixed by defining custom boundaries, but for now we remove.
@@ -565,14 +565,82 @@ for(i in 1:length(Case_Rates_Data_hold$Week)){
   Case_Rates_Data_hold$cumVaccPercentage_ThirdDose[i] <- data_filter$cumVaccPercentage_ThirdDose[1]
 }
 
-Case_Rates_Data <- Case_Rates_Data_hold
-rm(data_filter, date_hold, areaCode_hold, Case_Rates_Data_hold)
+#Case_Rates_Data <- Case_Rates_Data_hold
 
+rm(data_filter, date_hold, areaCode_hold)
 
 #save(Case_Rates_Data, file = 'Outputs/Weekly_Case_Date_12_01_22.RData')
 
-#GOT TO HERE: NOW NEED TO DO THE SAME BUT FOR THE LINELIST CASES AND RE-ATTACH
+#But, first episodes doesn't seem to always line up correctly with the new number of cases...
+#Of course, we wouldn't expect it too! First episodes will always be a bit less than
+#new cases, as it doesn't count the new repeat cases.
 
+#A quick sanity check though is always good
+#first_episode_differences <- rep(0, 45924)
+#all_dates <- unique(Case_Rates_Data$Week)
+#for(i in 3:131){
+#  current_week <- filter(Case_Rates_Data, Week == i)
+#  previous_week <- filter(Case_Rates_Data, Week == (i-1))
+#  first_eps <- current_week$First_Episodes_Total - previous_week$First_Episodes_Total
+#  cases_diff <- current_week$Week_Cases
+#  first_episode_differences[((356*(i-3))+1):(356*(i-2))] <- cases_diff - first_eps
+#  }
+#Confirms that it's always less first episodes than cases, and is mostly zeros in early weeks
+
+#GOT TO HERE: NOW NEED TO DO THE SAME BUT FOR THE LINELIST CASES AND RE-ATTACH
+##############################################################
+
+#Now sum by, everything, but not vaccination yet
+Linelist_Data_hold <- aggregate(Case_Rates_Data$Linelist_P2_PCR_cases, by=list(Week=Case_Rates_Data$Week, areaCode = Case_Rates_Data$areaCode), FUN=sum)
+
+#Now need to add a "previous week cases" column, and a "date_begin" column:
+colnames(Linelist_Data_hold) <- c('Week', 'areaCode', 'Linelist_P2_PCR_Week_Cases')
+
+#Previous weeks column
+Linelist_Data_hold$Linelist_P2_PCR_Previous_Week_Cases <- NA
+Linelist_Data_hold$Linelist_P2_PCR_Next_Week_Cases <- NA
+
+
+for(i in 1:length(Linelist_Data_hold$Week)){
+  areaCode_hold <- Linelist_Data_hold$areaCode[i]
+  date_hold <- Linelist_Data_hold$Week[i]
+  
+  #Obtain the previous day's case_Rate
+  data_hold <- filter(Linelist_Data_hold, areaCode == areaCode_hold)
+  data_hold <- filter(data_hold, Week == date_hold - 1)
+  
+  #Obtain the next day's case_Rate
+  data_hold2 <- filter(Linelist_Data_hold, areaCode == areaCode_hold)
+  data_hold2 <- filter(data_hold2, Week == date_hold + 1)
+  
+  if(length(data_hold$areaCode) == 0){
+    
+  } else if (length(data_hold$areaCode) == 1){
+    Linelist_Data_hold$Linelist_P2_PCR_Previous_Week_Cases[i] <- data_hold$Linelist_P2_PCR_Week_Cases
+  } else {
+    print(paste('Error: length neither 0 nor 1 at prev_week i =', i, sep = " "))
+  }
+  
+  if(length(data_hold2$areaCode) == 0){
+    
+  } else if (length(data_hold2$areaCode) == 1){
+    Linelist_Data_hold$Linelist_P2_PCR_Next_Week_Cases[i] <- data_hold2$Linelist_P2_PCR_Week_Cases
+  } else {
+    print(paste('Error: length neither 0 nor 1 at next_week i =', i, sep = " "))
+  }
+  
+}
+
+#Drop "week one", as we don't have the previous week cases.
+Linelist_Data_hold <- drop_na(Linelist_Data_hold)
+
+rm(data_hold, areaCode_hold, date_hold, i, data_hold2)
+
+#Now re-join the data
+Case_Rates_Data <- merge(Case_Rates_Data_hold, Linelist_Data_hold, by = c("areaCode", "Week"))
+
+rm(Case_Rates_Data_hold, Linelist_Data_hold)
+##############################################################
 
 #We need to investigate the NA's for vaccination:
 NA_vacc_data <- filter(Case_Rates_Data, is.na(Case_Rates_Data$cumVaccPercentage_FirstDose))
@@ -1171,22 +1239,28 @@ for(i in 1:nrow(Case_Rates_Data)){
 
 
 ##################################################################
-
+#MINIMUM CASE NUMBERS
 
 #We want to set the minimum case numbers possible to be 1, to get around issues with log(0)
 #There are only 73 occurrences of this!
-for(i in 1:nrow(Case_Rates_Data)){
-  if(Case_Rates_Data$Week_Cases[i] == 0){
-    Case_Rates_Data$Week_Cases[i] <- 1
-  }
-  
-  if(Case_Rates_Data$previous_week_cases[i] == 0){
-    Case_Rates_Data$previous_week_cases[i] <- 1
-  }
-  if(Case_Rates_Data$next_week_cases[i] == 0){
-    Case_Rates_Data$next_week_cases[i] <- 1
-  }
-}
+#for(i in 1:nrow(Case_Rates_Data)){
+#  if(Case_Rates_Data$Week_Cases[i] == 0){
+#    Case_Rates_Data$Week_Cases[i] <- 1
+#  }
+#  
+#  if(Case_Rates_Data$previous_week_cases[i] == 0){
+#    Case_Rates_Data$previous_week_cases[i] <- 1
+#  }
+#  if(Case_Rates_Data$next_week_cases[i] == 0){
+#    Case_Rates_Data$next_week_cases[i] <- 1
+#  }
+#}
+
+#What about for the Linelist data though?
+sum(Case_Rates_Data$Linelist_P2_PCR_Week_Cases == 0)
+#There are 7960 instances of it. That's a lot! 17% of all the data. 
+#Keep in mind most of these are well into 2022 though, maybe beyond our region of interest
+#Hence why I've switched this chunk off for now.
 
 ########################################################
 #Variant Proportion
@@ -1837,39 +1911,45 @@ for(i in 1:356){
 
 Case_Rates_Data <- merge(Case_Rates_Data, LTLA_centroids, by = c('areaCode'), all.x = TRUE)
 
-###############################################################################
-#We want to keep a tally of the total cumulative number of cases in the region to date... 
 
-#We do this using the cumulative number of "first episodes" from the dashboard. API link:
-#https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=cumFirstEpisodesBySpecimenDate&format=csv
-
-#But we saved a hard copy:
-first_episodes_data <- read.csv("Data/ltla_first_episodes_2023_06_22.csv")
-first_episodes_data$date <- as.Date(first_episodes_data$date)
-#BUT, unfortunately we need to do all the annoying LTLA boundary re-processing again... so,
-#for now, we just sum up after May 10th
-###########
-#TODO: Use the official sum numbers
-#Note that, on the one hand, we're missing the first few months this way, but we're then also double-counting the first episodes
-############
-Case_Rates_Data$total_cases <- NA
-for(i in 1:nrow(Case_Rates_Data)){
-  Week_hold <- Case_Rates_Data$Week[i]
-  #Week_start_hold <- max((Week_hold - 5),2)
-  Week_start_hold <- 2
-  areahold <- Case_Rates_Data$areaCode[i]
-  weeks_to_keep <- seq(Week_start_hold, Week_hold)
-  
-  Case_Rates_Data %>%
-    filter(areaCode == areahold) %>%
-    filter(Week %in% weeks_to_keep) -> data_hold
-  
-  cumCases <- sum(data_hold$Week_Cases)
-  Case_Rates_Data$total_cases[i] <- cumCases
-    
-}
-
-sum(which(Case_Rates_Data$total_cases > Case_Rates_Data$Population))
+############################################ 
+# Don't need this block anymore, we attached first episodes at the top!
+# ###############################################################################
+# #We want to keep a tally of the total cumulative number of cases in the region to date... 
+# 
+# #We do this using the cumulative number of "first episodes" from the dashboard. API link:
+# #https://api.coronavirus.data.gov.uk/v2/data?areaType=ltla&metric=cumFirstEpisodesBySpecimenDate&format=csv
+# 
+# #But we saved a hard copy:
+# first_episodes_data <- read.csv("Data/ltla_first_episodes_2023_06_22.csv")
+# first_episodes_data$date <- as.Date(first_episodes_data$date)
+# #BUT, unfortunately we need to do all the annoying LTLA boundary re-processing again... so,
+# #for now, we just sum up after May 10th
+# ###########
+# #TODO: Use the official sum numbers
+# #Note that, on the one hand, we're missing the first few months this way, but we're then also double-counting the first episodes
+# ############
+# Case_Rates_Data$total_cases <- NA
+# for(i in 1:nrow(Case_Rates_Data)){
+#   Week_hold <- Case_Rates_Data$Week[i]
+#   #Week_start_hold <- max((Week_hold - 5),2)
+#   Week_start_hold <- 2
+#   areahold <- Case_Rates_Data$areaCode[i]
+#   weeks_to_keep <- seq(Week_start_hold, Week_hold)
+#   
+#   Case_Rates_Data %>%
+#     filter(areaCode == areahold) %>%
+#     filter(Week %in% weeks_to_keep) -> data_hold
+#   
+#   cumCases <- sum(data_hold$Week_Cases)
+#   Case_Rates_Data$total_cases[i] <- cumCases
+#     
+# }
+# 
+# sum(which(Case_Rates_Data$total_cases > Case_Rates_Data$Population))
+# 
+# 
+# ############################################
 
 #Done for now, export the data
 
@@ -1952,7 +2032,9 @@ hospital_admissions <- merge(hospital_admissions, Region_populations, by = "area
 
 #VACCINATION. 
 #We need to multiply the percentages by the population and then add them all together and divide back down.
-LTLA_Vaccinations <- Case_Rates_Data[,c(1,2,4,12,13,14)]
+LTLA_Vaccinations <- Case_Rates_Data[,c("areaCode","Week","Population","cumVaccPercentage_FirstDose",                       
+                                        "cumVaccPercentage_SecondDose",                      
+                                        "cumVaccPercentage_ThirdDose" )]
 
 LTLA_Vaccinations$no_vaccs_one <- LTLA_Vaccinations$Population*LTLA_Vaccinations$cumVaccPercentage_FirstDose/100
 LTLA_Vaccinations$no_vaccs_two <- LTLA_Vaccinations$Population*LTLA_Vaccinations$cumVaccPercentage_SecondDose/100
@@ -1993,7 +2075,7 @@ rm(region_one_dose, region_two_dose, region_three_dose, LTLA_Vaccinations)
 
 #IMD average score
 #Again, multiply by population, aggregate, then divide down
-LTLA_IMD <- distinct(Case_Rates_Data[,c(1,4,23)])
+LTLA_IMD <- distinct(Case_Rates_Data[,c("areaCode","Population","IMD_Average_score")])
 LTLA_IMD$total_IMD <- LTLA_IMD$Population*LTLA_IMD$IMD_Average_score
 
 LTLA_IMD <- merge(LTLA_IMD, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2009,7 +2091,7 @@ rm(LTLA_IMD, Region_IMD)
 
 #transit_stations_percent_change_from_baseline
 #Again, multiply by population, aggregate, then divide down
-LTLA_transit <- distinct(Case_Rates_Data[,c(1,2,4,34)])
+LTLA_transit <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","transit_stations_percent_change_from_baseline")])
 LTLA_transit$total_transit <- LTLA_transit$Population*LTLA_transit$transit_stations_percent_change_from_baseline/100
 
 LTLA_transit <- merge(LTLA_transit, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2025,7 +2107,7 @@ rm(LTLA_transit, Region_transit)
 
 #residential_percent_change_from_baseline
 #Again, multiply by population, aggregate, then divide down
-LTLA_resident <- distinct(Case_Rates_Data[,c(1,2,4,36)])
+LTLA_resident <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","residential_percent_change_from_baseline")])
 LTLA_resident$total_resident <- LTLA_resident$Population*LTLA_resident$residential_percent_change_from_baseline/100
 
 LTLA_resident <- merge(LTLA_resident, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2042,7 +2124,7 @@ rm(LTLA_resident, Region_resident)
 
 #VARIANT PROPORTIONS
 #ALPHA
-LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,37)])
+LTLA_variant <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","Alpha_proportion")])
 LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Alpha_proportion/100
 
 LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2057,7 +2139,7 @@ hospital_admissions <- hospital_admissions[,-14]
 rm(LTLA_variant, Region_variant)
 
 #Delta_proportion
-LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,38)])
+LTLA_variant <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","Delta_proportion")])
 LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Delta_proportion/100
 
 LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2073,7 +2155,7 @@ rm(LTLA_variant, Region_variant)
 
 
 #Delta_AY_4_2_proportion
-LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,39)])
+LTLA_variant <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","Delta_AY_4_2_proportion")])
 LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Delta_AY_4_2_proportion/100
 
 LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2089,7 +2171,7 @@ rm(LTLA_variant, Region_variant)
 
 
 #Omicron_BA_1_proportion
-LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,40)])
+LTLA_variant <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","Omicron_BA_1_proportion")])
 LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BA_1_proportion/100
 
 LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2104,7 +2186,7 @@ hospital_admissions <- hospital_admissions[,-17]
 rm(LTLA_variant, Region_variant)
 
 #Omicron_BA_2_proportion
-LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,41)])
+LTLA_variant <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","Omicron_BA_2_proportion")])
 LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BA_2_proportion/100
 
 LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2119,7 +2201,7 @@ hospital_admissions <- hospital_admissions[,-18]
 rm(LTLA_variant, Region_variant)
 
 #Other_proportion
-LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,42)])
+LTLA_variant <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","Other_proportion")])
 LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Other_proportion/100
 
 LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2134,7 +2216,7 @@ hospital_admissions <- hospital_admissions[,-19]
 rm(LTLA_variant, Region_variant)
 
 #Omicron_BQ_1_proportion
-LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,43)])
+LTLA_variant <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","Omicron_BQ_1_proportion")])
 LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BQ_1_proportion/100
 
 LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2149,7 +2231,7 @@ hospital_admissions <- hospital_admissions[,-20]
 rm(LTLA_variant, Region_variant)
 
 #Omicron_BA_4_proportion
-LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,44)])
+LTLA_variant <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","Omicron_BA_4_proportion")])
 LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BA_4_proportion/100
 
 LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
@@ -2164,7 +2246,7 @@ hospital_admissions <- hospital_admissions[,-21]
 rm(LTLA_variant, Region_variant)
 
 #Omicron_BA_5_proportion
-LTLA_variant <- distinct(Case_Rates_Data[,c(1,2,4,45)])
+LTLA_variant <- distinct(Case_Rates_Data[,c("areaCode","Week","Population","Omicron_BA_5_proportion")])
 LTLA_variant$total_variant <- LTLA_variant$Population*LTLA_variant$Omicron_BA_5_proportion/100
 
 LTLA_variant <- merge(LTLA_variant, LTLA_to_region[,c(2,5)], by = c("areaCode"))
