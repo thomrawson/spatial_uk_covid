@@ -10,8 +10,27 @@ dir.create("Case_Outputs")
 #Instead we change our cumulative vaccination, to PROPORTION vaccination,
 #i.e. if you sum prop_no_dose, prop_1_dose, prop_2_dose, prop_3_dose for every i,j, it'll equal 1.
 #Quickly added in this switch to deal with that:
-PROP_vacc <- TRUE
+PROP_vacc <- use_prop_vacc
 ################################################################################
+T <- final_week - 1
+
+#Let's print an output .txt of the parameters used:
+param_string <- sprintf("tree_depth: %s \n
+  scale_by_number_of_neighbours: %s \n
+  scale_by_susceptible_pool: %s \n
+  cases_type: %s \n
+  use_prop_vacc: %s \n
+  use_SGTF_data: %s \n
+  final_week: %s \n
+  random_walk_prior_scale: %s \n
+  print_extra_gof:  %s ", tree_depth, scale_by_number_of_neighbours, 
+                        scale_by_susceptible_pool, cases_type,
+                        use_prop_vacc, use_SGTF_data, final_week,
+                        random_walk_prior_scale, print_extra_gof)
+
+fileConn<-file("parameters_used.txt")
+writeLines(param_string, fileConn)
+close(fileConn)
 
 #Our parameters and priors:
 #beta0 ~ normal(0.0, 1.0);
@@ -20,8 +39,14 @@ PROP_vacc <- TRUE
 #theta[,i] ~ normal(0.0, 1.0); #noise
 
 #Output summaries of the mixed chains for all parameters except theta
+if(scale_by_susceptible_pool){
+  main_summaries <- summary(stanfit, pars = c('sqrtQ', 'susc_scaling', 'betas', 'beta_random_walk', 'zetas', 'lp__'))
+  write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
+  
+}else{
 main_summaries <- summary(stanfit, pars = c('sqrtQ', 'betas', 'beta_random_walk', 'zetas', 'lp__'))
 write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
+}
 #Theta summaries are big, but we output anyway
 theta_summaries <- summary(stanfit, pars = c('theta_mu', 'theta_sd','theta'))
 write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names = TRUE)
@@ -41,6 +66,14 @@ png(file="Case_Outputs\\beta_trajectories2.png",
 plot(beta_trajectories2)
 dev.off()
 
+if(scale_by_susceptible_pool){
+  susc_trajectories <- rstan::traceplot(stanfit, pars=c('susc_scaling'))
+  png(file="Case_Outputs\\susc_scaling_trajectories.png",
+      width=1440, height=1080, res = 150)
+  plot(susc_trajectories)
+  dev.off()
+}
+
 #Let's also save the random walk plots
 rw_trajectories1 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk[%s]',1:25)), nrow = 5)
 png(file="Case_Outputs\\rw_trajectories1.png",
@@ -54,18 +87,25 @@ png(file="Case_Outputs\\rw_trajectories2.png",
 plot(rw_trajectories2)
 dev.off()
 
+if(T > 75){
 rw_trajectories3 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk[%s]',51:75)), nrow = 5)
 png(file="Case_Outputs\\rw_trajectories3.png",
     width=1440, height=1080, res = 150)
 plot(rw_trajectories3)
 dev.off()
 
-rw_trajectories4 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk[%s]',76:103)), nrow = 5)
+rw_trajectories4 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk[%s]',76:T)), nrow = 5)
 png(file="Case_Outputs\\rw_trajectories4.png",
     width=1440, height=1080, res = 150)
 plot(rw_trajectories4)
 dev.off()
-
+}else{
+  rw_trajectories3 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk[%s]',51:T)), nrow = 5)
+  png(file="Case_Outputs\\rw_trajectories3.png",
+      width=1440, height=1080, res = 150)
+  plot(rw_trajectories3)
+  dev.off()
+}
 #And just the steps of the RW too:
 ######################
 rw_trajectories1 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk_steps[%s]',1:25)), nrow = 5)
@@ -80,17 +120,25 @@ png(file="Case_Outputs\\rw_steps_trajectories2.png",
 plot(rw_trajectories2)
 dev.off()
 
+if(T > 75){
 rw_trajectories3 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk_steps[%s]',51:75)), nrow = 5)
 png(file="Case_Outputs\\rw_steps_trajectories3.png",
     width=1440, height=1080, res = 150)
 plot(rw_trajectories3)
 dev.off()
 
-rw_trajectories4 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk_steps[%s]',76:103)), nrow = 5)
+rw_trajectories4 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk_steps[%s]',76:T)), nrow = 5)
 png(file="Case_Outputs\\rw_steps_trajectories4.png",
     width=1440, height=1080, res = 150)
 plot(rw_trajectories4)
 dev.off()
+}else{
+  rw_trajectories3 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk_steps[%s]',51:T)), nrow = 5)
+  png(file="Case_Outputs\\rw_steps_trajectories3.png",
+      width=1440, height=1080, res = 150)
+  plot(rw_trajectories3)
+  dev.off()
+}
 ######################
 
 
@@ -339,24 +387,26 @@ rm(rhat_plot)
 
 #Investigate how good the model fit is against real data
 load("model_data.RData")
-#y is the REAL "next week cases". 103 (time) x 306 (LTLAs)
+#y is the REAL "next week cases". T (time) x 306 (LTLAs)
 #E is the "current" weeks cases.  i.e. E[2] = y[1]
 
  
   dir.create("Case_Outputs//Goodness_of_fit")
-  dir.create("Case_Outputs//Goodness_of_fit//basic_comparison_trajectories")
-  dir.create("Case_Outputs//Goodness_of_fit//log_basic_comparison_trajectories")
-  dir.create("Case_Outputs//Goodness_of_fit//basic_comparison_trajectories_grid")
-  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_trajectories_grid")
   dir.create("Case_Outputs//Goodness_of_fit//week_to_week_trajectories")
-  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories")
-  dir.create("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories_grid")
-  dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_trajectories")
-  dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_basic_trajectories")
-  dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_basic_trajectories_grid")
   dir.create("Case_Outputs//Goodness_of_fit//trajectories")
-  dir.create("Case_Outputs//Goodness_of_fit//log_trajectories")
-  dir.create("Case_Outputs//Goodness_of_fit//errors")
+  dir.create("Case_Outputs//Goodness_of_fit//basic_comparison_trajectories_grid")
+  
+  
+  
+  if(print_extra_gof){
+    dir.create("Case_Outputs//Goodness_of_fit//log_trajectories")
+    dir.create("Case_Outputs//Goodness_of_fit//log_basic_comparison_trajectories")
+    dir.create("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories")
+    dir.create("Case_Outputs//Goodness_of_fit//week_to_week_basic_trajectories_grid")
+    dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_trajectories")
+    dir.create("Case_Outputs//Goodness_of_fit//log_week_to_week_basic_trajectories")
+    
+  }
   
   #Script model definition:
   #y[,i] ~ poisson_log(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
@@ -370,10 +420,19 @@ load("model_data.RData")
   model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
   model_theta_sd <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_sd')[,5])
   
-  model_approx_y <- array(0, dim = c(103,306)) #
+  if(scale_by_susceptible_pool){
+    model_susc_scale <- as.numeric(get_posterior_mean(stanfit, pars = 'susc_scaling')[,5])
+  }
   
-  for(i in 1:103){
+  model_approx_y <- array(0, dim = c(T,306)) #
+  
+  for(i in 1:T){
+    if(scale_by_susceptible_pool){
+      model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
+      
+    }else{
   model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
+    }
   }
   
   model_approx_y <- exp(model_approx_y)
@@ -382,8 +441,8 @@ load("model_data.RData")
   MODEL_week_difference <- abs(model_approx_y - E)
   
   #Is the model better than just assuming the same rate of increase from the week previous?
-  basic_approx_y <- array(0, dim = c(103,306))
-  for(i in 3:103){
+  basic_approx_y <- array(0, dim = c(T,306))
+  for(i in 3:T){
     for(j in 1:306){
       basic_approx_y[i,j] <- y[i-1,j]*(y[i-1,j]/y[i-2,j])
     }
@@ -405,7 +464,7 @@ load("model_data.RData")
   
   #And also plot the differences
   random_walk_differences <- random_walk_plot[-1,]
-  random_walk_differences$random_walk_value <- model_beta_random_walk[2:103] - model_beta_random_walk[1:102]
+  random_walk_differences$random_walk_value <- model_beta_random_walk[2:T] - model_beta_random_walk[1:(T-1)]
   
   ggplot(data = random_walk_differences) +
     geom_line(aes(x = date, y = random_walk_value)) +
@@ -430,12 +489,12 @@ load("model_data.RData")
       areaCode_plot <- LTLAs_by_Index$areaCode[j]
       areaName_plot <- LTLAs_by_Index$areaName[j]
       
-      dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+      dataHold <- data.frame(Date = rep(AllDates[2:T],3),
                              areaCode = rep(areaCode_plot, 306),
                              areaName = rep(areaName_plot, 306),
-                             Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
-                             Cases = c(y[1:102,j],model_approx_y[1:102,j],basic_approx_y[1:102,j]),
-                             LineType = c(rep("1",204), rep("2",102))
+                             Source = c(rep("Real Data", T-1), rep("Model Approx.",T-1), rep("Same R assumed",T-1)),
+                             Cases = c(y[1:T-1,j],model_approx_y[1:(T-1),j],basic_approx_y[1:(T-1),j]),
+                             LineType = c(rep("1",(T-1)*2), rep("2",T-1))
                              )
       dataHold$date <- as.Date(dataHold$Date)
     
@@ -488,57 +547,22 @@ load("model_data.RData")
   }
   
   
-  plot(REAL_week_difference, MODEL_week_difference)
+  #plot(REAL_week_difference, MODEL_week_difference)
   #What if we just do y ~ poisson
-  plot(y[,2], model_approx_y[,2])
-  ############################################################################
-  
-  for(i in 1:(306)){
-
-      j <- i
-      areaCode_plot <- LTLAs_by_Index$areaCode[j]
-      areaName_plot <- LTLAs_by_Index$areaName[j]
-      
-      dataHold <- data.frame(Date = rep(AllDates[2:103],3),
-                             areaCode = rep(areaCode_plot, 306),
-                             areaName = rep(areaName_plot, 306),
-                             Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
-                             Cases = c(y[1:102,j],model_approx_y[1:102,j],basic_approx_y[1:102,j]),
-                             LineType = c(rep("1",204), rep("2",102))
-      )
-      dataHold$date <- as.Date(dataHold$Date)
-      
-      ggplot(dataHold) +
-        geom_line(aes(x = Date, y = log(Cases), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
-        theme_classic() +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-        scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
-        ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
-        scale_linetype(guide = "none") -> plotHold
-      
-      
-      
-  
-    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_basic_comparison_trajectories//trajectories_%s.png", i),
-        width=1440, height=1080, res = 150)
-    plot(plotHold)
-    dev.off()
-    
-  }
-  #############################################################################
-  ############################################################################
-  
+  #plot(y[,2], model_approx_y[,2])
+###########################################################
+  #########################################################
   for(i in 1:(306)){
     
     j <- i
     areaCode_plot <- LTLAs_by_Index$areaCode[j]
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
-    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+    dataHold <- data.frame(Date = rep(AllDates[2:T],2),
                            areaCode = rep(areaCode_plot, 204),
                            areaName = rep(areaName_plot, 204),
-                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
-                           Cases = c(y[1:102,j],model_approx_y[1:102,j]),
+                           Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1))),
+                           Cases = c(y[1:(T-1),j],model_approx_y[1:(T-1),j]),
                            LineType = c(rep("1",204))
     )
     dataHold$date <- as.Date(dataHold$Date)
@@ -560,7 +584,44 @@ load("model_data.RData")
     dev.off()
     
   }
+  
   #############################################################################
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:T],2),
+                           areaCode = rep(areaCode_plot, 204),
+                           areaName = rep(areaName_plot, 204),
+                           Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1))),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j]),
+                           LineType = c(rep("1",204))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = Week_to_Week_Difference, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//week_to_week_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  
+  
+  #############################################################################
+  if(print_extra_gof){
   ############################################################################
   
   for(i in 1:(306)){
@@ -569,11 +630,11 @@ load("model_data.RData")
     areaCode_plot <- LTLAs_by_Index$areaCode[j]
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
-    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+    dataHold <- data.frame(Date = rep(AllDates[2:T],2),
                            areaCode = rep(areaCode_plot, 204),
                            areaName = rep(areaName_plot, 204),
-                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
-                           Cases = c(y[1:102,j],model_approx_y[1:102,j]),
+                           Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1))),
+                           Cases = c(y[1:(T-1),j],model_approx_y[1:(T-1),j]),
                            LineType = c(rep("1",204))
     )
     dataHold$date <- as.Date(dataHold$Date)
@@ -595,6 +656,45 @@ load("model_data.RData")
     dev.off()
     
   }
+  
+  ############################################################################
+  
+  for(i in 1:(306)){
+    
+    j <- i
+    areaCode_plot <- LTLAs_by_Index$areaCode[j]
+    areaName_plot <- LTLAs_by_Index$areaName[j]
+    
+    dataHold <- data.frame(Date = rep(AllDates[2:T],3),
+                           areaCode = rep(areaCode_plot, 306),
+                           areaName = rep(areaName_plot, 306),
+                           Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1)), rep("Same R assumed",(T-1))),
+                           Cases = c(y[1:(T-1),j],model_approx_y[1:(T-1),j],basic_approx_y[1:(T-1),j]),
+                           LineType = c(rep("1",204), rep("2",(T-1)))
+    )
+    dataHold$date <- as.Date(dataHold$Date)
+    
+    ggplot(dataHold) +
+      geom_line(aes(x = Date, y = log(Cases), color = Source, linetype = LineType), size = 1, alpha = 0.6) +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
+      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
+      scale_linetype(guide = "none") -> plotHold
+    
+    
+    
+    
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//log_basic_comparison_trajectories//trajectories_%s.png", i),
+        width=1440, height=1080, res = 150)
+    plot(plotHold)
+    dev.off()
+    
+  }
+  #############################################################################
+  ############################################################################
+  
+  
   #############################################################################
   
   for(i in 1:(306)){
@@ -603,12 +703,12 @@ load("model_data.RData")
     areaCode_plot <- LTLAs_by_Index$areaCode[j]
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
-    dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+    dataHold <- data.frame(Date = rep(AllDates[2:T],3),
                            areaCode = rep(areaCode_plot, 306),
                            areaName = rep(areaName_plot, 306),
-                           Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
-                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j],BASIC_week_difference[1:102,j]),
-                           LineType = c(rep("1",204), rep("2",102))
+                           Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1)), rep("Same R assumed",(T-1))),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j],BASIC_week_difference[1:(T-1),j]),
+                           LineType = c(rep("1",204), rep("2",(T-1)))
     )
     dataHold$date <- as.Date(dataHold$Date)
     
@@ -636,12 +736,12 @@ load("model_data.RData")
     areaCode_plot <- LTLAs_by_Index$areaCode[j]
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
-    dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+    dataHold <- data.frame(Date = rep(AllDates[2:T],3),
                            areaCode = rep(areaCode_plot, 306),
                            areaName = rep(areaName_plot, 306),
-                           Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
-                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j],BASIC_week_difference[1:102,j]),
-                           LineType = c(rep("1",204), rep("2",102))
+                           Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1)), rep("Same R assumed",(T-1))),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j],BASIC_week_difference[1:(T-1),j]),
+                           LineType = c(rep("1",204), rep("2",(T-1)))
     )
     dataHold$date <- as.Date(dataHold$Date)
     
@@ -662,40 +762,7 @@ load("model_data.RData")
     dev.off()
     
   }
-  #############################################################################
-  for(i in 1:(306)){
-    
-    j <- i
-    areaCode_plot <- LTLAs_by_Index$areaCode[j]
-    areaName_plot <- LTLAs_by_Index$areaName[j]
-    
-    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
-                           areaCode = rep(areaCode_plot, 204),
-                           areaName = rep(areaName_plot, 204),
-                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
-                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j]),
-                           LineType = c(rep("1",204))
-    )
-    dataHold$date <- as.Date(dataHold$Date)
-    
-    ggplot(dataHold) +
-      geom_line(aes(x = Date, y = Week_to_Week_Difference, color = Source, linetype = LineType), size = 1, alpha = 0.6) +
-      theme_classic() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-      scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
-      ggtitle(paste(areaName_plot, " ", areaCode_plot)) +
-      scale_linetype(guide = "none") -> plotHold
-    
-    
-    
-    
-    png(file=sprintf("Case_Outputs//Goodness_of_fit//week_to_week_trajectories//trajectories_%s.png", i),
-        width=1440, height=1080, res = 150)
-    plot(plotHold)
-    dev.off()
-    
-  }
-  
+
   #############################################################################
   #############################################################################
   for(i in 1:(306)){
@@ -704,11 +771,11 @@ load("model_data.RData")
     areaCode_plot <- LTLAs_by_Index$areaCode[j]
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
-    dataHold <- data.frame(Date = rep(AllDates[2:103],2),
+    dataHold <- data.frame(Date = rep(AllDates[2:T],2),
                            areaCode = rep(areaCode_plot, 204),
                            areaName = rep(areaName_plot, 204),
-                           Source = c(rep("Real Data", 102), rep("Model Approx.",102)),
-                           Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j]),
+                           Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1))),
+                           Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j]),
                            LineType = c(rep("1",204))
     )
     dataHold$date <- as.Date(dataHold$Date)
@@ -741,12 +808,12 @@ load("model_data.RData")
       areaCode_plot <- LTLAs_by_Index$areaCode[j]
       areaName_plot <- LTLAs_by_Index$areaName[j]
       
-      dataHold <- data.frame(Date = rep(AllDates[2:103],3),
+      dataHold <- data.frame(Date = rep(AllDates[2:T],3),
                              areaCode = rep(areaCode_plot, 306),
                              areaName = rep(areaName_plot, 306),
-                             Source = c(rep("Real Data", 102), rep("Model Approx.",102), rep("Same R assumed",102)),
-                             Week_to_Week_Difference = c(REAL_week_difference[1:102,j],MODEL_week_difference[1:102,j],BASIC_week_difference[1:102,j]),
-                             LineType = c(rep("1",204), rep("2",102))
+                             Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1)), rep("Same R assumed",(T-1))),
+                             Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j],BASIC_week_difference[1:(T-1),j]),
+                             LineType = c(rep("1",204), rep("2",(T-1)))
       )
       dataHold$date <- as.Date(dataHold$Date)
       
@@ -797,6 +864,8 @@ load("model_data.RData")
     dev.off()
     
   }
+    
+  }
   #############################################################################
   png(file="Case_Outputs//Goodness_of_fit//log_week_to_week_difference.png",
       width=1440, height=1080, res = 150)
@@ -826,7 +895,7 @@ load("model_data.RData")
   #Make the data
   Error_data <- data.frame(Time = rep(as.Date("01/01/1999"),31518),
                            Pop_Adj_Error = rep(0,31518))
-  for(i in 1:103){
+  for(i in 1:T){
     Error_data$Time[(((i-1)*306)+1):((i)*306)] <- AllDates[i]
     Error_data$Pop_Adj_Error[(((i-1)*306)+1):((i)*306)] <- our_model_error[i,]/LTLAs_by_Index$Population
   }
