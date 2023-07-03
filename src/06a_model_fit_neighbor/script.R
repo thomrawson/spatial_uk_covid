@@ -265,7 +265,7 @@ for(i in 2:T){
   //beta_random_walk[1] ~ normal(0, sqrtQ);
 
   for(i in 1:T){
-  beta_random_walk[i] ~ normal(0, sqrtQ);
+  beta_random_walk_steps[i] ~ normal(0, sqrtQ);
   }
   
   

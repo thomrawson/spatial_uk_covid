@@ -56,26 +56,9 @@ artefacts:
         - Case_Outputs/theta_summaries.csv
         - Case_Outputs//random_walk_differences.png
         - Case_Outputs//random_walk_values.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_1.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_2.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_3.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_4.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_5.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_6.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_7.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_8.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_9.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_10.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_11.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_12.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_13.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_14.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_15.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_16.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_17.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_18.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_19.png
-#        - Case_Outputs/zeta_plots/zeta_trajectories_20.png
+        - Case_Outputs//Goodness_of_fit
+        - Case_Outputs//gravity_probabilities
+
         
 
 # An optional name to describe the report in more detail than its

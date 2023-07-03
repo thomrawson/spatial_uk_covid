@@ -66,6 +66,34 @@ png(file="Case_Outputs\\rw_trajectories4.png",
 plot(rw_trajectories4)
 dev.off()
 
+#And just the steps of the RW too:
+######################
+rw_trajectories1 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk_steps[%s]',1:25)), nrow = 5)
+png(file="Case_Outputs\\rw_steps_trajectories1.png",
+    width=1440, height=1080, res = 150)
+plot(rw_trajectories1)
+dev.off()
+
+rw_trajectories2 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk_steps[%s]',26:50)), nrow = 5)
+png(file="Case_Outputs\\rw_steps_trajectories2.png",
+    width=1440, height=1080, res = 150)
+plot(rw_trajectories2)
+dev.off()
+
+rw_trajectories3 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk_steps[%s]',51:75)), nrow = 5)
+png(file="Case_Outputs\\rw_steps_trajectories3.png",
+    width=1440, height=1080, res = 150)
+plot(rw_trajectories3)
+dev.off()
+
+rw_trajectories4 <- rstan::traceplot(stanfit, pars=c(sprintf('beta_random_walk_steps[%s]',76:103)), nrow = 5)
+png(file="Case_Outputs\\rw_steps_trajectories4.png",
+    width=1440, height=1080, res = 150)
+plot(rw_trajectories4)
+dev.off()
+######################
+
+
 #We'll save the zeta plots, though unlikely to be that interested...
 dir.create("Case_Outputs\\zeta_plots")
 for(i in 1:19){
@@ -364,7 +392,7 @@ load("model_data.RData")
   
   ##
   #Let's quickly plot the random walks too.
-  dates_hold <- unique(Case_Rates_Data[,c(2,7)])
+  dates_hold <- unique(Case_Rates_Data[,c("Week","date_begin")])
   random_walk_plot <- data.frame(date = as.Date(dates_hold$date_begin), random_walk_value = model_beta_random_walk)
   
   ggplot(data = random_walk_plot) +
