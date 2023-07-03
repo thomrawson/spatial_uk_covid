@@ -56,8 +56,8 @@ artefacts:
         - Case_Outputs/theta_summaries.csv
         - Case_Outputs//random_walk_differences.png
         - Case_Outputs//random_walk_values.png
-        - Case_Outputs//zeta_plots
-        - Case_Outputs//Goodness_of_fit
+        #- Case_Outputs//zeta_plots
+        #- Case_Outputs//Goodness_of_fit
         
 
 # An optional name to describe the report in more detail than its
