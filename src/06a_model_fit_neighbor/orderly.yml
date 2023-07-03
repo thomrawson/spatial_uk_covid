@@ -87,7 +87,15 @@ parameters:
     default: FALSE
   cases_type:
     default: "Dashboard"
-
+  use_prop_vacc:
+    default: TRUE
+  use_SGTF_data:
+    default: TRUE
+  final_week:
+    default: 104 #(104, 96, 71 are the main ones to use)
+  random_walk_prior_scale:
+    default: 1
+    
 # Similar to "data" but sets of temporary views before the data are
 # extracted.  Can be embedded SQL strings or filenames to actual
 # queries.  Use this to simplify the extraction.

@@ -25,11 +25,13 @@ rstan_options(auto_write = TRUE)
 #Instead we change our cumulative vaccination, to PROPORTION vaccination,
 #i.e. if you sum prop_no_dose, prop_1_dose, prop_2_dose, prop_3_dose for every i,j, it'll equal 1.
 #Quickly added in this switch to deal with that:
-PROP_vacc <- TRUE
+PROP_vacc <- use_prop_vacc
 
 #Additionally, I have the option to choose between two options for variant data
 #
-use_SGTF_data <- TRUE
+
+#use_SGTF_data <- TRUE
+
 #if TRUE, data is unique for each LTLA, but is based on yes/no SGTF data, which
 #is built from less information and so is arguably less reliable
 #if FALSE, data is from the dashboard at NHS region level (with a bit of VAM)
@@ -98,7 +100,16 @@ Case_Rates_Data <- Case_Rates_Data[,c("areaCode", "Week", "areaName",
   #This will have, in turn, affected the case data, so let's chop off everything
   #after week 104 (w/b 25/04/22)
   #TODO: Could include still but keep this as a variable
-  final_week <- 104
+
+#This is now a orderly parameter.  
+#final_week <- 104
+ 
+#KEY WEEKS:
+#104 - (w/b 25/04/22) the default, before testing gets weird
+#96 - (w/b 27/02/22) Neil thought this might be a smarter place to end
+#71 - (w/b 5/09/22) This is the last week with NO s_Omicron_prop
+  
+ 
   Case_Rates_Data <- filter(Case_Rates_Data, Week < final_week+1)
 
   #Let's investigate NAs. First of all, we sadly have incomplete mobility/vaccine
@@ -220,6 +231,8 @@ data {
   
   matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
 
+  real random_walk_prior; //What prior value to use in the prior distribution for the random walk sd
+
 }
 transformed data {
 }
@@ -251,7 +264,7 @@ for(i in 2:T){
   betas ~ normal(0.0, 1.0);
   zetas ~ normal(0.05, 1.0);
   
-  sqrtQ ~ gamma(1,1);
+  sqrtQ ~ gamma(1,random_walk_prior);
   susc_scaling ~ beta(1,1);
 
   for(i in 1:T){
@@ -281,6 +294,7 @@ data {
   
   matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
 
+  real random_walk_prior; //What prior value to use in the prior distribution for the random walk sd
 }
 transformed data {
 }
@@ -312,7 +326,7 @@ for(i in 2:T){
   betas ~ normal(0.0, 1.0);
   zetas ~ normal(0.05, 1.0);
   
-  sqrtQ ~ gamma(1,1);
+  sqrtQ ~ gamma(1,random_walk_prior);
 
   for(i in 1:T){
   beta_random_walk_steps[i] ~ normal(0, sqrtQ);
@@ -438,7 +452,8 @@ stanfit = stan(model_code = Stan_model_string_neighbours,
                          x=x, K=K,
                          E=t(E),
                          E_neighbours = E_neighbours_scaled,
-                         susceptible_proxy = susceptible_proxy),
+                         susceptible_proxy = susceptible_proxy,
+                         random_walk_prior = random_walk_prior_scale),
                warmup=warmup_iterations, iter=total_iterations,
                control = list(max_treedepth = tree_depth));
 
