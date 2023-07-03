@@ -204,7 +204,8 @@ if(PROP_vacc){
 
 
 #Define model
-
+#Annoyingly, we need to have two cases of the script, for if we scale or not
+if(scale_by_susceptible_pool){
 Stan_model_string_neighbours = "
 data {
   int<lower=0> N; // Number of areas
@@ -218,70 +219,115 @@ data {
   matrix[N, K] x[T];                 // design matrix
   
   matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
-  
-  
-  //Distance between LTLAs
-  //matrix<lower=0>[N,N] Distance_matrix;
 
 }
 transformed data {
-  //matrix[N,T] log_E = log(E + E_neighbours); #kept as formatting reminder
 }
 parameters {
-  //real beta0;            // intercept, but we've removed this now.
   vector[K] betas;       // covariates
   vector<lower = 0, upper = 1>[N] zetas;       //spatial kernel, but this can't be less than 0
   
   vector[T] beta_random_walk_steps; //We add in a random walk error term
-  //real random_walk_init; //The initial point of the random walk
   real<lower=0> sqrtQ; //Standard deviation of random walk
 
   vector[N] theta;       // heterogeneous effects
   real theta_mu; //hierarchical hyperparameter for drawing theta
   real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
   
+  real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
 }
 transformed parameters {
 vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 }
 model {
-y[,1] ~ poisson_log(log(susceptible_proxy[,1].*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) + theta);  // extra noise removed removed: + theta[,i]
-//y[,1] ~ poisson((susceptible_proxy[,1].*(E[,1] + (zetas .*E_neighbours[,1]))) .* exp((x[1] * betas) + (beta_random_walk[1]) + theta));  // extra noise removed removed: + theta[,i]
 
+y[,1] ~ poisson_log(log((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) + theta);  // extra noise removed removed: + theta[,i]
 
 for(i in 2:T){
-  y[,i] ~ poisson_log(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) + theta);  // extra noise removed removed: + theta[,i]
-  //y[,i] ~ poisson((susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) .* exp((x[i] * betas) + (beta_random_walk[i]) + theta));  // extra noise removed removed: + theta[,i]
-
+  y[,i] ~ poisson_log(log((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) + theta);  // extra noise removed removed: + theta[,i]
+  
 }
 
-
-  //beta0 ~ normal(0.0, 1.0);
   betas ~ normal(0.0, 1.0);
   zetas ~ normal(0.05, 1.0);
   
   sqrtQ ~ gamma(1,1);
-  
-  //beta_random_walk[1] ~ normal(0, sqrtQ);
+  susc_scaling ~ beta(1,1);
 
   for(i in 1:T){
   beta_random_walk_steps[i] ~ normal(0, sqrtQ);
   }
   
+  theta ~ normal(theta_mu, theta_sd);
+  theta_mu ~ normal(0.0,1.0);
+  theta_sd ~ uniform(0.0,20.0);
+
+}
+generated quantities {
+}
+"
+} else {
+  Stan_model_string_neighbours = "
+data {
+  int<lower=0> N; // Number of areas
+  int<lower=0> T; // Number of timepoints
+
+
+  int<lower=0> y[N,T];              // count outcomes (next week's cases)
+  matrix<lower=0>[N,T] E;           // exposure (current week's cases)
+  matrix<lower=0>[N,T] E_neighbours; // exposure (mean current week's cases for neighbours)
+  int<lower=1> K;                 // num covariates 
+  matrix[N, K] x[T];                 // design matrix
+  
+  matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
+
+}
+transformed data {
+}
+parameters {
+  vector[K] betas;       // covariates
+  vector<lower = 0, upper = 1>[N] zetas;       //spatial kernel, but this can't be less than 0
+  
+  vector[T] beta_random_walk_steps; //We add in a random walk error term
+  real<lower=0> sqrtQ; //Standard deviation of random walk
+
+  vector[N] theta;       // heterogeneous effects
+  real theta_mu; //hierarchical hyperparameter for drawing theta
+  real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
+  
+  real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
+}
+transformed parameters {
+vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
+}
+model {
+
+y[,1] ~ poisson_log(log((susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) + theta);  // extra noise removed removed: + theta[,i]
+
+for(i in 2:T){
+  y[,i] ~ poisson_log(log((susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) + theta);  // extra noise removed removed: + theta[,i]
+  
+}
+
+  betas ~ normal(0.0, 1.0);
+  zetas ~ normal(0.05, 1.0);
+  
+  sqrtQ ~ gamma(1,1);
+
+  for(i in 1:T){
+  beta_random_walk_steps[i] ~ normal(0, sqrtQ);
+  }
   
   theta ~ normal(theta_mu, theta_sd);
   theta_mu ~ normal(0.0,1.0);
   theta_sd ~ uniform(0.0,20.0);
-  
-  
-  
+
 }
 generated quantities {
-  //matrix[N,T] eta = log(E[,i] + zetas .*(Cases_Nbors[,i]./N_Nbors)) + beta0 + x[i] * betas + theta[,i]
-  //matrix[N,T] mu = exp(eta);
-  
 }
 "
+}
+
 #######################################################################################################################
 ######################################################################################################################
 
