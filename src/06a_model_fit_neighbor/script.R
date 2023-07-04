@@ -17,6 +17,22 @@ rstan_options(auto_write = TRUE)
 #You will need to run these commands each time you load the rstan library.
 
 ###################
+#Let's print an output .txt of the parameters used:
+param_string <- sprintf("tree_depth: %s \n
+  scale_by_number_of_neighbours: %s \n
+  scale_by_susceptible_pool: %s \n
+  cases_type: %s \n
+  use_prop_vacc: %s \n
+  use_SGTF_data: %s \n
+  final_week: %s \n
+  random_walk_prior_scale: %s ", tree_depth, scale_by_number_of_neighbours, 
+                        scale_by_susceptible_pool, cases_type,
+                        use_prop_vacc, use_SGTF_data, final_week,
+                        random_walk_prior_scale)
+
+fileConn<-file("parameters_used.txt")
+writeLines(param_string, fileConn)
+close(fileConn)
 ################################################################################
 #When running this code originally with just the cumulative vaccination numbers,
 #there was an odd trend where it would punish the uptick of second jabs. I think
