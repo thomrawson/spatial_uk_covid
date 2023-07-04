@@ -415,6 +415,7 @@ load("model_data.RData")
   model_betas <- as.numeric(get_posterior_mean(stanfit, pars = 'betas')[,5])
   #model_beta0 <- as.numeric(get_posterior_mean(stanfit, pars = 'beta0')[,5])
   model_beta_random_walk <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk')[,5])
+  model_beta_random_walk_steps <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk_steps')[,5])
   model_zetas <- as.numeric(get_posterior_mean(stanfit, pars = 'zetas')[,5])
   model_theta <- as.numeric(get_posterior_mean(stanfit, pars = 'theta')[,5])
   model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
@@ -452,7 +453,10 @@ load("model_data.RData")
   ##
   #Let's quickly plot the random walks too.
   dates_hold <- unique(Case_Rates_Data[,c("Week","date_begin")])
+  #Order it by week
+  dates_hold <- dates_hold[order(dates_hold$Week,decreasing=FALSE),]
   random_walk_plot <- data.frame(date = as.Date(dates_hold$date_begin), random_walk_value = model_beta_random_walk)
+  random_walk_steps_plot <- data.frame(date = as.Date(dates_hold$date_begin), random_walk_steps_value = model_beta_random_walk_steps)
   
   ggplot(data = random_walk_plot) +
     geom_line(aes(x = date, y = random_walk_value)) ->random_walk_p1
@@ -460,6 +464,14 @@ load("model_data.RData")
   png(file="Case_Outputs//random_walk_values.png",
       width=1440, height=1080, res = 150)
   plot(random_walk_p1)
+  dev.off()
+  
+  ggplot(data = random_walk_steps_plot) +
+    geom_line(aes(x = date, y = random_walk_steps_value)) ->random_walk_steps_p1
+  
+  png(file="Case_Outputs//random_walk_steps_values.png",
+      width=1440, height=1080, res = 150)
+  plot(random_walk_steps_p1)
   dev.off()
   
   #And also plot the differences
@@ -490,8 +502,8 @@ load("model_data.RData")
       areaName_plot <- LTLAs_by_Index$areaName[j]
       
       dataHold <- data.frame(Date = rep(AllDates[2:T],3),
-                             areaCode = rep(areaCode_plot, 306),
-                             areaName = rep(areaName_plot, 306),
+                             areaCode = rep(areaCode_plot, (T-1)*3),
+                             areaName = rep(areaName_plot, (T-1)*3),
                              Source = c(rep("Real Data", T-1), rep("Model Approx.",T-1), rep("Same R assumed",T-1)),
                              Cases = c(y[1:T-1,j],model_approx_y[1:(T-1),j],basic_approx_y[1:(T-1),j]),
                              LineType = c(rep("1",(T-1)*2), rep("2",T-1))
@@ -559,11 +571,11 @@ load("model_data.RData")
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
     dataHold <- data.frame(Date = rep(AllDates[2:T],2),
-                           areaCode = rep(areaCode_plot, 204),
-                           areaName = rep(areaName_plot, 204),
+                           areaCode = rep(areaCode_plot, (T-1)*2),
+                           areaName = rep(areaName_plot, (T-1)*2),
                            Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1))),
                            Cases = c(y[1:(T-1),j],model_approx_y[1:(T-1),j]),
-                           LineType = c(rep("1",204))
+                           LineType = c(rep("1",(T-1)*2))
     )
     dataHold$date <- as.Date(dataHold$Date)
     
@@ -593,11 +605,11 @@ load("model_data.RData")
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
     dataHold <- data.frame(Date = rep(AllDates[2:T],2),
-                           areaCode = rep(areaCode_plot, 204),
-                           areaName = rep(areaName_plot, 204),
+                           areaCode = rep(areaCode_plot, (T-1)*2),
+                           areaName = rep(areaName_plot, (T-1)*2),
                            Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1))),
                            Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j]),
-                           LineType = c(rep("1",204))
+                           LineType = c(rep("1",(T-1)*2))
     )
     dataHold$date <- as.Date(dataHold$Date)
     
@@ -631,11 +643,11 @@ load("model_data.RData")
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
     dataHold <- data.frame(Date = rep(AllDates[2:T],2),
-                           areaCode = rep(areaCode_plot, 204),
-                           areaName = rep(areaName_plot, 204),
+                           areaCode = rep(areaCode_plot, (T-1)*2),
+                           areaName = rep(areaName_plot, (T-1)*2),
                            Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1))),
                            Cases = c(y[1:(T-1),j],model_approx_y[1:(T-1),j]),
-                           LineType = c(rep("1",204))
+                           LineType = c(rep("1",(T-1)*2))
     )
     dataHold$date <- as.Date(dataHold$Date)
     
@@ -666,11 +678,11 @@ load("model_data.RData")
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
     dataHold <- data.frame(Date = rep(AllDates[2:T],3),
-                           areaCode = rep(areaCode_plot, 306),
-                           areaName = rep(areaName_plot, 306),
+                           areaCode = rep(areaCode_plot, (T-1)*3),
+                           areaName = rep(areaName_plot, (T-1)*3),
                            Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1)), rep("Same R assumed",(T-1))),
                            Cases = c(y[1:(T-1),j],model_approx_y[1:(T-1),j],basic_approx_y[1:(T-1),j]),
-                           LineType = c(rep("1",204), rep("2",(T-1)))
+                           LineType = c(rep("1",(T-1)*2), rep("2",(T-1)))
     )
     dataHold$date <- as.Date(dataHold$Date)
     
@@ -704,11 +716,11 @@ load("model_data.RData")
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
     dataHold <- data.frame(Date = rep(AllDates[2:T],3),
-                           areaCode = rep(areaCode_plot, 306),
-                           areaName = rep(areaName_plot, 306),
+                           areaCode = rep(areaCode_plot, (T-1)*3),
+                           areaName = rep(areaName_plot, (T-1)*3),
                            Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1)), rep("Same R assumed",(T-1))),
                            Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j],BASIC_week_difference[1:(T-1),j]),
-                           LineType = c(rep("1",204), rep("2",(T-1)))
+                           LineType = c(rep("1",(T-1)*2), rep("2",(T-1)))
     )
     dataHold$date <- as.Date(dataHold$Date)
     
@@ -737,11 +749,11 @@ load("model_data.RData")
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
     dataHold <- data.frame(Date = rep(AllDates[2:T],3),
-                           areaCode = rep(areaCode_plot, 306),
-                           areaName = rep(areaName_plot, 306),
+                           areaCode = rep(areaCode_plot, (T-1)*3),
+                           areaName = rep(areaName_plot, (T-1)*3),
                            Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1)), rep("Same R assumed",(T-1))),
                            Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j],BASIC_week_difference[1:(T-1),j]),
-                           LineType = c(rep("1",204), rep("2",(T-1)))
+                           LineType = c(rep("1",(T-1)*2), rep("2",(T-1)))
     )
     dataHold$date <- as.Date(dataHold$Date)
     
@@ -772,11 +784,11 @@ load("model_data.RData")
     areaName_plot <- LTLAs_by_Index$areaName[j]
     
     dataHold <- data.frame(Date = rep(AllDates[2:T],2),
-                           areaCode = rep(areaCode_plot, 204),
-                           areaName = rep(areaName_plot, 204),
+                           areaCode = rep(areaCode_plot, (T-1)*2),
+                           areaName = rep(areaName_plot, (T-1)*2),
                            Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1))),
                            Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j]),
-                           LineType = c(rep("1",204))
+                           LineType = c(rep("1",(T-1)*2))
     )
     dataHold$date <- as.Date(dataHold$Date)
     
@@ -809,11 +821,11 @@ load("model_data.RData")
       areaName_plot <- LTLAs_by_Index$areaName[j]
       
       dataHold <- data.frame(Date = rep(AllDates[2:T],3),
-                             areaCode = rep(areaCode_plot, 306),
-                             areaName = rep(areaName_plot, 306),
+                             areaCode = rep(areaCode_plot, (T-1)*3),
+                             areaName = rep(areaName_plot, (T-1)*3),
                              Source = c(rep("Real Data", (T-1)), rep("Model Approx.",(T-1)), rep("Same R assumed",(T-1))),
                              Week_to_Week_Difference = c(REAL_week_difference[1:(T-1),j],MODEL_week_difference[1:(T-1),j],BASIC_week_difference[1:(T-1),j]),
-                             LineType = c(rep("1",204), rep("2",(T-1)))
+                             LineType = c(rep("1",(T-1)*2), rep("2",(T-1)))
       )
       dataHold$date <- as.Date(dataHold$Date)
       
@@ -893,8 +905,8 @@ load("model_data.RData")
   
   #Make a plot of boxplots for each week, showing the population adjusted error for each LTLA (so boxplot shows 306 LTLAs)
   #Make the data
-  Error_data <- data.frame(Time = rep(as.Date("01/01/1999"),31518),
-                           Pop_Adj_Error = rep(0,31518))
+  Error_data <- data.frame(Time = rep(as.Date("01/01/1999"),(306*T)),
+                           Pop_Adj_Error = rep(0,(306*T)))
   for(i in 1:T){
     Error_data$Time[(((i-1)*306)+1):((i)*306)] <- AllDates[i]
     Error_data$Pop_Adj_Error[(((i-1)*306)+1):((i)*306)] <- our_model_error[i,]/LTLAs_by_Index$Population
@@ -904,7 +916,7 @@ load("model_data.RData")
   
   ggplot(Error_data, aes(x=Time, y=Pop_Adj_Error, group = Time)) + 
     geom_boxplot(alpha = 0.2) + ylab("Population Adjusted Error across all LTLAs") +
-    ylim(c(0,0.04)) + ggtitle(sprintf("Total Error: %s",total_error)) + theme_bw() -> error_box
+    ylim(c(0,plyr::round_any(max(Error_data$Pop_Adj_Error), 0.02, f=ceiling))) + ggtitle(sprintf("Total Error: %s",total_error)) + theme_bw() -> error_box
     
   png(file="Case_Outputs//Goodness_of_fit/Boxplot_error.png",
       width=1440, height=1080, res = 150)
