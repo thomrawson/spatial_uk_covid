@@ -22,10 +22,12 @@ param_string <- sprintf("tree_depth: %s \n
   use_prop_vacc: %s \n
   use_SGTF_data: %s \n
   final_week: %s \n
+  theta_ON: %s \n
   random_walk_prior_scale: %s \n
   print_extra_gof:  %s ", tree_depth, scale_by_number_of_neighbours, 
                         scale_by_susceptible_pool, cases_type,
                         use_prop_vacc, use_SGTF_data, final_week,
+                        theta_ON,
                         random_walk_prior_scale, print_extra_gof)
 
 fileConn<-file("parameters_used.txt")
@@ -47,10 +49,12 @@ if(scale_by_susceptible_pool){
 main_summaries <- summary(stanfit, pars = c('sqrtQ', 'betas', 'beta_random_walk', 'zetas', 'lp__'))
 write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
 }
+
+if(theta_ON){
 #Theta summaries are big, but we output anyway
 theta_summaries <- summary(stanfit, pars = c('theta_mu', 'theta_sd','theta'))
 write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names = TRUE)
-
+} 
 
 
 #Save a plot of the beta trajectories
@@ -417,9 +421,12 @@ load("model_data.RData")
   model_beta_random_walk <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk')[,5])
   model_beta_random_walk_steps <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk_steps')[,5])
   model_zetas <- as.numeric(get_posterior_mean(stanfit, pars = 'zetas')[,5])
+  
+  if(theta_ON){
   model_theta <- as.numeric(get_posterior_mean(stanfit, pars = 'theta')[,5])
   model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
   model_theta_sd <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_sd')[,5])
+  }
   
   if(scale_by_susceptible_pool){
     model_susc_scale <- as.numeric(get_posterior_mean(stanfit, pars = 'susc_scaling')[,5])
@@ -427,6 +434,8 @@ load("model_data.RData")
   
   model_approx_y <- array(0, dim = c(T,306)) #
   
+  
+  if(theta_ON){
   for(i in 1:T){
     if(scale_by_susceptible_pool){
       model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
@@ -435,6 +444,20 @@ load("model_data.RData")
   model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
     }
   }
+  }else{
+    
+    for(i in 1:T){
+      if(scale_by_susceptible_pool){
+        model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i])
+        
+      }else{
+        model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i])
+      }
+    }
+    
+  }
+  
+  
   
   model_approx_y <- exp(model_approx_y)
   
