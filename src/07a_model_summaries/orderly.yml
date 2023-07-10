@@ -104,6 +104,8 @@ parameters:
     default: FALSE
   theta_ON:
     default: TRUE
+  rw_penalty:
+    default: 0
 # Similar to "data" but sets of temporary views before the data are
 # extracted.  Can be embedded SQL strings or filenames to actual
 # queries.  Use this to simplify the extraction.
@@ -172,7 +174,7 @@ resources:
 #
 depends:
   - 06a_model_fit_neighbor:
-      id: latest(parameter:tree_depth == tree_depth && parameter:scale_by_number_of_neighbours == scale_by_number_of_neighbours && parameter:scale_by_susceptible_pool == scale_by_susceptible_pool && parameter:cases_type == cases_type && parameter:use_prop_vacc == use_prop_vacc && parameter:use_SGTF_data == use_SGTF_data && parameter:cases_type == cases_type && parameter:final_week == final_week && parameter:random_walk_prior_scale == random_walk_prior_scale && parameter:theta_ON == theta_ON )
+      id: latest(parameter:tree_depth == tree_depth && parameter:scale_by_number_of_neighbours == scale_by_number_of_neighbours && parameter:scale_by_susceptible_pool == scale_by_susceptible_pool && parameter:cases_type == cases_type && parameter:use_prop_vacc == use_prop_vacc && parameter:use_SGTF_data == use_SGTF_data && parameter:cases_type == cases_type && parameter:final_week == final_week && parameter:random_walk_prior_scale == random_walk_prior_scale && parameter:theta_ON == theta_ON && rw_penalty == rw_penalty )
       use:
         stanfit.RData: Outputs/stanfit.RData
         model_data.RData: Outputs/model_data.RData
