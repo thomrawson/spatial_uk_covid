@@ -250,6 +250,7 @@ data {
   matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
 
   real random_walk_prior; //What prior value to use in the prior distribution for the random walk sd
+  real penalty_term; // Penalty applied to the random_walk magnitude
 
 }
 transformed data {
@@ -273,10 +274,10 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 model {
 
 y[,1] ~ poisson_log(log((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) + theta);  // extra noise removed removed: + theta[,i]
-
+target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
   y[,i] ~ poisson_log(log((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) + theta);  // extra noise removed removed: + theta[,i]
-  
+  target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
   betas ~ normal(0.0, 1.0);
@@ -313,6 +314,7 @@ data {
   matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
 
   real random_walk_prior; //What prior value to use in the prior distribution for the random walk sd
+  real penalty_term; // Penalty applied to the random_walk magnitude
 }
 transformed data {
 }
@@ -335,10 +337,10 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 model {
 
 y[,1] ~ poisson_log(log((susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) + theta);  // extra noise removed removed: + theta[,i]
-
+target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
   y[,i] ~ poisson_log(log((susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) + theta);  // extra noise removed removed: + theta[,i]
-  
+  target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
   betas ~ normal(0.0, 1.0);
@@ -377,7 +379,7 @@ data {
   matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
 
   real random_walk_prior; //What prior value to use in the prior distribution for the random walk sd
-
+  real penalty_term; // Penalty applied to the random_walk magnitude
 }
 transformed data {
 }
@@ -396,10 +398,10 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 model {
 
 y[,1] ~ poisson_log(log((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) );  // extra noise removed removed: + theta[,i]
-
+target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
   y[,i] ~ poisson_log(log((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) );  // extra noise removed removed: + theta[,i]
-  
+  target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
   betas ~ normal(0.0, 1.0);
@@ -432,6 +434,7 @@ data {
   matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
 
   real random_walk_prior; //What prior value to use in the prior distribution for the random walk sd
+  real penalty_term; // Penalty applied to the random_walk magnitude
 }
 transformed data {
 }
@@ -450,10 +453,10 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 model {
 
 y[,1] ~ poisson_log(log((susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) );  // extra noise removed removed: + theta[,i]
-
+target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
   y[,i] ~ poisson_log(log((susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) );  // extra noise removed removed: + theta[,i]
-  
+  target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
   betas ~ normal(0.0, 1.0);
@@ -582,7 +585,8 @@ stanfit = stan(model_code = Stan_model_string_neighbours,
                          E=t(E),
                          E_neighbours = E_neighbours_scaled,
                          susceptible_proxy = susceptible_proxy,
-                         random_walk_prior = random_walk_prior_scale),
+                         random_walk_prior = random_walk_prior_scale,
+                         penalty_term = rw_penalty),
                warmup=warmup_iterations, iter=total_iterations,
                control = list(max_treedepth = tree_depth));
 
