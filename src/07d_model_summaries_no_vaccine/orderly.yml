@@ -92,8 +92,6 @@ parameters:
     default: FALSE
   cases_type:
     default: "Dashboard"
-  use_prop_vacc:
-    default: TRUE
   use_SGTF_data:
     default: TRUE
   final_week:
@@ -174,7 +172,7 @@ resources:
 #
 depends:
   - 06d_model_fit_no_vaccine:
-      id: latest(parameter:tree_depth == tree_depth && parameter:scale_by_number_of_neighbours == scale_by_number_of_neighbours && parameter:scale_by_susceptible_pool == scale_by_susceptible_pool && parameter:cases_type == cases_type && parameter:use_prop_vacc == use_prop_vacc && parameter:use_SGTF_data == use_SGTF_data && parameter:cases_type == cases_type && parameter:final_week == final_week && parameter:random_walk_prior_scale == random_walk_prior_scale && parameter:theta_ON == theta_ON && rw_penalty == rw_penalty )
+      id: latest(parameter:tree_depth == tree_depth && parameter:scale_by_number_of_neighbours == scale_by_number_of_neighbours && parameter:scale_by_susceptible_pool == scale_by_susceptible_pool && parameter:cases_type == cases_type && parameter:use_SGTF_data == use_SGTF_data && parameter:cases_type == cases_type && parameter:final_week == final_week && parameter:random_walk_prior_scale == random_walk_prior_scale && parameter:theta_ON == theta_ON && rw_penalty == rw_penalty )
       use:
         stanfit.RData: Outputs/stanfit.RData
         model_data.RData: Outputs/model_data.RData
