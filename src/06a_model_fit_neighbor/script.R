@@ -26,10 +26,11 @@ param_string <- sprintf("tree_depth: %s \n
   use_SGTF_data: %s \n
   final_week: %s \n
   theta_ON: %s \n
-  random_walk_prior_scale: %s ", tree_depth, scale_by_number_of_neighbours, 
+  random_walk_prior_scale: %s \n
+  rw_penalty: %s ", tree_depth, scale_by_number_of_neighbours, 
                         scale_by_susceptible_pool, cases_type,
                         use_prop_vacc, use_SGTF_data, final_week, theta_ON,
-                        random_walk_prior_scale)
+                        random_walk_prior_scale, rw_penalty)
 
 fileConn<-file("parameters_used.txt")
 writeLines(param_string, fileConn)
