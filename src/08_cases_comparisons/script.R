@@ -47,6 +47,13 @@ Total_data %>%                                        # Specify data frame
                     newCasesLFDOnlyBySpecimenDate, Linelist_P2_PCR),              # Specify column
                sum, na.rm = TRUE) -> UK_totals_data
 
+Total_data %>% 
+  filter(grepl('E', areaCode)) %>%
+  group_by(date) %>%                         # Specify group indicator
+  summarise_at(vars(newCasesBySpecimenDate, newCasesPillarTwoBySpecimenDate,
+                    newCasesPCROnlyBySpecimenDate, newCasesLFDConfirmedPCRBySpecimenDate,
+                    newCasesLFDOnlyBySpecimenDate, Linelist_P2_PCR),              # Specify column
+               sum, na.rm = TRUE) -> England_totals_data
 #In general, for the first chunk, Pillar 2 PCR seems to be just a few less than dashboard Pillar 2
 #Then, LFTs come in, and instead it looks like, roughly speaking, Dashboard Pillar 2 = linelist_p2_pcr + dashboard LFD only + dashboard LFD confirmed via PCR
 
@@ -59,7 +66,21 @@ UK_week_totals_data <- UK_totals_data %>%
 
 colnames(UK_week_totals_data) <- c("week_begin", "Total_Cases", "Total_Pillar2", "PCR_Only", "LFD_confirmed_PCR", "LFD_Only", "Linelist_P2_PCR")
 
+Eng_week_totals_data <- England_totals_data %>% 
+  group_by(week_begin = floor_date(date, "weeks", week_start = 1))%>% 
+  summarise_if(is.numeric, sum)
+
+colnames(Eng_week_totals_data) <- c("week_begin", "Total_Cases", "Total_Pillar2", "PCR_Only", "LFD_confirmed_PCR", "LFD_Only", "Linelist_P2_PCR")
+
+
 UK_totals_long <- UK_week_totals_data %>% 
+  pivot_longer(
+    cols = Total_Cases:Linelist_P2_PCR, 
+    names_to = "Data_Source",
+    values_to = "Cases"
+  )
+
+Eng_totals_long <- Eng_week_totals_data %>% 
   pivot_longer(
     cols = Total_Cases:Linelist_P2_PCR, 
     names_to = "Data_Source",
@@ -74,14 +95,43 @@ UK_totals_long$Data_Source <- factor(UK_totals_long$Data_Source, levels = c("Tot
                                                                             "LFD_confirmed_PCR",
                                                                             "LFD_Only"))
 
+Eng_totals_long$Data_Source <- factor(Eng_totals_long$Data_Source, levels = c("Total_Cases",
+                                                                            "Total_Pillar2",
+                                                                            "Linelist_P2_PCR",
+                                                                            "PCR_Only",
+                                                                            "LFD_confirmed_PCR",
+                                                                            "LFD_Only"))
+
 UK_totals_long$linetype <- ifelse(UK_totals_long$Data_Source == "Linelist_P2_PCR", "--", "-")
+
+Eng_totals_long$linetype <- ifelse(Eng_totals_long$Data_Source == "Linelist_P2_PCR", "--", "-")
+
 
 ggplot(UK_totals_long) +
   geom_line(aes(x = week_begin, y = Cases, color = Data_Source, lty = linetype), size = 1, alpha = 0.5) +
   theme_minimal() + ggtitle("UK COVID-19 Cases by data source") + guides(lty = "none") -> UK_totals_plot
 
+ggplot(Eng_totals_long) +
+  geom_line(aes(x = week_begin, y = Cases, color = Data_Source, lty = linetype), size = 1, alpha = 0.5) +
+  theme_minimal() + ggtitle("England COVID-19 Cases by data source") + guides(lty = "none") -> Eng_totals_plot
+
+#Also a reduced version with only these types:
+data_filter <- c("Total_Cases", "Total_Pillar2", "Linelist_P2_PCR")
+
+ggplot(filter(UK_totals_long, Data_Source %in% data_filter)) +
+  geom_line(aes(x = week_begin, y = Cases, color = Data_Source, lty = linetype), size = 1, alpha = 0.5) +
+  theme_minimal() + ggtitle("UK COVID-19 Cases by data source") + guides(lty = "none") -> UK_totals_plot_2
+
+ggplot(filter(Eng_totals_long, Data_Source %in% data_filter)) +
+  geom_line(aes(x = week_begin, y = Cases, color = Data_Source, lty = linetype), size = 1, alpha = 0.5) +
+  theme_minimal() + ggtitle("England COVID-19 Cases by data source") + guides(lty = "none") -> Eng_totals_plot_2
+
+
 dir.create("Outputs")
 ggsave("Outputs/UK_cases.png", UK_totals_plot, bg = "white", width = 10, height = 6)
+ggsave("Outputs/Eng_cases.png", Eng_totals_plot, bg = "white", width = 10, height = 6)
+ggsave("Outputs/UK_cases_reduced.png", UK_totals_plot_2, bg = "white", width = 10, height = 6)
+ggsave("Outputs/Eng_cases_reduced.png", Eng_totals_plot_2, bg = "white", width = 10, height = 6)
 
 #Now, we repeat, but for every LTLA
 dir.create("Outputs/LTLA_plots")
