@@ -125,7 +125,7 @@ Case_Rates_Data <- Case_Rates_Data[,c("areaCode", "Week", "areaName",
 #KEY WEEKS:
 #104 - (w/b 25/04/22) the default, before testing gets weird
 #96 - (w/b 27/02/22) Neil thought this might be a smarter place to end
-#71 - (w/b 5/09/22) This is the last week with NO s_Omicron_prop
+#71 - (w/b 5/09/21) This is the last week with NO s_Omicron_prop
   
  
   Case_Rates_Data <- filter(Case_Rates_Data, Week < final_week+1)
