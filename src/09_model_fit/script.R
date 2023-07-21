@@ -19,16 +19,14 @@ rstan_options(auto_write = TRUE)
 ###################
 #Let's print an output .txt of the parameters used:
 param_string <- sprintf("tree_depth: %s \n
-  scale_by_number_of_neighbours: %s \n
   scale_by_susceptible_pool: %s \n
   cases_type: %s \n
   use_SGTF_data: %s \n
   final_week: %s \n
-  theta_ON: %s \n
   rw_penalty: %s \n
-  random_walk_prior_scale: %s ", tree_depth, scale_by_number_of_neighbours, 
+  random_walk_prior_scale: %s ", tree_depth,
                         scale_by_susceptible_pool, cases_type,
-                        use_SGTF_data, final_week, theta_ON, rw_penalty,
+                        use_SGTF_data, final_week, rw_penalty,
                         random_walk_prior_scale)
 
 fileConn<-file("parameters_used.txt")
@@ -64,6 +62,7 @@ close(fileConn)
   
 Case_Rates_Data <- Case_Rates_Data[,c("areaCode", "Week", "areaName",
                                       "Population", "INDEX",
+                                      "Pop_per_km2",
                                       "date_begin"                                   ,
                                       "Week_Cases"                                   ,
                                       "previous_week_cases"                          ,
@@ -73,8 +72,11 @@ Case_Rates_Data <- Case_Rates_Data[,c("areaCode", "Week", "areaName",
                                       "Linelist_P2_PCR_Next_Week_Cases",
                                       "First_Episodes_Total",
                                       "prop_white_british"                           ,
+                                      "prop_all_other_white",
                                       "prop_asian"                                   ,
                                       "prop_black_afr_car"                           ,
+                                      "prop_mixed_multiple",
+                                      "prop_other",
                                       "IMD_Average_score"                            ,
                                       "mean_age"                                     ,
                                       "prop_o65"                                     ,
@@ -217,14 +219,21 @@ for(i in 1:length(missing_data$areaCode)){
 
 ###################
 #Begin STAN fit
-
+if(scale_by_susceptible_pool){
+  test <- "
+  yes
+  "
+  print(test)
+} else {
+  print("no")
+}
 
 
 #Define model
-if(theta_ON){
+
 #Annoyingly, we need to have two cases of the script, for if we scale or not
 if(scale_by_susceptible_pool){
-Stan_model_string_neighbours = "
+  Stan_model_string_neighbours <- "
 data {
   int<lower=0> N; // Number of areas
   int<lower=0> T; // Number of timepoints
@@ -288,7 +297,7 @@ generated quantities {
 }
 "
 } else {
-  Stan_model_string_neighbours = "
+  Stan_model_string_neighbours <- "
 data {
   int<lower=0> N; // Number of areas
   int<lower=0> T; // Number of timepoints
@@ -351,118 +360,6 @@ generated quantities {
 "
 }
 
-}else{
-  if(scale_by_susceptible_pool){
-    Stan_model_string_neighbours = "
-data {
-  int<lower=0> N; // Number of areas
-  int<lower=0> T; // Number of timepoints
-
-
-  int<lower=0> y[N,T];              // count outcomes (next week's cases)
-  matrix<lower=0>[N,T] E;           // exposure (current week's cases)
-  matrix<lower=0>[N,T] E_neighbours; // exposure (mean current week's cases for neighbours)
-  int<lower=1> K;                 // num covariates 
-  matrix[N, K] x[T];                 // design matrix
-  
-  matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
-
-  real random_walk_prior; //What prior value to use in the prior distribution for the random walk sd
-  real penalty_term; // Penalty applied to the random_walk magnitude
-}
-transformed data {
-}
-parameters {
-  vector[K] betas;       // covariates
-  vector<lower = 0, upper = 1>[N] zetas;       //spatial kernel, but this can't be less than 0
-  
-  vector[T] beta_random_walk_steps; //We add in a random walk error term
-  real<lower=0> sqrtQ; //Standard deviation of random walk
-  
-  real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
-}
-transformed parameters {
-vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
-}
-model {
-
-y[,1] ~ poisson_log(log((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) );  // extra noise removed removed: + theta[,i]
-target += -penalty_term*fabs(beta_random_walk[1]);
-for(i in 2:T){
-  y[,i] ~ poisson_log(log((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) );  // extra noise removed removed: + theta[,i]
-  target += -penalty_term*fabs(beta_random_walk[i]);
-}
-
-  betas ~ normal(0.0, 1.0);
-  zetas ~ normal(0.05, 1.0);
-  
-  sqrtQ ~ gamma(1,random_walk_prior);
-  susc_scaling ~ beta(1,1);
-
-  for(i in 1:T){
-  beta_random_walk_steps[i] ~ normal(0, sqrtQ);
-  }
-
-}
-generated quantities {
-}
-"
-  } else {
-    Stan_model_string_neighbours = "
-data {
-  int<lower=0> N; // Number of areas
-  int<lower=0> T; // Number of timepoints
-
-
-  int<lower=0> y[N,T];              // count outcomes (next week's cases)
-  matrix<lower=0>[N,T] E;           // exposure (current week's cases)
-  matrix<lower=0>[N,T] E_neighbours; // exposure (mean current week's cases for neighbours)
-  int<lower=1> K;                 // num covariates 
-  matrix[N, K] x[T];                 // design matrix
-  
-  matrix<lower=0,upper=1>[N,T] susceptible_proxy; //Factor in a rough metric of how many susceptibles in the population
-
-  real random_walk_prior; //What prior value to use in the prior distribution for the random walk sd
-  real penalty_term; // Penalty applied to the random_walk magnitude
-}
-transformed data {
-}
-parameters {
-  vector[K] betas;       // covariates
-  vector<lower = 0, upper = 1>[N] zetas;       //spatial kernel, but this can't be less than 0
-  
-  vector[T] beta_random_walk_steps; //We add in a random walk error term
-  real<lower=0> sqrtQ; //Standard deviation of random walk
-  
-  real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
-}
-transformed parameters {
-vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
-}
-model {
-
-y[,1] ~ poisson_log(log((susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))) + x[1] * betas + (beta_random_walk[1]) );  // extra noise removed removed: + theta[,i]
-target += -penalty_term*fabs(beta_random_walk[1]);
-for(i in 2:T){
-  y[,i] ~ poisson_log(log((susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))) + x[i] * betas + (beta_random_walk[i]) );  // extra noise removed removed: + theta[,i]
-  target += -penalty_term*fabs(beta_random_walk[i]);
-}
-
-  betas ~ normal(0.0, 1.0);
-  zetas ~ normal(0.05, 1.0);
-  
-  sqrtQ ~ gamma(1,random_walk_prior);
-
-  for(i in 1:T){
-  beta_random_walk_steps[i] ~ normal(0, sqrtQ);
-  }
-
-}
-generated quantities {
-}
-"
-  }
-}
 #######################################################################################################################
 ######################################################################################################################
 
@@ -474,7 +371,10 @@ y <- array(0, dim = c(T,N))
 E <- array(0, dim = c(T,N))
 #K is current number of covariates
 #K <- 26; Was 26 but changed to 21 for sgtf variants, then to 18 after removing vacc
-K <- 18
+#Then, I removed NHS funding info, so that's down to 15. 
+#Then removed prop_white to use as baseline, but added in "other" , stay at 15
+#But added in pop_density, so up to 16!
+K <- 16
 x <- array(0, dim = c(T, N,K))
 
 scale_by_recent_cases <- array(0, dim = c(T,N))
@@ -501,33 +401,31 @@ for(i in 2:final_week){
   
   #For now I will not scale the percentages, I'll just give them from 0 to 1
 
-  x[j,,1] <- scale(Reduced_Data$prop_white_british)
-  x[j,,2] <- scale(Reduced_Data$prop_asian)
-  x[j,,3] <- scale(Reduced_Data$prop_black_afr_car)
+  x[j,,1] <- scale(Reduced_Data$prop_asian)
+  x[j,,2] <- scale(Reduced_Data$prop_black_afr_car)
+  x[j,,3] <- scale(Reduced_Data$prop_mixed_multiple + Reduced_Data$prop_other)
   x[j,,4] <- scale(Reduced_Data$IMD_Average_score)   
   x[j,,5] <- scale(Reduced_Data$prop_o65) 
-  x[j,,6] <- scale(Reduced_Data$Median_annual_income) 
-  x[j,,7] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
-  x[j,,8] <- scale(Reduced_Data$residential_percent_change_from_baseline)
-  x[j,,9] <- scale(Reduced_Data$transit_stations_percent_change_from_baseline)
+  x[j,,6] <- scale(Reduced_Data$Pop_per_km2) 
+  x[j,,7] <- scale(Reduced_Data$Median_annual_income) 
+  x[j,,8] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
+  x[j,,9] <- scale(Reduced_Data$residential_percent_change_from_baseline)
+  x[j,,10] <- scale(Reduced_Data$transit_stations_percent_change_from_baseline)
   if(use_SGTF_data){
-  x[j,,10] <- Reduced_Data$s_Alpha_prop
-  x[j,,11] <- Reduced_Data$s_Delta_prop
-  x[j,,12] <- Reduced_Data$s_Omicron_prop
+  x[j,,11] <- Reduced_Data$s_Alpha_prop
+  x[j,,12] <- Reduced_Data$s_Delta_prop
+  x[j,,13] <- Reduced_Data$s_Omicron_prop
 
   } else{
-    x[j,,10] <- Reduced_Data$Alpha_proportion/100
-    x[j,,11] <- (Reduced_Data$Delta_proportion + Reduced_Data$Delta_AY_4_2_proportion)/100
-    x[j,,12] <- (Reduced_Data$Omicron_BA_1_proportion + Reduced_Data$Omicron_BA_2_proportion + Reduced_Data$Omicron_BA_4_proportion + Reduced_Data$Omicron_BA_5_proportion)/100
+    x[j,,11] <- Reduced_Data$Alpha_proportion/100
+    x[j,,12] <- (Reduced_Data$Delta_proportion + Reduced_Data$Delta_AY_4_2_proportion)/100
+    x[j,,13] <- (Reduced_Data$Omicron_BA_1_proportion + Reduced_Data$Omicron_BA_2_proportion + Reduced_Data$Omicron_BA_4_proportion + Reduced_Data$Omicron_BA_5_proportion)/100
   }
   
   
-  x[j,,13] <- scale(Reduced_Data$Core_services_funding_by_weighted)
-  x[j,,14] <- scale(Reduced_Data$Primary_care_funding_by_weighted)
-  x[j,,15] <- scale(Reduced_Data$Specialised_services_by_weighted)
-  x[j,,16] <- scale(Reduced_Data$unringfenced/Reduced_Data$Population)
-  x[j,,17] <- scale(Reduced_Data$contain_outbreak_management/Reduced_Data$Population)
-  x[j,,18] <- scale(Reduced_Data$ASC_infection_control_fund/Reduced_Data$Population)
+  x[j,,14] <- scale(Reduced_Data$unringfenced/Reduced_Data$Population)
+  x[j,,15] <- scale(Reduced_Data$contain_outbreak_management/Reduced_Data$Population)
+  x[j,,16] <- scale(Reduced_Data$ASC_infection_control_fund/Reduced_Data$Population)
   
 }
 
@@ -537,13 +435,7 @@ W_reduced <- W[Reduced_Data$INDEX, Reduced_Data$INDEX]
 
 #Calculate E_neighbours
 E_neighbours <- W_reduced%*%t(E)
-if(scale_by_number_of_neighbours == TRUE){
-Nbors <- as.numeric(rowSums(W_reduced))
-} else{
-  Nbors <- 1
-}
-E_neighbours_scaled <- E_neighbours/Nbors
-susceptible_proportion_estimate <- 1 - scale_by_recent_cases #This is currently #of cases / population, so 1 - this is a rough proxy of S/N
+susceptible_proportion_estimate <- 1 - scale_by_recent_cases #This is currently #of first episodes / population, so 1 - this is a rough proxy of S/N
 
 if(scale_by_susceptible_pool){
   susceptible_proxy <- t(susceptible_proportion_estimate)
@@ -563,7 +455,7 @@ stanfit = stan(model_code = Stan_model_string_neighbours,
                          y=t(y),
                          x=x, K=K,
                          E=t(E),
-                         E_neighbours = E_neighbours_scaled,
+                         E_neighbours = E_neighbours,
                          susceptible_proxy = susceptible_proxy,
                          random_walk_prior = random_walk_prior_scale,
                          penalty_term = rw_penalty),
@@ -574,6 +466,6 @@ stanfit = stan(model_code = Stan_model_string_neighbours,
 dir.create("Outputs")
 
 save(stanfit, file = 'Outputs/stanfit.RData')
-save(N,T,y,x,K,E,E_neighbours_scaled, susceptible_proxy, 
+save(N,T,y,x,K,E,E_neighbours, susceptible_proxy, 
        Case_Rates_Data, file = "Outputs/model_data.RData")
 

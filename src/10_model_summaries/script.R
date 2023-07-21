@@ -15,18 +15,15 @@ T <- final_week - 1
 
 #Let's print an output .txt of the parameters used:
 param_string <- sprintf("tree_depth: %s \n
-  scale_by_number_of_neighbours: %s \n
   scale_by_susceptible_pool: %s \n
   cases_type: %s \n
   use_SGTF_data: %s \n
   final_week: %s \n
-  theta_ON: %s \n
   random_walk_prior_scale: %s \n
   rw_penalty: %s \n
-  print_extra_gof:  %s ", tree_depth, scale_by_number_of_neighbours, 
+  print_extra_gof:  %s ", tree_depth,  
                         scale_by_susceptible_pool, cases_type,
                          use_SGTF_data, final_week,
-                        theta_ON,
                         random_walk_prior_scale, rw_penalty, print_extra_gof)
 
 fileConn<-file("parameters_used.txt")
@@ -49,21 +46,20 @@ main_summaries <- summary(stanfit, pars = c('sqrtQ', 'betas', 'beta_random_walk'
 write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
 }
 
-if(theta_ON){
+
 #Theta summaries are big, but we output anyway
 theta_summaries <- summary(stanfit, pars = c('theta_mu', 'theta_sd','theta'))
 write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names = TRUE)
-} 
 
 
 #Save a plot of the beta trajectories
-beta_trajectories1 <- rstan::traceplot(stanfit, pars=c('sqrtQ', sprintf('betas[%s]',1:11)), nrow = 3)
+beta_trajectories1 <- rstan::traceplot(stanfit, pars=c('sqrtQ', sprintf('betas[%s]',1:8)), nrow = 3)
 png(file="Case_Outputs\\beta_trajectories1.png",
     width=1440, height=1080, res = 150)
 plot(beta_trajectories1)
 dev.off()
 
-beta_trajectories2 <- rstan::traceplot(stanfit, pars= sprintf('betas[%s]',12:18))
+beta_trajectories2 <- rstan::traceplot(stanfit, pars= sprintf('betas[%s]',9:16))
 png(file="Case_Outputs\\beta_trajectories2.png",
     width=1440, height=1080, res = 150)
 plot(beta_trajectories2)
@@ -142,6 +138,15 @@ dev.off()
   plot(rw_trajectories3)
   dev.off()
 }
+
+######################
+#Also plot just one of the theta plots out of curiosity
+theta_trajectories <- rstan::traceplot(stanfit, pars=c('theta_mu', 'theta_sd', sprintf('theta[%s]',1:14)), nrow = 5)
+png(file="Case_Outputs\\theta_trajectories.png",
+    width=1440, height=1080, res = 150)
+plot(theta_trajectories)
+dev.off()
+
 ######################
 
 
@@ -275,79 +280,73 @@ dev.off()
 
 #Reminder of what all the betas correspond to:
 
-#1 - cumVaccPercentage_FirstDose
-#2 - cumVaccPercentage_SecondDose
-#3 - cumVaccPercentage_ThirdDose
-#4 - prop_white_british
-#5 - prop_asian
-#6 - prop_black_afr_car
-#7 - IMD_Average_score
-#8 - prop_o65
-#9 - Median_annual_income
-#10 - workplaces_percent_change_from_baseline
-#11 - residential_percent_change_from_baseline
-#12 - transit_stations_percent_change_from_baseline
-#13 - Alpha_proportion
-#14 - Delta_proportion
-#15 - Omicron_proportion
+#1 - prop_asian
+#2 - prop_black_afr_car
+#3 - prop_other
+#4 - IMD_Average_score
+#5 - prop_o65
+#6 - Pop_per_km2
+#7 - Median_annual_income
+#8 - workplaces_percent_change_from_baseline
+#9 - residential_percent_change_from_baseline
+#10 - transit_stations_percent_change_from_baseline
+#11 - Alpha_proportion
+#12 - Delta_proportion
+#13 - Omicron_proportion
 
-#16 - Core_services_funding_by_weighted
-#17 - Primary_care_funding_by_weighted
-#18 - Specialised_services_by_weighted
-#19 - unringfenced
-#20 - contain_outbreak_management
-#21 - ASC_infection_control_fund
+#14 - unringfenced
+#15 - contain_outbreak_management
+#16 - ASC_infection_control_fund
 
 #######################################
 
   labels_hold <- c(
-    "1) prop_white_british", "2) prop_asian",
-    "3) prop_black_afr", "4) IMD_Average_score",
-    "5) prop_o65", "6) Median_annual_income",
-    "7) workplaces_movement",
-    "8) residential_movement", "9) transit_movement")
+    "1) prop_asian", "2) prop_black_afr",
+    "3) prop_other", "4) IMD_Average_score",
+    "5) prop_o65", "6) Pop_per_km2", "7) Median_annual_income",
+    "8) workplaces_movement",
+    "9) residential_movement", "10) transit_movement")
 
 
 beta_summaries <- main_summaries$summary
 #Next we have a look at how good our fit is
-betas_1_9 <- plot(stanfit, pars = sprintf('betas[%s]',1:9))
+betas_1_10 <- plot(stanfit, pars = sprintf('betas[%s]',1:10))
 #ci_level: 0.8 (80% intervals)
 #outer_level: 0.95 (95% intervals)
-betas_1_9 <- betas_1_9 + scale_y_continuous(breaks = c(9:1),
+betas_1_10 <- betas_1_10 + scale_y_continuous(breaks = c(10:1),
                                 labels = labels_hold) +
   geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Covariate coefficients")
 
-png(file="Case_Outputs\\betas_1_9.png",
+png(file="Case_Outputs\\betas_1_10.png",
     width=1440, height=1080, res = 150)
-plot(betas_1_9)
+plot(betas_1_10)
 dev.off()
 
 
-betas_13_15 <- plot(stanfit, pars = sprintf('betas[%s]',10:12))
+betas_11_13 <- plot(stanfit, pars = sprintf('betas[%s]',11:13))
 #ci_level: 0.8 (80% intervals)
 #outer_level: 0.95 (95% intervals)
-betas_13_15 <- betas_13_15 + scale_y_continuous(breaks = c(3:1),
-                                              labels = c("10) Alpha", "11) Delta", 
-                                                         "12) Omicron")) +
+betas_11_13 <- betas_11_13 + scale_y_continuous(breaks = c(3:1),
+                                              labels = c("11) Alpha", "12) Delta", 
+                                                         "13) Omicron")) +
   geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Variant proportion coefficients")
 
-png(file="Case_Outputs\\betas_10_12.png",
+png(file="Case_Outputs\\betas_11_13.png",
     width=1440, height=1080, res = 150)
-plot(betas_13_15)
+plot(betas_11_13)
 dev.off()
 
-betas_16_21 <- plot(stanfit, pars = sprintf('betas[%s]',13:18))
+betas_14_16 <- plot(stanfit, pars = sprintf('betas[%s]',14:16))
 #ci_level: 0.8 (80% intervals)
 #outer_level: 0.95 (95% intervals)
-betas_16_21 <- betas_16_21 + scale_y_continuous(breaks = c(6:1),
-                                                labels = c("13) Core Services", "14) Primary Care", 
-                                                           "15) Specialised Services", "16) Unringfenced",
-                                                           "17) Outbreak Management", "18) ASC infection control")) +
+betas_14_16 <- betas_14_16 + scale_y_continuous(breaks = c(3:1),
+                                                labels = c("14) Unringfenced",
+                                                           "15) Outbreak Management", "16) ASC infection control")) +
   geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Funding coefficients")
 
-png(file="Case_Outputs\\betas_13_18.png",
+png(file="Case_Outputs\\betas_14_16.png",
     width=1440, height=1080, res = 150)
-plot(betas_16_21)
+plot(betas_14_16)
 dev.off()
 
 
@@ -412,11 +411,9 @@ load("model_data.RData")
   model_beta_random_walk_steps <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk_steps')[,5])
   model_zetas <- as.numeric(get_posterior_mean(stanfit, pars = 'zetas')[,5])
   
-  if(theta_ON){
   model_theta <- as.numeric(get_posterior_mean(stanfit, pars = 'theta')[,5])
   model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
   model_theta_sd <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_sd')[,5])
-  }
   
   if(scale_by_susceptible_pool){
     model_susc_scale <- as.numeric(get_posterior_mean(stanfit, pars = 'susc_scaling')[,5])
@@ -425,26 +422,13 @@ load("model_data.RData")
   model_approx_y <- array(0, dim = c(T,306)) #
   
   
-  if(theta_ON){
   for(i in 1:T){
     if(scale_by_susceptible_pool){
-      model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
+      model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (model_zetas *E_neighbours[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
       
     }else{
-  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
+  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
     }
-  }
-  }else{
-    
-    for(i in 1:T){
-      if(scale_by_susceptible_pool){
-        model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i])
-        
-      }else{
-        model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours_scaled[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i])
-      }
-    }
-    
   }
   
   

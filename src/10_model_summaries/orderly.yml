@@ -57,6 +57,7 @@ artefacts:
         - Case_Outputs//random_walk_values.png
         #- Case_Outputs//zeta_plots
         #- Case_Outputs//Goodness_of_fit
+        - parameters_used.txt
         
 
 # An optional name to describe the report in more detail than its
@@ -98,8 +99,6 @@ parameters:
     default: 1
   print_extra_gof:
     default: FALSE
-  theta_ON:
-    default: TRUE
   rw_penalty:
     default: 0
 # Similar to "data" but sets of temporary views before the data are
@@ -170,7 +169,7 @@ resources:
 #
 depends:
   - 09_model_fit:
-      id: latest(parameter:tree_depth == tree_depth && parameter:scale_by_susceptible_pool == scale_by_susceptible_pool && parameter:cases_type == cases_type && parameter:use_SGTF_data == use_SGTF_data && parameter:cases_type == cases_type && parameter:final_week == final_week && parameter:random_walk_prior_scale == random_walk_prior_scale && parameter:theta_ON == theta_ON && rw_penalty == rw_penalty )
+      id: latest(parameter:tree_depth == tree_depth && parameter:scale_by_susceptible_pool == scale_by_susceptible_pool && parameter:cases_type == cases_type && parameter:use_SGTF_data == use_SGTF_data && parameter:cases_type == cases_type && parameter:final_week == final_week && parameter:random_walk_prior_scale == random_walk_prior_scale && rw_penalty == rw_penalty )
       use:
         stanfit.RData: Outputs/stanfit.RData
         model_data.RData: Outputs/model_data.RData

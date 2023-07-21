@@ -49,6 +49,7 @@ artefacts:
       filenames:
         - Outputs/stanfit.RData
         - Outputs/model_data.RData
+        - parameters_used.txt
 
 # An optional name to describe the report in more detail than its
 # directory name (which must be short) but less detail than
@@ -91,8 +92,6 @@ parameters:
     default: 96 #(104, 96, 71 are the main ones to use)
   random_walk_prior_scale:
     default: 1
-  theta_ON:
-    default: TRUE
   rw_penalty:
     default: 0
     
