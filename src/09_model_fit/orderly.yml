@@ -76,10 +76,12 @@ artefacts:
 #
 # parameters:
 parameters:
-  warmup_iterations:
-    default: 1000
+  #warmup_iterations:
+  #  default: 1000
   total_iterations:
     default: 2000
+  n_chains:
+    default: 4
   tree_depth:
     default: 10
   scale_by_susceptible_pool:

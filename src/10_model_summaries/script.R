@@ -15,13 +15,14 @@ T <- final_week - 1
 
 #Let's print an output .txt of the parameters used:
 param_string <- sprintf("tree_depth: %s \n
+n_chains: %s \n
   scale_by_susceptible_pool: %s \n
   cases_type: %s \n
   use_SGTF_data: %s \n
   final_week: %s \n
   random_walk_prior_scale: %s \n
   rw_penalty: %s \n
-  print_extra_gof:  %s ", tree_depth,  
+  print_extra_gof:  %s ", tree_depth, n_chains, 
                         scale_by_susceptible_pool, cases_type,
                          use_SGTF_data, final_week,
                         random_walk_prior_scale, rw_penalty, print_extra_gof)

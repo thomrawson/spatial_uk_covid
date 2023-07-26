@@ -19,12 +19,13 @@ rstan_options(auto_write = TRUE)
 ###################
 #Let's print an output .txt of the parameters used:
 param_string <- sprintf("tree_depth: %s \n
+chains: %s \n
   scale_by_susceptible_pool: %s \n
   cases_type: %s \n
   use_SGTF_data: %s \n
   final_week: %s \n
   rw_penalty: %s \n
-  random_walk_prior_scale: %s ", tree_depth,
+  random_walk_prior_scale: %s ", tree_depth, n_chains,
                         scale_by_susceptible_pool, cases_type,
                         use_SGTF_data, final_week, rw_penalty,
                         random_walk_prior_scale)
@@ -459,7 +460,9 @@ stanfit = stan(model_code = Stan_model_string_neighbours,
                          susceptible_proxy = susceptible_proxy,
                          random_walk_prior = random_walk_prior_scale,
                          penalty_term = rw_penalty),
-               warmup=warmup_iterations, iter=total_iterations,
+               #warmup=warmup_iterations, 
+               iter=total_iterations,
+               chains =n_chains,
                control = list(max_treedepth = tree_depth));
 
 #Make folder for outputs
