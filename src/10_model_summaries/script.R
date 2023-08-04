@@ -39,17 +39,18 @@ close(fileConn)
 
 #Output summaries of the mixed chains for all parameters except theta
 if(scale_by_susceptible_pool){
-  main_summaries <- summary(stanfit, pars = c('sqrtQ', 'susc_scaling', 'betas', 'beta_random_walk', 'zetas', 'lp__'))
+  main_summaries <- summary(stanfit, pars = c('sqrtQ', 'susc_scaling', 'betas', 'beta_random_walk_steps', 'zetas', 'lp__'))
   write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
   
 }else{
-main_summaries <- summary(stanfit, pars = c('sqrtQ', 'betas', 'beta_random_walk', 'zetas', 'lp__'))
+main_summaries <- summary(stanfit, pars = c('sqrtQ', 'betas', 'beta_random_walk_steps', 'zetas', 'lp__'))
 write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
 }
 
 
 #Theta summaries are big, but we output anyway
-theta_summaries <- summary(stanfit, pars = c('theta_mu', 'theta_sd','theta'))
+theta_summaries <- summary(stanfit, pars = c( #'theta_mu', 'theta_sd',
+                                             'theta'))
 write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names = TRUE)
 
 
@@ -142,7 +143,8 @@ dev.off()
 
 ######################
 #Also plot just one of the theta plots out of curiosity
-theta_trajectories <- rstan::traceplot(stanfit, pars=c('theta_mu', 'theta_sd', sprintf('theta[%s]',1:14)), nrow = 5)
+theta_trajectories <- rstan::traceplot(stanfit, pars=c(#'theta_mu', 'theta_sd', 
+                                                       sprintf('theta[%s]',1:16)), nrow = 5)
 png(file="Case_Outputs\\theta_trajectories.png",
     width=1440, height=1080, res = 150)
 plot(theta_trajectories)

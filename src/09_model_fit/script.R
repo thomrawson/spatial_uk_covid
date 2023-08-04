@@ -262,8 +262,8 @@ parameters {
   real<lower=0> sqrtQ; //Standard deviation of random walk
 
   vector[N] theta;       // heterogeneous effects
-  real theta_mu; //hierarchical hyperparameter for drawing theta
-  real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
+  //REMOVED real theta_mu; //hierarchical hyperparameter for drawing theta
+  //REMOVED real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
   
   real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
 }
@@ -289,9 +289,9 @@ for(i in 2:T){
   beta_random_walk_steps[i] ~ normal(0, sqrtQ);
   }
   
-  theta ~ normal(theta_mu, theta_sd);
-  theta_mu ~ normal(0.0,1.0);
-  theta_sd ~ uniform(0.0,20.0);
+  theta ~ normal(0.0, 1.0);
+  //REMOVED theta_mu ~ normal(0.0,1.0);
+  //REMOVED theta_sd ~ uniform(0.0,20.0);
 
 }
 generated quantities {
@@ -325,8 +325,8 @@ parameters {
   real<lower=0> sqrtQ; //Standard deviation of random walk
 
   vector[N] theta;       // heterogeneous effects
-  real theta_mu; //hierarchical hyperparameter for drawing theta
-  real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
+  //REMOVED real theta_mu; //hierarchical hyperparameter for drawing theta
+  //REMOVED real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
   
   real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
 }
@@ -351,9 +351,9 @@ for(i in 2:T){
   beta_random_walk_steps[i] ~ normal(0, sqrtQ);
   }
   
-  theta ~ normal(theta_mu, theta_sd);
-  theta_mu ~ normal(0.0,1.0);
-  theta_sd ~ uniform(0.0,20.0);
+  theta ~ normal(0.0, 1.0);
+  //REMOVED theta_mu ~ normal(0.0,1.0);
+  //REMOVED theta_sd ~ uniform(0.0,20.0);
 
 }
 generated quantities {
