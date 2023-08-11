@@ -415,8 +415,8 @@ load("model_data.RData")
   model_zetas <- as.numeric(get_posterior_mean(stanfit, pars = 'zetas')[,5])
   
   model_theta <- as.numeric(get_posterior_mean(stanfit, pars = 'theta')[,5])
-  model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
-  model_theta_sd <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_sd')[,5])
+  # model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
+  # model_theta_sd <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_sd')[,5])
   
   if(scale_by_susceptible_pool){
     model_susc_scale <- as.numeric(get_posterior_mean(stanfit, pars = 'susc_scaling')[,5])
