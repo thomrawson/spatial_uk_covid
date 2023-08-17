@@ -590,7 +590,7 @@ load("model_data.RData")
     
     
     
-    png(file=sprintf("Case_Outputs//Goodness_of_fit//trajectories//trajectories_%s.png", i),
+    png(file=sprintf("Case_Outputs//Goodness_of_fit//trajectories//trajectories_%s_%s.png", i, areaName_plot),
         width=1440, height=1080, res = 150)
     plot(plotHold)
     dev.off()
