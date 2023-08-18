@@ -151,6 +151,10 @@ england_daily_total <- Model_fit_data %>%
 
 # Let's plot the england total to start with
 
+#Save the data.frames
+save(Model_fit_data, england_daily_total, file = "CI_data_outputs.RData")
+
+
 grey_lines <- c(
   "2021-01-05", ## 16. Lockdown 3 starts
   "2021-03-08", ## 17. Step 1 of roadmap: schools reopen
@@ -176,10 +180,21 @@ ggplot(data = england_daily_total, aes(x= date, y = Model_mean )) +
         legend.title = element_text(size=rel(1.3))) +
   ggtitle("Weekly cases reported in England") +
   geom_point(data = england_daily_total, aes(x = date, y = Real_Cases), alpha = 0.7, shape = 18,
-             color = 'black')  #-> p2
+             color = 'black')  -> england_plot
+
+png(file="england_fit.png",
+    width=1440, height=1080, res = 150)
+plot(england_plot)
+dev.off()
+
+LTLA_names <- unique(Model_fit_data$areaName)
+
+for(i in 1:length(LTLA_names)){
+  
+  areaName_hold <- LTLA_names[i]
 
 #Let's just do a one off, for example, of Bolton
-  ggplot(data = filter(Model_fit_data, areaName == "Bolton"), aes(x= date, y = Model_mean )) +
+  ggplot(data = filter(Model_fit_data, areaName == areaName_hold), aes(x= date, y = Model_mean )) +
     geom_line(size = 1, color = "#9BC362") + 
     geom_ribbon(aes(ymin = Model_lower, ymax = Model_upper), alpha = 0.3, fill = "#9BC362", show.legend = FALSE) + 
     theme_classic() + ylab('Weekly Cases') +
@@ -194,8 +209,14 @@ ggplot(data = england_daily_total, aes(x= date, y = Model_mean )) +
           axis.title=element_text(size=rel(1.3)),
           legend.text = element_text(size=rel(1.2)),
           legend.title = element_text(size=rel(1.3))) +
-    ggtitle("Weekly cases reported in Bolton") +
-  geom_point(data = filter(Model_fit_data, areaName == "Bolton"), aes(x = date, y = Real_Cases), alpha = 0.7, shape = 18,
-             color = 'black') 
+    ggtitle(sprintf("Weekly cases reported in %s", areaName_hold)) +
+  geom_point(data = filter(Model_fit_data, areaName == areaName_hold), aes(x = date, y = Real_Cases), alpha = 0.7, shape = 18,
+             color = 'black') -> plot_hold
+  
+  png(file=sprintf("Case_Outputs\\model_fit_%s_%s.png", i, areaName_hold),
+                   width=1440, height=1080, res = 150)
+  plot(plot_hold)
+  dev.off()
+}
 
 

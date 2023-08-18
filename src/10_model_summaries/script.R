@@ -492,7 +492,7 @@ load("model_data.RData")
   #In 34 3x3 plots
   LTLAs_by_Index <- unique(Case_Rates_Data[,c(1,3,4,5)])
   LTLAs_by_Index <- LTLAs_by_Index[order(LTLAs_by_Index$INDEX),]
-  AllDates <- unique(Case_Rates_Data$date_begin)
+  AllDates <- sort(unique(Case_Rates_Data$date_begin))
   for(i in 1:(306/9)){
     Indices_to_plot <- seq(((9*i)-8),(9*i)) 
     myplots <- list()
