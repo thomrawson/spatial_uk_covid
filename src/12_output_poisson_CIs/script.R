@@ -37,7 +37,7 @@ close(fileConn)
 
 #####################################
 #Start by extracting all the values from all the chains.
-list_of_draws <- extract(stanfit)
+list_of_draws <- rstan::extract(stanfit)
 print(names(list_of_draws))
 n_draws <- length(list_of_draws$sqrtQ)
 #We have 32000 draws, that's because we had 2000 iterations (after a 2000 warm-up) and 16 chains. 16*2000
