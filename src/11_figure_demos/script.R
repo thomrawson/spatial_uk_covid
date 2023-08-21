@@ -4,6 +4,8 @@
 load("stanfit.RData")
 load("model_data.RData")
 dir.create("Case_Outputs")
+dir.create("Case_Outputs\\LTLA_model_fits")
+dir.create("Case_Outputs\\fig_demos")
 
 ################################################################################
 #When running this code originally with just the cumulative vaccination numbers,
@@ -37,6 +39,21 @@ close(fileConn)
 
 #####################################
 #Start by extracting all the values from all the chains.
+###########
+#Here's some switches to possibly save time:
+
+#If TRUE then we don't run all the long code, we just get the final data frames at the end
+Preload_data <- TRUE
+#Do we want to then factor in the Poisson uncertainty?
+include_Poisson <- TRUE
+
+if(Preload_data){
+  load("CI_data_outputs.RData")
+} else{
+  
+
+
+
 list_of_draws <- extract(stanfit)
 print(names(list_of_draws))
 n_draws <- length(list_of_draws$sqrtQ)
@@ -62,8 +79,7 @@ for(i in 1:T){
   
 }
 
-#Do we want to then factor in the Poisson uncertainty?
-include_Poisson <- TRUE
+
 
 if(include_Poisson){
   mean_y <- array(dim=c(95,306))
@@ -106,6 +122,8 @@ LTLAs_by_Index <- unique(Case_Rates_Data[,c(1,3,4,5)])
 LTLAs_by_Index <- LTLAs_by_Index[order(LTLAs_by_Index$INDEX),]
 #Major error spotted here! The cases are in the wrong place! The dates aren't the right order!
 #Remember, our main default is using the P2 Case linelist data. y = Linelist_P2_PCR_Next_Week_Cases
+#Only the pillar 2, and PCR_only cases from the direct England linelist
+
 AllDates <- sort(unique(Case_Rates_Data$date_begin))
 #Also remember, because the y data here are technically speaking the "next week" values, that
 #we want to use +7 to the dates
@@ -151,35 +169,96 @@ england_daily_total <- Model_fit_data %>%
 
 # Let's plot the england total to start with
 
-grey_lines <- c(
-  "2021-01-05", ## 16. Lockdown 3 starts
-  "2021-03-08", ## 17. Step 1 of roadmap: schools reopen
-  "2021-04-19", ## 19. Step 2 of roadmap: outdoors hospitality (04-12) 
+}
+
+##################################
+
+
+#grey_lines <- c(
+#  "2021-01-05", ## 16. Lockdown 3 starts
+  #"2021-03-08", ## 17. Step 1 of roadmap: schools reopen
+  #"2021-04-19", ## 19. Step 2 of roadmap: outdoors hospitality (04-12) 
   ##     and schools return (04-19)
-  "2021-05-17", ## 20. Step 3 of roadmap: indoors hospitality
-  "2021-07-19") ## 24. Step 4
+  #"2021-05-17", ## 20. Step 3 of roadmap: indoors hospitality
+  #"2021-07-19") ## 24. Step 4
+#)
 
-ggplot(data = england_daily_total, aes(x= date, y = Model_mean )) +
-  geom_line(size = 1, color = "#9BC362") + 
-  geom_ribbon(aes(ymin = Model_lower, ymax = Model_upper), alpha = 0.3, fill = "#9BC362", show.legend = FALSE) + 
-  theme_classic() + ylab('Weekly Cases') +
+grey_lines <- c(
+  "2020-06-01", ## End of first stay-at-home-order
+  "2020-11-05", ## Start of second stay at home order
+  "2020-12-02", ## End of second stay-at-home order 
+  "2021-01-06", ## Start of third stay-at-home order
+  "2021-03-08", ## End of third stay-at-home order (step 1)
+  "2021-07-19" ## End of steps, no more legal restrictions
+)
+
+variant_dates <- c( #Dates that variants first appear in our dataset
+  "2020-07-26", #ALPHA
+  "2021-03-28", #DELTA
+  "2021-09-12"  #OMICRON
+)
+
+lockdown_shades <- data.frame(date_start = as.Date(c("2020-04-01", grey_lines)),
+                              date_end = as.Date(c(grey_lines, '2022-04-01' )),
+                              rect_bottom = rep(775, 7),
+                              rect_top = rep(800, 7),
+                              rect_col = c("red", "orange", "red", "orange", "red", "orange", "green"))
+
+######################################
+
+ggplot() +
+  geom_line(data = england_daily_total, aes(x = date, y = Model_mean / 1000,
+                                            color = "Model Fit"), size = 1) +
+  geom_ribbon(data = england_daily_total,
+              aes(x = date, ymin = Model_lower / 1000, ymax = Model_upper / 1000,
+                  fill = "Model Fit"), alpha = 0.3, show.legend = FALSE) +
+  theme_classic() + ylab('Weekly Cases (thousands)') +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %y") +
-  coord_cartesian(xlim = c(as.Date('2020-05-01'),as.Date('2022-04-01'))) +
-  #labs(color = "Strategy") +
-  geom_vline(xintercept = as.Date('2021-03-31'), alpha = 0.9, color = 'black') +
+  scale_x_date(date_breaks = "2 month", date_labels = "%b %y") +
+  coord_cartesian(xlim = c(as.Date('2020-05-01'), as.Date('2022-04-01'))) +
+  geom_rect(data = lockdown_shades, aes(xmin = as.Date(date_start), xmax = as.Date(date_end),
+                                        ymin = 775, ymax = 800),
+            fill = c('#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", "#C8E7C1"),
+            show.legend = FALSE) +
+  
+  geom_vline(xintercept = as.Date(variant_dates), alpha = 0.9, color = 'black') +
   geom_vline(xintercept = as.Date(grey_lines), alpha = 0.7, color = 'gray23', lty = 'dashed') +
-  xlab(NULL) +
-  theme(axis.text=element_text(size=rel(1.2)),
-        axis.title=element_text(size=rel(1.3)),
-        legend.text = element_text(size=rel(1.2)),
-        legend.title = element_text(size=rel(1.3))) +
-  ggtitle("Weekly cases reported in England") +
-  geom_point(data = england_daily_total, aes(x = date, y = Real_Cases), alpha = 0.7, shape = 18,
-             color = 'black')  #-> p2
+  xlab("Date") +
+  annotate('text', x = as.Date("2020-07-26") - 13, label = "Alpha emergence", y = 500, colour = "black", size = 4, angle = 90) +
+  annotate('text', x = as.Date("2021-03-28") - 13, label = "Delta emergence", y = 500, colour = "black", size = 4, angle = 90) +
+  annotate('text', x = as.Date("2021-09-12") - 13, label = "Omicron emergence", y = 500, colour = "black", size = 4, angle = 90) +
+  
+  theme(axis.text = element_text(size = rel(1.2)),
+        axis.title = element_text(size = rel(1.3)),
+        legend.text = element_text(size = rel(1.2)),
+        legend.title = element_text(size = rel(1.3))) +
+  ggtitle("Weekly total Pillar 2 and PCR cases reported in England ") +
+  geom_point(data = england_daily_total, aes(x = date, y = Real_Cases / 1000,
+                                             color = "Data"),
+             alpha = 0.7, shape = 18) +
+  scale_color_manual(values = c("Data" = "black", "Model Fit" = "#9BC362")) +
+  scale_fill_manual(values = c("Model Fit" = "#9BC362")) +  # Adjust fill for the ribbon legend
+  
+  # Modify legend labels
+  guides(color = guide_legend(override.aes = list(shape = c(18, NA), linetype = c(NA, 1)))) +
+  labs(color = "")  -> england_plot
 
-#Let's just do a one off, for example, of Bolton
-  ggplot(data = filter(Model_fit_data, areaName == "Bolton"), aes(x= date, y = Model_mean )) +
+######################################
+
+
+png(file="england_fit.png",
+    width=1440, height=1080, res = 150)
+plot(england_plot)
+dev.off()
+
+LTLA_names <- unique(Model_fit_data$areaName)
+
+for(i in 1:length(LTLA_names)){
+  
+  areaName_hold <- LTLA_names[i]
+  
+  #Let's just do a one off, for example, of Bolton
+  ggplot(data = filter(Model_fit_data, areaName == areaName_hold), aes(x= date, y = Model_mean )) +
     geom_line(size = 1, color = "#9BC362") + 
     geom_ribbon(aes(ymin = Model_lower, ymax = Model_upper), alpha = 0.3, fill = "#9BC362", show.legend = FALSE) + 
     theme_classic() + ylab('Weekly Cases') +
@@ -194,8 +273,354 @@ ggplot(data = england_daily_total, aes(x= date, y = Model_mean )) +
           axis.title=element_text(size=rel(1.3)),
           legend.text = element_text(size=rel(1.2)),
           legend.title = element_text(size=rel(1.3))) +
-    ggtitle("Weekly cases reported in Bolton") +
-  geom_point(data = filter(Model_fit_data, areaName == "Bolton"), aes(x = date, y = Real_Cases), alpha = 0.7, shape = 18,
-             color = 'black') 
+    ggtitle(sprintf("Weekly cases reported in %s", areaName_hold)) +
+    geom_point(data = filter(Model_fit_data, areaName == areaName_hold), aes(x = date, y = Real_Cases), alpha = 0.7, shape = 18,
+               color = 'black') -> plot_hold
+  
+  png(file=sprintf("Case_Outputs\\LTLA_model_fits\\model_fit_%s_%s.png", i, areaName_hold),
+      width=1440, height=1080, res = 150)
+  plot(plot_hold)
+  dev.off()
+}
+
+dir.create("Case_Outputs\\LTLA_infection_rates")
+
+for(i in 1:length(LTLA_names)){
+  
+  areaName_hold <- LTLA_names[i]
+  
+  #Let's just do a one off, for example, of Bolton
+  ggplot(data = filter(Model_fit_data, areaName == areaName_hold), aes(x= date, y = Model_mean/Population )) +
+    geom_line(size = 1, color = "#9BC362") + 
+    geom_ribbon(aes(ymin = Model_lower/Population, ymax = Model_upper/Population), alpha = 0.3, fill = "#9BC362", show.legend = FALSE) + 
+    theme_classic() + ylab('Weekly Case rates') +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %y") +
+    coord_cartesian(xlim = c(as.Date('2020-05-01'),as.Date('2022-04-01'))) +
+    geom_vline(xintercept = as.Date(grey_lines), alpha = 0.7, color = 'gray23', lty = 'dashed') +
+    xlab(NULL) +
+    theme(axis.text=element_text(size=rel(1.2)),
+          axis.title=element_text(size=rel(1.3)),
+          legend.text = element_text(size=rel(1.2)),
+          legend.title = element_text(size=rel(1.3))) +
+    ggtitle(sprintf("Weekly case rates reported in %s", areaName_hold))
+     -> plot_hold
+  
+  png(file=sprintf("Case_Outputs\\LTLA_infection_rates\\case_rate_fit_%s_%s.png", i, areaName_hold),
+      width=1440, height=1080, res = 150)
+  plot(plot_hold)
+  dev.off()
+}
+
+
+####################################################
+#I want to output plots for LTLA_A, and LTLA_B to compare
+LTLA_A_index <- 267
+LTLA_B_index <- 67
+LTLA_A_name <- LTLA_names[LTLA_A_index]
+LTLA_B_name <- LTLA_names[LTLA_B_index]
+LTLA_A_data <- filter(Model_fit_data, areaName == LTLA_A_name)
+LTLA_B_data <- filter(Model_fit_data, areaName == LTLA_B_name)
+
+ggplot() +
+  geom_rect(data = lockdown_shades, aes(xmin = as.Date(date_start), xmax = as.Date(date_end),
+                                        ymin = 0.019, ymax = 0.02),
+            fill = c('#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", "#C8E7C1"),
+            show.legend = FALSE) +
+  geom_line(data = LTLA_A_data, aes(x = date, y = Model_mean / Population,
+                                            color = "Model Fit"), size = 1, show.legend = FALSE) +
+  geom_ribbon(data = LTLA_A_data,
+              aes(x = date, ymin = Model_lower / Population, ymax = Model_upper / Population,
+                  fill = "Model Fit"), alpha = 0.3, show.legend = FALSE) +
+  theme_classic() + ylab('Weekly Case Rates') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_x_date(date_breaks = "3 month", date_labels = "%b %y") +
+  coord_cartesian(xlim = c(as.Date('2020-05-01'), as.Date('2022-04-01'))) +
+  ylim(c(0,0.02)) +
+  #geom_vline(xintercept = as.Date(variant_dates), alpha = 0.9, color = 'black') +
+  geom_vline(xintercept = as.Date(grey_lines), alpha = 0.7, color = 'gray23', lty = 'dashed') +
+  xlab("Date") +
+  #annotate('text', x = as.Date("2020-07-26") - 13, label = "Alpha emergence", y = 500, colour = "black", size = 4, angle = 90) +
+  #annotate('text', x = as.Date("2021-03-28") - 13, label = "Delta emergence", y = 500, colour = "black", size = 4, angle = 90) +
+  #annotate('text', x = as.Date("2021-09-12") - 13, label = "Omicron emergence", y = 500, colour = "black", size = 4, angle = 90) +
+  
+  theme(axis.text.y = element_text(size = rel(1.2)),
+        axis.title.y = element_text(size = rel(1.3)),
+        legend.text = element_text(size = rel(1.2)),
+        legend.title = element_text(size = rel(1.3)),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank()) +
+  ggtitle(sprintf("%s ", LTLA_A_name)) +
+  geom_point(data = LTLA_A_data, aes(x = date, y = Real_Cases / Population,
+                                             color = "Real Data"),
+             alpha = 0.7, shape = 18, show.legend = FALSE) +
+  scale_color_manual(values = c("Real Data" = "black", "Model Fit" = "#9BC362")) +
+  scale_fill_manual(values = c("Model Fit" = "#9BC362")) +  # Adjust fill for the ribbon legend
+  # Modify legend labels
+  guides(color = guide_legend(override.aes = list(shape = c(18, NA), linetype = c(NA, 1)))) +
+  labs(color = "Legend")  -> LTLA_A_plot
+
+ggplot() +
+  geom_rect(data = lockdown_shades, aes(xmin = as.Date(date_start), xmax = as.Date(date_end),
+                                        ymin = 0.019, ymax = 0.02),
+            fill = c('#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", "#C8E7C1"),
+            show.legend = FALSE) +
+  geom_line(data = LTLA_B_data, aes(x = date, y = Model_mean / Population,
+                                    color = "Model Fit"), size = 1, show.legend = FALSE) +
+  geom_ribbon(data = LTLA_B_data,
+              aes(x = date, ymin = Model_lower / Population, ymax = Model_upper / Population,
+                  fill = "Model Fit"), alpha = 0.3, show.legend = FALSE) +
+  theme_classic() + ylab('') +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_x_date(date_breaks = "3 month", date_labels = "%b %y") +
+  coord_cartesian(xlim = c(as.Date('2020-05-01'), as.Date('2022-04-01'))) +
+  ylim(c(0,0.02)) +
+  #geom_vline(xintercept = as.Date(variant_dates), alpha = 0.9, color = 'black') +
+  geom_vline(xintercept = as.Date(grey_lines), alpha = 0.7, color = 'gray23', lty = 'dashed') +
+  xlab("Date") +
+  #annotate('text', x = as.Date("2020-07-26") - 13, label = "Alpha emergence", y = 500, colour = "black", size = 4, angle = 90) +
+  #annotate('text', x = as.Date("2021-03-28") - 13, label = "Delta emergence", y = 500, colour = "black", size = 4, angle = 90) +
+  #annotate('text', x = as.Date("2021-09-12") - 13, label = "Omicron emergence", y = 500, colour = "black", size = 4, angle = 90) +
+  
+  theme(axis.text.y = element_text(size = rel(1.2)),
+        axis.title.y = element_text(size = rel(1.3)),
+        legend.text = element_text(size = rel(1.2)),
+        legend.title = element_text(size = rel(1.3)),
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank()) +
+  ggtitle(sprintf("%s ", LTLA_B_name)) +
+  geom_point(data = LTLA_B_data, aes(x = date, y = Real_Cases / Population,
+                                     color = "Real Data"),
+             alpha = 0.7, shape = 18, show.legend = FALSE) +
+  scale_color_manual(values = c("Real Data" = "black", "Model Fit" = "#9BC362")) +
+  scale_fill_manual(values = c("Model Fit" = "#9BC362")) +  # Adjust fill for the ribbon legend
+  # Modify legend labels
+  guides(color = guide_legend(override.aes = list(shape = c(18, NA), linetype = c(NA, 1)))) +
+  labs(color = "Legend")  -> LTLA_B_plot
+
+
+##########################
+
+#Now stick it all together in a cowplot.
+
+
+LTLAs_plot <- plot_grid(LTLA_A_plot, LTLA_B_plot, labels = c('B', 'C'))
+
+Fig1_plot <- plot_grid(england_plot, LTLAs_plot, nrow = 2, labels = c("A", ""))
+
+#Export the plot
+ggsave(filename = "f1_trajectories.png",
+       path = 'Case_Outputs\\fig_demos', plot = Fig1_plot,
+       dpi=300, height=11, width=11, units="in")
+
+ggsave(filename = "f1_trajectories.tiff",
+       path = 'Case_Outputs\\fig_demos', plot = Fig1_plot,
+       dpi=300, height=11, width=11, units="in")
+
+ggsave(filename = "f1_trajectories.pdf",
+       path = 'Case_Outputs\\fig_demos', plot = Fig1_plot,
+       dpi=300, height=11, width=11, units="in")
+
+############################################################################
+#FIG 2
+############################################################################
+#This figure will show regional variation in certain covariates
+#IMD, and, 
+
+
+load("Boundaries_Data.RData")
+#Remove to just the indices I've modelled:
+areaCodes_used <- unique(Case_Rates_Data$areaCode)
+Boundaries_reduced <- filter(Boundaries, CODE %in% areaCodes_used)
+
+#I'm fairly sure that the Boundaries file is the INDEX order, yes look:
+# for(i in 1:length(Case_Rates_Data$date)){
+#   hold_code <- Case_Rates_Data$areaCode[i]
+#   Case_Rates_Data$INDEX[i] <- which(Boundaries$CODE == hold_code)
+# }
+
+#IMD average score is the same for every date
+Case_Rates_Data %>%
+  filter(Week == 10) %>% #Any week will do
+  select(areaCode, areaName, INDEX, IMD_Average_score, prop_white_british) -> fig2_data
+
+fig2_data <- fig2_data[order(fig2_data$INDEX),]
+
+Boundaries_reduced$IMD_Average_score <- as.numeric(fig2_data$IMD_Average_score) 
+Boundaries_reduced$prop_white_british <- as.numeric(fig2_data$prop_white_british) 
+
+# gb_cities <- read.csv("gb_cities.csv")
+# #Manually trim off the ones we don't want.
+# gb_cities <- gb_cities[1:30,]
+# gb_cities <- gb_cities[-c(6,7,9,16,17,18,19,21,22,24,25,27,29,30),]
+# 
+# gb_cities %>%
+#   st_as_sf(coords = c("lng", "lat"), crs = 4326) -> gb_cities
+
+#PLOT standard
+  ggplot(Boundaries_reduced) +
+  geom_sf(aes(fill = IMD_Average_score)) +
+  #scale_fill_viridis_c() +
+  scale_fill_gradientn(
+    colours =  c("#9BC362", "white", "#e54339"),  # Blue, white, and red colors
+    values = scales::rescale(c(min(Boundaries_reduced$IMD_Average_score), median(Boundaries_reduced$IMD_Average_score), max(Boundaries_reduced$IMD_Average_score)))
+  ) +
+  ggtitle("Average Index of Multiple Deprivation (IMD) by LTLA") +
+    labs(fill = "Average \nIMD Score") +
+  theme_void() +
+    theme(plot.margin = unit(c(0, 0, 0, 0.5), "cm")) +
+    # Highlight the two specific regions
+  geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
+          color = "blue", fill = NA, size = 0.8) -> england_IMD
+  
+  ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
+    geom_sf(aes(fill = IMD_Average_score), show.legend = FALSE) +
+    #scale_fill_viridis_c() +
+    scale_fill_gradientn(
+      colours =  c("#9BC362", "white", "#e54339"),  # Blue, white, and red colors
+      values = scales::rescale(c(min(Boundaries_reduced$IMD_Average_score), median(Boundaries_reduced$IMD_Average_score), max(Boundaries_reduced$IMD_Average_score)))
+    ) +
+    #ggtitle("Average Index of Multiple Deprivation (IMD) by LTLA") +
+    labs(fill = "Average \nIMD Score") +
+    theme_void() +
+    theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) +
+    # Highlight the two specific regions
+    geom_sf(data = Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),] %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
+            color = "blue", fill = NA, size = 0.8) -> london_IMD
+  
+
+
+  ggplot(Boundaries_reduced) +
+    geom_sf(aes(fill = prop_white_british)) +
+    #scale_fill_viridis_c() +
+    scale_fill_gradientn(
+      colours =  c("#9BC362", "white", "#e54339"),  # Blue, white, and red colors
+      values = scales::rescale(c(min(Boundaries_reduced$prop_white_british), median(Boundaries_reduced$prop_white_british), max(Boundaries_reduced$prop_white_british)))
+    ) +
+    ggtitle("White British Proportion of LTLA Population") +
+    labs(fill = "Proportion \nWhite British") +
+    theme_void() +
+    theme(plot.margin = unit(c(0, 0.5, 0, 0), "cm")) +
+    # Highlight the two specific regions
+    geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
+            color = "blue", fill = NA, size = 0.8) -> england_prop_white
+  
+  
+Fig2_plot <- plot_grid(england_IMD, england_prop_white, 
+                       nrow = 1, labels = c("A", "B"), align = "v", axis = "bt") +
+  theme(plot.background = element_rect(fill = "white"))
+
+ggsave(filename = "f2_covariates.png",
+       path = 'Case_Outputs\\fig_demos', plot = Fig2_plot,
+       dpi=300, height=6.31, width=11, units="in")
+
+ggsave(filename = "f2_covariates.tiff",
+       path = 'Case_Outputs\\fig_demos', plot = Fig2_plot,
+       dpi=300, height=6.31, width=11, units="in")
+
+ggsave(filename = "f2_covariates.pdf",
+       path = 'Case_Outputs\\fig_demos', plot = Fig2_plot,
+       dpi=300, height=6.31, width=11, units="in")
+
+#########################################
+#FIGURE 3
+
+#This figure will be my covariate CrI. I want them all on one plot, 
+#but we can have them separated by sections
+
+#I say we just use the stanfit default and alter it slightly to better suit our wants
+
+labels_hold <- c(
+  "1) Proportion Asian", "2) Proportion Black Afr/Car",
+  "3) Proportion Other Ethnicity", "4) IMD Average Score",
+  "5) Proportion Over Age 65", "6) Population per km^2",
+  "7) Median Annual Income", "8) Time At Workplace",
+  "9) Time At Home", "10) Time At Transit Stations")
+
+
+#Next we have a look at how good our fit is
+betas_1_10 <- stan_plot(stanfit, pars = sprintf('betas[%s]',1:10),
+                        fill_color = "#e54339",
+                        show_density = FALSE)
+#ci_level: 0.8 (80% intervals)
+#outer_level: 0.95 (95% intervals)
+  betas_1_10 + scale_y_continuous(breaks = c(10:1),
+                                              labels =labels_hold) +
+  geom_vline(xintercept = 0, color = "#9BC362", lty = 5, size = 1) +
+    ggtitle("Covariate Coefficients") +
+    xlim(c(-0.4, 0.45)) +
+  #theme(axis.text.y = element_text(angle = 35, hjust = 1, vjust = 0)) +
+    theme( # remove the vertical grid lines
+      panel.grid.major.x = element_blank() ,
+      # explicitly set the horizontal lines (or they will disappear too)
+      panel.grid.major.y = element_line( size=.1, color="grey" ),
+      axis.text.y = element_markdown(size = rel(1.2)),
+      axis.title.y = element_blank(),
+      legend.text = element_text(size = rel(1.2)),
+      legend.title = element_text(size = rel(1.3)),
+      axis.text.x = element_blank()
+    ) -> betas_1_10
+
+  betas_11_13 <- stan_plot(stanfit, pars = sprintf('betas[%s]',11:13),
+                          fill_color = "#e54339",
+                          show_density = FALSE)
+  #ci_level: 0.8 (80% intervals)
+  #outer_level: 0.95 (95% intervals)
+  betas_11_13 + scale_y_continuous(breaks = c(3:1),
+                                  labels = c("11) Alpha Proportion", "12) Delta Proportion", "13) Omicron Proportion")) +
+    geom_vline(xintercept = 0, color = "#9BC362", lty = 5, size = 1) +
+    ggtitle("SARS-CoV-2 Variant Coefficients") +
+    xlim(c(-0.4, 0.45)) +
+    #theme(axis.text.y = element_text(angle = 35, hjust = 1, vjust = 0)) +
+    theme( # remove the vertical grid lines
+      panel.grid.major.x = element_blank() ,
+      # explicitly set the horizontal lines (or they will disappear too)
+      panel.grid.major.y = element_line( size=.1, color="grey" ),
+      axis.text.y = element_text(size = rel(1.2)),
+      axis.title.y = element_blank(),
+      axis.text.x = element_blank()
+    )  -> betas_11_13
+  
+  betas_14_16 <- stan_plot(stanfit, pars = sprintf('betas[%s]',14:16),
+                           fill_color = "#e54339",
+                           show_density = FALSE)
+  #ci_level: 0.8 (80% intervals)
+  #outer_level: 0.95 (95% intervals)
+  betas_14_16 + scale_y_continuous(breaks = c(3:1),
+                                   labels = c("14) Unringfenced",
+                                              "15) Outbreak Management", "16) ASC infection control")) +
+    geom_vline(xintercept = 0, color = "#9BC362", lty = 5, size = 1) +
+    ggtitle("Funding Coefficients") +
+    xlim(c(-0.4, 0.45)) +
+    #theme(axis.text.y = element_text(angle = 35, hjust = 1, vjust = 0)) +
+    theme( # remove the vertical grid lines
+      panel.grid.major.x = element_blank() ,
+      # explicitly set the horizontal lines (or they will disappear too)
+      panel.grid.major.y = element_line( size=.1, color="grey" ),
+      axis.text.y = element_text(size = rel(1.2)),
+      axis.text.x = element_text(size = rel(1.4)),
+      axis.title.y = element_blank()
+    )  -> betas_14_16
+  
+  
+  Fig3_plot <- plot_grid(betas_1_10, betas_11_13, betas_14_16,
+                         nrow = 3, rel_heights = c(10,3,3), align = "v")
+
+  
+  ggsave(filename = "f3_betas.png",
+         path = 'Case_Outputs\\fig_demos', plot = Fig3_plot,
+         dpi=300, height=10, width=9, units="in")
+  
+  ggsave(filename = "f3_betas.tiff",
+         path = 'Case_Outputs\\fig_demos', plot = Fig3_plot,
+         dpi=300, height=10, width=9, units="in")
+  
+  ggsave(filename = "f3_betas.pdf",
+         path = 'Case_Outputs\\fig_demos', plot = Fig3_plot,
+         dpi=300, height=10, width=9, units="in")
+  ########################################
+#FIGURE 4 COUNTERFACTUAL
+
+
 
 

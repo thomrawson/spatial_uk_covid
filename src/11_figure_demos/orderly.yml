@@ -124,6 +124,9 @@ packages:
   - gridExtra
   - cowplot
   - plyr
+  - scales
+  - ggtext
+  - stringr
 
 # Source files, in addition to the script.  Typically these will
 # contain function definitions.  These will be sourced after loading
@@ -143,7 +146,7 @@ packages:
 # referenced in "views" or "data"
 #
 resources:
-  #- gb_cities.csv
+  - CI_data_outputs.RData
 
 # Optional name of a variable to make the SQL connection available to
 # the script.  Use this with care and avoid using any queries that
