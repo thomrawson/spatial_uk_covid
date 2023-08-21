@@ -303,8 +303,7 @@ for(i in 1:length(LTLA_names)){
           axis.title=element_text(size=rel(1.3)),
           legend.text = element_text(size=rel(1.2)),
           legend.title = element_text(size=rel(1.3))) +
-    ggtitle(sprintf("Weekly case rates reported in %s", areaName_hold))
-     -> plot_hold
+    ggtitle(sprintf("Weekly case rates reported in %s", areaName_hold)) -> plot_hold
   
   png(file=sprintf("Case_Outputs\\LTLA_infection_rates\\case_rate_fit_%s_%s.png", i, areaName_hold),
       width=1440, height=1080, res = 150)
