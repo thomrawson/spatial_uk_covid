@@ -401,17 +401,36 @@ for(i in 2:final_week){
   #scale() will fail if all variables are the same value (i.e. if sd = 0)
   
   #For now I will not scale the percentages, I'll just give them from 0 to 1
+  
+  ###########
+  # JUST SPOTTED AN ERROR:
+  # I've been scaling each week separately. Meaning a score of "0" one week, won't be the same as "0" the next weel
+  # I need to be scaling over the whole data set.
+  # i.e. subtract the mean of the entire dataset, and divide by the sd of the whole dataset.
 
-  x[j,,1] <- scale(Reduced_Data$prop_asian)
-  x[j,,2] <- scale(Reduced_Data$prop_black_afr_car)
-  x[j,,3] <- scale(Reduced_Data$prop_mixed_multiple + Reduced_Data$prop_other)
-  x[j,,4] <- scale(Reduced_Data$IMD_Average_score)   
-  x[j,,5] <- scale(Reduced_Data$prop_o65) 
-  x[j,,6] <- scale(Reduced_Data$Pop_per_km2) 
-  x[j,,7] <- scale(Reduced_Data$Median_annual_income) 
-  x[j,,8] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
-  x[j,,9] <- scale(Reduced_Data$residential_percent_change_from_baseline)
-  x[j,,10] <- scale(Reduced_Data$transit_stations_percent_change_from_baseline)
+  # x[j,,1] <- scale(Reduced_Data$prop_asian)
+  # x[j,,2] <- scale(Reduced_Data$prop_black_afr_car)
+  # x[j,,3] <- scale(Reduced_Data$prop_mixed_multiple + Reduced_Data$prop_other)
+  # x[j,,4] <- scale(Reduced_Data$IMD_Average_score)   
+  # x[j,,5] <- scale(Reduced_Data$prop_o65) 
+  # x[j,,6] <- scale(Reduced_Data$Pop_per_km2) 
+  # x[j,,7] <- scale(Reduced_Data$Median_annual_income) 
+  # x[j,,8] <- scale(Reduced_Data$workplaces_percent_change_from_baseline)
+  # x[j,,9] <- scale(Reduced_Data$residential_percent_change_from_baseline)
+  # x[j,,10] <- scale(Reduced_Data$transit_stations_percent_change_from_baseline)
+  
+  x[j,,1] <- (Reduced_Data$prop_asian - mean(Case_Rates_Data$prop_asian))/sd(Case_Rates_Data$prop_asian)
+  x[j,,2] <- (Reduced_Data$prop_black_afr_car - mean(Case_Rates_Data$prop_black_afr_car))/sd(Case_Rates_Data$prop_black_afr_car)
+  x[j,,3] <- ((Reduced_Data$prop_mixed_multiple + Reduced_Data$prop_other) - mean(Case_Rates_Data$prop_mixed_multiple + Case_Rates_Data$prop_other))/sd(Case_Rates_Data$prop_mixed_multiple + Case_Rates_Data$prop_other)
+  x[j,,4] <- (Reduced_Data$IMD_Average_score - mean(Case_Rates_Data$IMD_Average_score))   /sd(Case_Rates_Data$IMD_Average_score)
+  x[j,,5] <- (Reduced_Data$prop_o65 - mean(Case_Rates_Data$prop_o65))/sd(Case_Rates_Data$prop_o65) 
+  x[j,,6] <- (Reduced_Data$Pop_per_km2 - mean(Case_Rates_Data$Pop_per_km2))/sd(Case_Rates_Data$Pop_per_km2) 
+  x[j,,7] <- (Reduced_Data$Median_annual_income - mean(Case_Rates_Data$Median_annual_income))/sd(Case_Rates_Data$Median_annual_income) 
+  x[j,,8] <- (Reduced_Data$workplaces_percent_change_from_baseline - mean(Case_Rates_Data$workplaces_percent_change_from_baseline))/sd(Case_Rates_Data$workplaces_percent_change_from_baseline)
+  x[j,,9] <- (Reduced_Data$residential_percent_change_from_baseline - mean(Case_Rates_Data$residential_percent_change_from_baseline))/sd(Case_Rates_Data$residential_percent_change_from_baseline)
+  x[j,,10] <-(Reduced_Data$transit_stations_percent_change_from_baseline - mean(Case_Rates_Data$transit_stations_percent_change_from_baseline))/sd(Case_Rates_Data$transit_stations_percent_change_from_baseline)
+  
+  
   if(use_SGTF_data){
   x[j,,11] <- Reduced_Data$s_Alpha_prop
   x[j,,12] <- Reduced_Data$s_Delta_prop
@@ -424,9 +443,9 @@ for(i in 2:final_week){
   }
   
   
-  x[j,,14] <- scale(Reduced_Data$unringfenced/Reduced_Data$Population)
-  x[j,,15] <- scale(Reduced_Data$contain_outbreak_management/Reduced_Data$Population)
-  x[j,,16] <- scale(Reduced_Data$ASC_infection_control_fund/Reduced_Data$Population)
+  x[j,,14] <- ((Reduced_Data$unringfenced/Reduced_Data$Population) - mean(Case_Rates_Data$unringfenced/Case_Rates_Data$Population))/sd(Case_Rates_Data$unringfenced/Case_Rates_Data$Population)
+  x[j,,15] <- ((Reduced_Data$contain_outbreak_management/Reduced_Data$Population) - mean(Case_Rates_Data$contain_outbreak_management/Case_Rates_Data$Population))/sd(Case_Rates_Data$contain_outbreak_management/Case_Rates_Data$Population)
+  x[j,,16] <- ((Reduced_Data$ASC_infection_control_fund/Reduced_Data$Population) - mean(Case_Rates_Data$ASC_infection_control_fund/Case_Rates_Data$Population))/sd(Case_Rates_Data$ASC_infection_control_fund/Case_Rates_Data$Population)
   
 }
 
