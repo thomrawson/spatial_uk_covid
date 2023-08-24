@@ -153,6 +153,7 @@ england_daily_total <- Model_fit_data %>%
 
 #Save the data.frames
 save(Model_fit_data, england_daily_total, file = "CI_data_outputs.RData")
+#save(Model_fit_data, england_daily_total, file = "poisson_y_approx.RData")
 
 
 grey_lines <- c(
