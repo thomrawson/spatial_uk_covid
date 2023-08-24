@@ -1,0 +1,76 @@
+#I want to try fitting a logistic growth with offset I think for the first episodes
+Case_Rates_Data %>%
+  select(areaName, areaCode, Week, Week_Cases, First_Episodes_Total) -> logistic_data
+
+logistic_data$Cases_Total <- 0
+
+LTLA_names <- unique(logistic_data$areaName)
+AllWeeks <- sort(unique(logistic_data$Week))
+
+for(i in 1:length(LTLA_names)){
+  areaName_hold <- LTLA_names[i] 
+  
+  hold_data <- logistic_data[which(logistic_data$areaName == areaName_hold),]
+  first_episodes_hold <- min(hold_data$First_Episodes_Total)
+  hold_data$Week_Cases[which(hold_data$Week == 2)] -> first_cases_hold
+  
+  logistic_data$First_Episodes_Total[which(logistic_data$areaName == areaName_hold)] <- logistic_data$First_Episodes_Total[which(logistic_data$areaName == areaName_hold)] - first_episodes_hold + first_cases_hold
+  
+  for(j in 1:length(AllWeeks)){
+    
+    weekHold <- AllWeeks[j]
+    if(j == 1){
+      logistic_data$Cases_Total[which(logistic_data$areaName == areaName_hold & logistic_data$Week == weekHold)] <- logistic_data$Week_Cases[which(logistic_data$areaName == areaName_hold & logistic_data$Week == weekHold)]
+    }else{
+      logistic_data$Cases_Total[which(logistic_data$areaName == areaName_hold & logistic_data$Week == weekHold)] <- (logistic_data$Cases_Total[which(logistic_data$areaName == areaName_hold & logistic_data$Week == (weekHold-1))] + logistic_data$Week_Cases[which(logistic_data$areaName == areaName_hold & logistic_data$Week == weekHold)] )
+    }
+    
+  }
+  
+}
+
+
+model_string <- "
+data {
+  int<lower=0> T; // Number of timepoints
+
+  int<lower=0> total_cases[T];              // count outcomes (next week's cases)
+  int<lower=0> first_episodes[T];   
+}
+transformed data {
+}
+parameters {
+  
+  real a;
+  real C;
+  real k;
+  real x0;
+
+  }
+transformed parameters {
+}
+model {
+
+for(i in 1:T){
+first_episodes[i] ~ normal( a + ((C-a)/(1 + exp((-k)*(total_cases - x0))))  , 1);
+}
+
+  a ~ normal(0, 10);
+  real C ~ normal(50000000, 1000000);
+  real k ~ normal(0, 100);
+  real x0 ~ normal(0,100);
+
+}
+generated quantities {
+}
+"
+
+lg_stanfit = stan(model_code = model_string,
+               data=list(T=length(logistic_data$areaName),
+                         total_cases = logistic_data$Cases_Total,
+                           first_episodes = logistic_data$First_Episodes_Total),
+               #warmup=warmup_iterations, 
+               #iter=total_iterations,
+               #chains =n_chains,
+               #control = list(max_treedepth = tree_depth)
+               );

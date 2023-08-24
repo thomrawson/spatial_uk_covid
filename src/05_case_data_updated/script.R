@@ -1703,6 +1703,10 @@ if(date_hold < as.Date("2021-04-06")){
 
 #Now add specific COVID support funds provided, as taken from here:
 #https://www.gov.uk/government/publications/covid-19-emergency-funding-for-local-government
+#ASC is adult social care, and was basically for paying peoples wages when they had covid.
+#Outbreak management details here:
+#https://www.gov.uk/government/publications/contain-outbreak-management-fund-2021-to-2022/contain-outbreak-management-fund-guidance-financial-year-2021-to-2022
+  
 COVID_funding <- read.csv("Data/LTLA_Covid_Extra_Funding.csv")
 funding_types <- unique(COVID_funding$fund)
 ONS_codes <- unique(COVID_funding$ONS_code)
