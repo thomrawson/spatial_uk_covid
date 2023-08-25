@@ -106,7 +106,7 @@ for(i in 1:length(LTLA_names)){
   
   
 }
-  
+  #print(k)
   FACTOR_data$error_value[k]  <- sum(abs(Plot_data$Fit_First_Episodes - Plot_data$Week_First_Episodes)/Plot_data$Population)
 }
 
