@@ -489,5 +489,5 @@ dir.create("Outputs")
 
 save(stanfit, file = 'Outputs/stanfit.RData')
 save(N,T,y,x,K,E,E_neighbours, susceptible_proxy, 
-       Case_Rates_Data, file = "Outputs/model_data.RData")
+       Case_Rates_Data, W_reduced, file = "Outputs/model_data.RData")
 
