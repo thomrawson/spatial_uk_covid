@@ -1,5 +1,4 @@
 *.png
-*.RData
 *.txt
 Outputs/
 Hospital_Outputs/
