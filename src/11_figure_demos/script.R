@@ -641,11 +641,18 @@ x_IMD_worst_counterfactual[,,4] <- max(x[,,4])
 x_IMD_best_counterfactual <- x
 x_IMD_best_counterfactual[,,4] <- min(x[,,4])
 
+#Furthermore, we're going to need Population data in index order
+Population_Data <- unique(select(Case_Rates_Data, Population, INDEX))
+Population_Data <- Population_Data[order(Population_Data$INDEX),]
+
 #Now we calculate the new y_approx values
 #If TRUE then we don't run all the long code, we just get the final data frames at the end
 Preload_data <- FALSE
 #Do we want to then factor in the Poisson uncertainty?
 include_Poisson <- FALSE
+
+#The first episode scaling factor we'll use:
+Best_Factor <- 1.167667668
 
 #To preserve memory we do each scenario one at-a-time
 if(Preload_data){
@@ -666,24 +673,105 @@ if(Preload_data){
   
   for(j in 1:n_draws){
     
+    #Now keep in mind, our susceptible proxy may be a bit different here.
+    #Task 13 shows how we came up with a new way to build a value for "first episodes"
+    #At each time-step, we need to calculate the new number of first episodes for that time-step
+    #Keep a running total over time, and the susceptible proxy can be rebuilt from that
     if(scale_by_susceptible_pool){
       model_susc_scale <- list_of_draws$susc_scaling[j]
     }
+    #Another thing to keep in mind, is that we don't want to calculate the cases from E, that was the previous cases
+    #in the actual model fit, we need to build a NEW E to go along with it
     
-    #Now keep in mind, our susceptible proxy may be a bit different here.
-    #What we're going to do is keep the same RATIO of first-episodes to cases, but then build a new proxy
+    counterfactual_first_episodes_total_worst <- array(0, dim = c(N,T))
+    counterfactual_susceptible_proxy_worst <- array(0, dim = c(N,T))
+    counterfactual_E_worst <- array(0, dim = c(T,N))
+    counterfactual_E_neighbours_worst <- array(0, dim = c(N,T))
     
+    counterfactual_first_episodes_total_best <- array(0, dim = c(N,T))
+    counterfactual_susceptible_proxy_best <- array(0, dim = c(N,T))
+    counterfactual_E_best <- array(0, dim = c(T,N))
+    counterfactual_E_neighbours_best <- array(0, dim = c(N,T))
     
-    for(i in 1:T){
+    #First, we do the i = 1 case
+    if(scale_by_susceptible_pool){
+      #Susceptible proxy is a 306x95
+      counterfactual_E_worst[1,] <- E[1,]
+      counterfactual_first_episodes_total_worst[,1] <- E[1,]
+      counterfactual_susceptible_proxy_worst[,1] <- 1-(counterfactual_first_episodes_total_worst[,1]/Population_Data$Population)
+      
+      counterfactual_E_best[1,] <- E[1,]
+      counterfactual_first_episodes_total_best[,1] <- E[1,]
+      counterfactual_susceptible_proxy_best[,1] <- 1-(counterfactual_first_episodes_total_best[,1]/Population_Data$Population)
+      
+      #Also need to calculate E_neighbours, the number of neighborhood cases
+      #TODO: Future runs of task 09 will output W_reduced, but for now:
+      load('W.RData')
+      W_reduced <- W[Population_Data$INDEX, Population_Data$INDEX]
+      
+      counterfactual_E_neighbours_worst <- W_reduced%*%t(counterfactual_E_worst)
+      counterfactual_E_neighbours_best <- W_reduced%*%t(counterfactual_E_best)
+      
+      y_approx_IMD_worst[1,,j] <- as.numeric(log((model_susc_scale*counterfactual_susceptible_proxy_worst[,1])*(counterfactual_E_worst[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,1])))) + x_IMD_worst_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,]
+      y_approx_IMD_best[1,,j] <- as.numeric(log((model_susc_scale*counterfactual_susceptible_proxy_best[,1])*(counterfactual_E_best[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,1])))) + x_IMD_best_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,]
+      
+      
+    }else{
+      counterfactual_E_worst[1,] <- E[1,]
+      counterfactual_first_episodes_total_worst[,1] <- E[1,]
+      counterfactual_susceptible_proxy_worst <- array(1, dim = c(N,T))
+      counterfactual_E_best[1,] <- E[1,]
+      counterfactual_first_episodes_total_best[,1] <- E[1,]
+      counterfactual_susceptible_proxy_best[,1] <- array(1, dim = c(N,T))
+      
+      load('W.RData')
+      W_reduced <- W[Population_Data$INDEX, Population_Data$INDEX]
+      
+      counterfactual_E_neighbours_worst <- W_reduced%*%t(counterfactual_E_worst)
+      counterfactual_E_neighbours_best <- W_reduced%*%t(counterfactual_E_best)
+      
+      
+      y_approx_IMD_worst[1,,j] <- as.numeric(log(counterfactual_susceptible_proxy_worst[,1]*(counterfactual_E_worst[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,1])))) + x_IMD_worst_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,]
+      y_approx_IMD_best[1,,j] <- as.numeric(log(counterfactual_susceptible_proxy_best[,1]*(counterfactual_E_best[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,1])))) + x_IMD_best_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,]
+      
+    }
+    
+    #Now for the rest, we will be updating the arrays in each timestep with the y values from the previous step
+    
+    for(i in 2:T){
+      
       if(scale_by_susceptible_pool){
-        y_approx_IMD_worst[i,,j] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_IMD_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
-        y_approx_IMD_best[i,,j] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_IMD_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        #Susceptible proxy is a 306x95
+        counterfactual_E_worst[i,] <- exp(y_approx_IMD_worst[(i-1),,j])
+        counterfactual_first_episodes_total_worst[,i] <- counterfactual_first_episodes_total_worst[,(i-1)] +  counterfactual_E_worst[i,]*min(1,(Best_Factor*(1-(counterfactual_first_episodes_total_worst[,(i-1)]/Population_Data$Population))))
+        counterfactual_susceptible_proxy_worst[,i] <- 1-(counterfactual_first_episodes_total_worst[,i]/Population_Data$Population)
         
-      }else{
-        y_approx_IMD_worst[i,,j] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_IMD_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
-        y_approx_IMD_best[i,,j] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_IMD_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        counterfactual_E_best[i,] <- exp(y_approx_IMD_best[(i-1),,j])
+        counterfactual_first_episodes_total_best[,i] <- counterfactual_first_episodes_total_best[,(i-1)] +  counterfactual_E_best[i,]*min(1,(Best_Factor*(1-(counterfactual_first_episodes_total_best[,(i-1)]/Population_Data$Population))))
+        counterfactual_susceptible_proxy_best[,i] <- 1-(counterfactual_first_episodes_total_best[,i]/Population_Data$Population)
+        
+        counterfactual_E_neighbours_worst <- W_reduced%*%t(counterfactual_E_worst)
+        counterfactual_E_neighbours_best <- W_reduced%*%t(counterfactual_E_best)
+        
+        y_approx_IMD_worst[i,,j] <- as.numeric(log((model_susc_scale*counterfactual_susceptible_proxy_worst[,i])*(counterfactual_E_worst[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,i])))) + x_IMD_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_IMD_best[i,,j] <- as.numeric(log((model_susc_scale*counterfactual_susceptible_proxy_best[,i])*(counterfactual_E_best[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,i])))) + x_IMD_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        
+      
+        }else{
+          
+          counterfactual_E_worst[i,] <- y_approx_IMD_worst[(i-1),,j]
+          counterfactual_first_episodes_total_worst[,i] <- counterfactual_first_episodes_total_worst[,(i-1)] +  counterfactual_E_worst[i,]*min(1,(Best_Factor*(1-(counterfactual_first_episodes_total_worst[,(i-1)]/Population_Data$Population))))
+          counterfactual_E_best[i,] <- y_approx_IMD_best[(i-1),,j]
+          counterfactual_first_episodes_total_best[,i] <- counterfactual_first_episodes_total_best[,(i-1)] +  counterfactual_E_best[i,]*min(1,(Best_Factor*(1-(counterfactual_first_episodes_total_best[,(i-1)]/Population_Data$Population))))
+          counterfactual_E_neighbours_worst <- W_reduced%*%t(counterfactual_E_worst)
+          counterfactual_E_neighbours_best <- W_reduced%*%t(counterfactual_E_best)
+          
+          
+        y_approx_IMD_worst[i,,j] <- as.numeric(log(counterfactual_susceptible_proxy_worst[,i]*(counterfactual_E_worst[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,i])))) + x_IMD_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_IMD_best[i,,j] <- as.numeric(log(counterfactual_susceptible_proxy_best[,i]*(counterfactual_E_best[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,i])))) + x_IMD_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
         
       }
+      
     }
     
   }
@@ -842,12 +930,12 @@ if(Preload_data){
   
 }
 
-
+#Save these outputs for pre-loading on future runs
+save(england_daily_total_best, england_daily_total_worst,
+     Model_fit_data_worst, Model_fit_data_best, file = "IMD_counterfactual_data.RData")
 
 
 #Now we stick it together with the existing datasets.
-#One thing I've realised is that we need to factor in the "susceptible scaling term".
-##TODO: Have a think about doing that
 
 england_daily_total_best$scenario <- "Best"
 england_daily_total_worst$scenario <- "Worst"
@@ -903,6 +991,18 @@ ggplot() +
   # Modify legend labels
   #guides(color = guide_legend(override.aes = list(shape = c(18, NA), linetype = c(NA, 1)))) +
   labs(color = "Scenario") -> IMD_plot
+
+ggsave(filename = "f4_IMD.png",
+       path = 'Case_Outputs\\fig_demos', plot = IMD_plot,
+       dpi=300, height=10, width=9, units="in")
+
+ggsave(filename = "f4_IMD.tiff",
+       path = 'Case_Outputs\\fig_demos', plot = IMD_plot,
+       dpi=300, height=10, width=9, units="in")
+
+ggsave(filename = "f4_IMD.pdf",
+       path = 'Case_Outputs\\fig_demos', plot = IMD_plot,
+       dpi=300, height=10, width=9, units="in")
 
 #Let's also output the totals for reporting:
 IMD_counterfactual_totals <- data.frame(scenario = c("Model Fit", "High IMD", "Low IMD"),
@@ -1482,7 +1582,20 @@ ggplot() +
   ) +
   # Modify legend labels
   #guides(color = guide_legend(override.aes = list(shape = c(18, NA), linetype = c(NA, 1)))) +
-  labs(color = "Scenario") #-> IMD_plot
+  labs(color = "Scenario") -> funding_plot
+
+
+ggsave(filename = "f4_funding.png",
+       path = 'Case_Outputs\\fig_demos', plot = funding_plot,
+       dpi=300, height=10, width=9, units="in")
+
+ggsave(filename = "f4_funding.tiff",
+       path = 'Case_Outputs\\fig_demos', plot = funding_plot,
+       dpi=300, height=10, width=9, units="in")
+
+ggsave(filename = "f4_funding.pdf",
+       path = 'Case_Outputs\\fig_demos', plot = funding_plot,
+       dpi=300, height=10, width=9, units="in")
 
 #Let's also output the totals for reporting:
 funding_counterfactual_totals <- data.frame(scenario = c("Model Fit", "Less Funding", "More Funding", "No Funding" ),

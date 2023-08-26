@@ -184,3 +184,4 @@ depends:
       id: latest
       use:
         Boundaries_Data.RData: Outputs/Boundaries_Data.RData
+        W.RData: Outputs/W.RData
