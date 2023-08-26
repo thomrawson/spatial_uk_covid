@@ -57,7 +57,7 @@ artefacts:
         #- Case_Outputs//random_walk_values.png
         #- Case_Outputs//zeta_plots
         #- Case_Outputs//Goodness_of_fit
-        #- parameters_used.txt
+        - First_Episodes_Total_fits//model_fit_Adur.png
         
 
 # An optional name to describe the report in more detail than its
