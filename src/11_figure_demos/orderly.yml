@@ -125,7 +125,7 @@ packages:
   - cowplot
   - plyr
   - scales
-  - ggtext
+  #- ggtext
   - stringr
 
 # Source files, in addition to the script.  Typically these will

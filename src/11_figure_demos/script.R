@@ -624,6 +624,12 @@ betas_1_10 <- stan_plot(stanfit, pars = sprintf('betas[%s]',1:10),
   
 #IMD all set to min or max.
 #outbreak management fund all set to 0 or 1.
+  FIG4_OFF <- TRUE
+  
+  if(FIG4_OFF){
+    
+  }else{
+  
   
 #We start with IMD
 #So who has the worst IMD?  
@@ -1688,3 +1694,4 @@ for(i in 1:length(LTLA_names)){
 
 
 ################################################################
+}
