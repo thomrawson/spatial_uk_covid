@@ -152,6 +152,7 @@ dev.off()
 
 #We'll save the zeta plots, though unlikely to be that interested...
 dir.create("Case_Outputs\\zeta_plots")
+
 for(i in 1:19){
   zeta_trajectories <- rstan::traceplot(stanfit, pars =sprintf('zetas[%s]',((i-1)*16 + 1):(16*i)))
   png(file=sprintf("Case_Outputs\\zeta_plots\\zeta_trajectories_%s.png", i),
@@ -171,6 +172,7 @@ dev.off()
 load("Boundaries_Data.RData")
 load("model_data.RData")
 dir.create("Case_Outputs\\Zeta_maps")
+dir.create("Case_Outputs\\Theta_maps")
 
 #Remove to just the indices I've modelled:
 areaCodes_used <- unique(Case_Rates_Data$areaCode)
@@ -178,7 +180,7 @@ Boundaries_reduced <- filter(Boundaries, CODE %in% areaCodes_used)
 
 #CAN DO THIS BETTER:
 zetas_mean <- get_posterior_mean(stanfit, pars = 'zetas')
-zetas_mean <- as.data.frame(zetas_mean[,5])
+zetas_mean <- as.data.frame(zetas_mean[,ncol(zetas_mean)])
 
 Boundaries_reduced$zetas <- as.numeric(zetas_mean[,1]) 
 
@@ -272,8 +274,44 @@ plot(combined_plot)
 dev.off()
 
 
+######################################################
+#Remove to just the indices I've modelled:
+areaCodes_used <- unique(Case_Rates_Data$areaCode)
+Boundaries_reduced <- filter(Boundaries, CODE %in% areaCodes_used)
+
+#CAN DO THIS BETTER:
+thetas_mean <- get_posterior_mean(stanfit, pars = 'theta')
+thetas_mean <- as.data.frame(thetas_mean[,ncol(thetas_mean)])
+
+Boundaries_reduced$thetas <- as.numeric(thetas_mean[,1]) 
+
+gb_cities <- read.csv("gb_cities.csv")
+#Manually trim off the ones we don't want.
+gb_cities <- gb_cities[1:30,]
+gb_cities <- gb_cities[-c(6,7,9,16,17,18,19,21,22,24,25,27,29,30),]
+
+gb_cities %>%
+  st_as_sf(coords = c("lng", "lat"), crs = 4326) -> gb_cities
+
+#PLOT standard
+thetas_map <- ggplot(Boundaries_reduced) +
+  geom_sf(aes(fill = thetas)) +
+  scale_fill_viridis_c() +
+  ggtitle("LTLAs, nearest neighbor model")
+
+London_thetas <- ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
+  geom_sf(aes(fill = thetas)) +
+  scale_fill_viridis_c()
+
+combined_plot <- grid.arrange(thetas_map, London_thetas, nrow = 1, widths = c(2,1))
+
+png(file="Case_Outputs\\Theta_maps\\thetas.png",
+    width=1440, height=1080, res = 150)
+plot(combined_plot)
+dev.off()
 
 
+######################################################
 
 #Next we give some sense of how our thetas are.
 #Theta_means <- get_posterior_mean(stanfit, pars = 'theta')
@@ -308,8 +346,7 @@ beta_summaries <- main_summaries$summary
 betas_1_10 <- plot(stanfit, pars = 'betas')
 #ci_level: 0.8 (80% intervals)
 #outer_level: 0.95 (95% intervals)
-betas_1_10 <- betas_1_10 + scale_y_continuous(breaks = c(1:1),
-                                labels = labels_hold) +
+betas_1_10 <- betas_1_10 + xlim(c(min(-0.01, beta_summaries[3,4]), max(0.01, beta_summaries[3,8]))) +
   geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle(covariate)
 
 png(file="Case_Outputs\\betas_1_10.png",
@@ -393,10 +430,10 @@ load("model_data.RData")
   
   for(i in 1:T){
     if(scale_by_susceptible_pool){
-      model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (model_zetas *E_neighbours[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
+      model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (model_zetas *E_neighbours[,i])))) + x[i,,]*model_betas + (model_beta_random_walk[i]) + model_theta
       
     }else{
-  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
+  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours[,i])))) + x[i,,]*model_betas + (model_beta_random_walk[i]) + model_theta
     }
   }
   
