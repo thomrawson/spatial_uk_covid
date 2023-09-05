@@ -39,11 +39,11 @@ close(fileConn)
 
 #Output summaries of the mixed chains for all parameters except theta
 if(scale_by_susceptible_pool){
-  main_summaries <- summary(stanfit, pars = c('sqrtQ', 'susc_scaling', 'betas', 'beta_random_walk_steps', 'zetas', 'lp__'))
+  main_summaries <- summary(stanfit, pars = c('sqrtQ', 'susc_scaling', 'beta_random_walk_steps', 'lp__'))
   write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
   
 }else{
-main_summaries <- summary(stanfit, pars = c('sqrtQ', 'betas', 'beta_random_walk_steps', 'zetas', 'lp__'))
+main_summaries <- summary(stanfit, pars = c('sqrtQ', 'beta_random_walk_steps', 'lp__'))
 write.csv(main_summaries$summary,"Case_Outputs/main_summaries.csv", row.names = TRUE)
 }
 
@@ -54,18 +54,6 @@ theta_summaries <- summary(stanfit, pars = c( #'theta_mu', 'theta_sd',
 write.csv(theta_summaries$summary,"Case_Outputs/theta_summaries.csv", row.names = TRUE)
 
 
-#Save a plot of the beta trajectories
-beta_trajectories1 <- rstan::traceplot(stanfit, pars=c('sqrtQ', sprintf('betas[%s]',1:8)), nrow = 3)
-png(file="Case_Outputs\\beta_trajectories1.png",
-    width=1440, height=1080, res = 150)
-plot(beta_trajectories1)
-dev.off()
-
-beta_trajectories2 <- rstan::traceplot(stanfit, pars= sprintf('betas[%s]',9:16))
-png(file="Case_Outputs\\beta_trajectories2.png",
-    width=1440, height=1080, res = 150)
-plot(beta_trajectories2)
-dev.off()
 
 if(scale_by_susceptible_pool){
   susc_trajectories <- rstan::traceplot(stanfit, pars=c('susc_scaling'))
@@ -151,133 +139,6 @@ plot(theta_trajectories)
 dev.off()
 
 ######################
-
-
-#We'll save the zeta plots, though unlikely to be that interested...
-dir.create("Case_Outputs\\zeta_plots")
-for(i in 1:19){
-  zeta_trajectories <- rstan::traceplot(stanfit, pars =sprintf('zetas[%s]',((i-1)*16 + 1):(16*i)))
-  png(file=sprintf("Case_Outputs\\zeta_plots\\zeta_trajectories_%s.png", i),
-      width=1440, height=1080, res = 150)
-  plot(zeta_trajectories)
-  dev.off()
-}
-
-zeta_trajectories <- rstan::traceplot(stanfit, pars =sprintf('zetas[%s]',304:306))
-png(file=sprintf("Case_Outputs\\zeta_plots\\zeta_trajectories_%s.png", 20),
-    width=1440, height=1080, res = 150)
-plot(zeta_trajectories)
-dev.off()
-
-
-##We export a map of the UK LTLAs and shaded with the value of their zetas
-load("Boundaries_Data.RData")
-load("model_data.RData")
-dir.create("Case_Outputs\\Zeta_maps")
-
-#Remove to just the indices I've modelled:
-areaCodes_used <- unique(Case_Rates_Data$areaCode)
-Boundaries_reduced <- filter(Boundaries, CODE %in% areaCodes_used)
-
-#CAN DO THIS BETTER:
-zetas_mean <- get_posterior_mean(stanfit, pars = 'zetas')
-zetas_mean <- as.data.frame(zetas_mean[,(n_chains+1)])
-
-Boundaries_reduced$zetas <- as.numeric(zetas_mean[,1]) 
-
-gb_cities <- read.csv("gb_cities.csv")
-#Manually trim off the ones we don't want.
-gb_cities <- gb_cities[1:30,]
-gb_cities <- gb_cities[-c(6,7,9,16,17,18,19,21,22,24,25,27,29,30),]
-
-gb_cities %>%
-  st_as_sf(coords = c("lng", "lat"), crs = 4326) -> gb_cities
-
-#PLOT standard
-zetas_map <- ggplot(Boundaries_reduced) +
-  geom_sf(aes(fill = zetas)) +
-  scale_fill_viridis_c() +
-  ggtitle("LTLAs, nearest neighbor model")
-
-London_zetas <- ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
-  geom_sf(aes(fill = zetas)) +
-  scale_fill_viridis_c()
-
-combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
-
-png(file="Case_Outputs\\Zeta_maps\\zetas.png",
-    width=1440, height=1080, res = 150)
-plot(combined_plot)
-dev.off()
-
-zetas_map <- zetas_map + geom_sf_label(data = gb_cities[1:30,], aes( label = city), alpha = 0.25, size = 3) +
-  xlab("") + ylab("")
-
-combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
-
-png(file="Case_Outputs\\Zeta_maps\\zetas_w_cities.png",
-    width=1440, height=1080, res = 150)
-plot(combined_plot)
-dev.off()
-
-#PLOT standard capped
-zetas_map <- ggplot(Boundaries_reduced) +
-  geom_sf(aes(fill = zetas)) +
-  scale_fill_gradient2(limits = c(0,1), midpoint = 0.05) +
-  ggtitle("LTLAs, nearest neighbor model") 
-
-London_zetas <- ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
-  geom_sf(aes(fill = zetas)) +
-  scale_fill_gradient2(limits = c(0,1), midpoint = 0.05)
-
-combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
-
-png(file="Case_Outputs\\Zeta_maps\\zetas_capped.png",
-    width=1440, height=1080, res = 150)
-plot(combined_plot)
-dev.off()
-
-zetas_map <- zetas_map + geom_sf_label(data = gb_cities[1:30,], aes( label = city), alpha = 0.25, size = 3) +
-  xlab("") + ylab("")
-
-combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
-
-png(file="Case_Outputs\\Zeta_maps\\zetas_capped_w_cities.png",
-    width=1440, height=1080, res = 150)
-plot(combined_plot)
-dev.off()
-
-#PLOT log
-zetas_map <- ggplot(Boundaries_reduced) +
-  geom_sf(aes(fill = log(zetas))) +
-  scale_fill_gradient2() +
-  ggtitle("LTLAs, nearest neighbor model")
-
-London_zetas <- ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
-  geom_sf(aes(fill = log(zetas))) +
-  scale_fill_gradient2()
-
-combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
-
-png(file="Case_Outputs\\Zeta_maps\\zetas_log.png",
-    width=1440, height=1080, res = 150)
-plot(combined_plot)
-dev.off()
-
-zetas_map <- zetas_map + geom_sf_label(data = gb_cities[1:30,], aes( label = city), alpha = 0.25, size = 3) +
-  xlab("") + ylab("")
-
-combined_plot <- grid.arrange(zetas_map, London_zetas, nrow = 1, widths = c(2,1))
-
-png(file="Case_Outputs\\Zeta_maps\\zetas_log_w_cities.png",
-    width=1440, height=1080, res = 150)
-plot(combined_plot)
-dev.off()
-
-
-
-
-
 #Next we give some sense of how our thetas are.
 #Theta_means <- get_posterior_mean(stanfit, pars = 'theta')
 
@@ -302,67 +163,6 @@ dev.off()
 #16 - ASC_infection_control_fund
 
 #######################################
-
-  labels_hold <- c(
-    "1) prop_asian", "2) prop_black_afr",
-    "3) prop_other", "4) IMD_Average_score",
-    "5) prop_o65", "6) Pop_per_km2", "7) Median_annual_income",
-    "8) workplaces_movement",
-    "9) residential_movement", "10) transit_movement")
-
-
-beta_summaries <- main_summaries$summary
-#Next we have a look at how good our fit is
-betas_1_10 <- plot(stanfit, pars = sprintf('betas[%s]',1:10))
-#ci_level: 0.8 (80% intervals)
-#outer_level: 0.95 (95% intervals)
-betas_1_10 <- betas_1_10 + scale_y_continuous(breaks = c(10:1),
-                                labels = labels_hold) +
-  geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Covariate coefficients")
-
-png(file="Case_Outputs\\betas_1_10.png",
-    width=1440, height=1080, res = 150)
-plot(betas_1_10)
-dev.off()
-
-
-betas_11_13 <- plot(stanfit, pars = sprintf('betas[%s]',11:13))
-#ci_level: 0.8 (80% intervals)
-#outer_level: 0.95 (95% intervals)
-betas_11_13 <- betas_11_13 + scale_y_continuous(breaks = c(3:1),
-                                              labels = c("11) Alpha", "12) Delta", 
-                                                         "13) Omicron")) +
-  geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Variant proportion coefficients")
-
-png(file="Case_Outputs\\betas_11_13.png",
-    width=1440, height=1080, res = 150)
-plot(betas_11_13)
-dev.off()
-
-betas_14_16 <- plot(stanfit, pars = sprintf('betas[%s]',14:16))
-#ci_level: 0.8 (80% intervals)
-#outer_level: 0.95 (95% intervals)
-betas_14_16 <- betas_14_16 + scale_y_continuous(breaks = c(3:1),
-                                                labels = c("14) Unringfenced",
-                                                           "15) Outbreak Management", "16) ASC infection control")) +
-  geom_vline(xintercept = 0, color = "skyblue", lty = 5, size = 1) +ggtitle("Funding coefficients")
-
-png(file="Case_Outputs\\betas_14_16.png",
-    width=1440, height=1080, res = 150)
-plot(betas_14_16)
-dev.off()
-
-
-# MCMCplot(stanfit, 
-#          params = 'betas[1]',
-#          rank = TRUE,
-#          xlab = 'ESTIMATE')
-
-# log_pp <- stan_diag(stanfit)
-# png(file="Outputs\\lpp_acceptance.png",
-#     width=1440, height=1080, res = 150)
-# plot(log_pp)
-# dev.off()
 
 #Other stuff
 sampler_params <- get_sampler_params(stanfit, inc_warmup = FALSE)
@@ -408,11 +208,9 @@ load("model_data.RData")
   #y[,i] ~ poisson_log(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
   #y_hosp[,i+average_hosp_lag] ~ poisson_log(log(LTLA_to_region*y_as_matrix[,i]) + beta0_hosp + x_hosp[i]*betas_hosp + theta_hosp);
   
-  model_betas <- as.numeric(get_posterior_mean(stanfit, pars = 'betas')[,(n_chains+1)])
   #model_beta0 <- as.numeric(get_posterior_mean(stanfit, pars = 'beta0')[,5])
   model_beta_random_walk <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk')[,(n_chains+1)])
   model_beta_random_walk_steps <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk_steps')[,(n_chains+1)])
-  model_zetas <- as.numeric(get_posterior_mean(stanfit, pars = 'zetas')[,(n_chains+1)])
   
   model_theta <- as.numeric(get_posterior_mean(stanfit, pars = 'theta')[,(n_chains+1)])
   # model_theta_mu <- as.numeric(get_posterior_mean(stanfit, pars = 'theta_mu')[,5])
@@ -427,10 +225,10 @@ load("model_data.RData")
   
   for(i in 1:T){
     if(scale_by_susceptible_pool){
-      model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (model_zetas *E_neighbours[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
+      model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,]))) + (model_beta_random_walk[i]) + model_theta
       
     }else{
-  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (model_zetas *E_neighbours[,i])))) + x[i,,]%*%model_betas + (model_beta_random_walk[i]) + model_theta
+  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,]))) + (model_beta_random_walk[i]) + model_theta
     }
   }
   

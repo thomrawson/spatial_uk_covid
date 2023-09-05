@@ -153,7 +153,7 @@ Boundaries_reduced <- filter(Boundaries, CODE %in% areaCodes_used)
 
 #CAN DO THIS BETTER:
 zetas_mean <- get_posterior_mean(stanfit, pars = 'zetas')
-zetas_mean <- as.data.frame(zetas_mean[,5])
+zetas_mean <- as.data.frame(zetas_mean[,(n_chains+1)])
 
 Boundaries_reduced$zetas <- as.numeric(zetas_mean[,1]) 
 
@@ -320,12 +320,12 @@ load("model_data.RData")
   #y[,i] ~ poisson_log(log(susceptible_proxy[,i].*(E[,i] + (zetas .*E_neighbours[,i]))) + beta0 + x[i] * betas + theta);  // extra noise removed removed: + theta[,i]
   #y_hosp[,i+average_hosp_lag] ~ poisson_log(log(LTLA_to_region*y_as_matrix[,i]) + beta0_hosp + x_hosp[i]*betas_hosp + theta_hosp);
   
-  model_beta_random_walk <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk')[,5])
-  model_beta_random_walk_steps <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk_steps')[,5])
-  model_zetas <- as.numeric(get_posterior_mean(stanfit, pars = 'zetas')[,5])
+  model_beta_random_walk <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk')[,(n_chains+1)])
+  model_beta_random_walk_steps <- as.numeric(get_posterior_mean(stanfit, pars = 'beta_random_walk_steps')[,(n_chains+1)])
+  model_zetas <- as.numeric(get_posterior_mean(stanfit, pars = 'zetas')[,(n_chains+1)])
   
   if(scale_by_susceptible_pool){
-    model_susc_scale <- as.numeric(get_posterior_mean(stanfit, pars = 'susc_scaling')[,5])
+    model_susc_scale <- as.numeric(get_posterior_mean(stanfit, pars = 'susc_scaling')[,(n_chains+1)])
   }
   
   model_approx_y <- array(0, dim = c(T,306)) #
