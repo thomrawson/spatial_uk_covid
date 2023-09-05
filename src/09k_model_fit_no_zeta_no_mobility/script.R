@@ -297,7 +297,7 @@ real log_lik[N, T]; // Log-likelihood for each data point
 
   for (n in 1:N) {
     for (t in 1:T) {
-      log_lik[n, t] = poisson_log_lpmf(y[n, t] | log((susc_scaling*susceptible_proxy[n,t]) * (E[n,t]) + dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]);
+      log_lik[n, t] = poisson_log_lpmf(y[n, t] | log((susc_scaling*susceptible_proxy[n,t]) * (E[n,t])) + dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]);
     }                                               
   }
 }
@@ -364,7 +364,7 @@ real log_lik[N, T]; // Log-likelihood for each data point
 
   for (n in 1:N) {
     for (t in 1:T) {
-      log_lik[n, t] = poisson_log_lpmf(y[n, t] | log((susceptible_proxy[n,t]) * (E[n,t]) + dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]);
+      log_lik[n, t] = poisson_log_lpmf(y[n, t] | log((susceptible_proxy[n,t]) * (E[n,t])) + dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]);
     }                                               
   }
 }
