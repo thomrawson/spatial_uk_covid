@@ -43,7 +43,7 @@ close(fileConn)
 #Here's some switches to possibly save time:
 
 #If TRUE then we don't run all the long code, we just get the final data frames at the end
-Preload_data <- TRUE
+Preload_data <- FALSE
 #Do we want to then factor in the Poisson uncertainty?
 include_Poisson <- TRUE
 
@@ -54,7 +54,7 @@ if(Preload_data){
 
 
 
-list_of_draws <- extract(stanfit)
+list_of_draws <- rstan::extract(stanfit)
 print(names(list_of_draws))
 n_draws <- length(list_of_draws$sqrtQ)
 #We have 32000 draws, that's because we had 2000 iterations (after a 2000 warm-up) and 16 chains. 16*2000
