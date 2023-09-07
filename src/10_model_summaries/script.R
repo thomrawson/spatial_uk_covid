@@ -1012,4 +1012,5 @@ load("model_data.RData")
   plot(rw_plot)
   dev.off()
   
+  graphics.off()
 
