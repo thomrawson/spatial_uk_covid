@@ -50,8 +50,6 @@ artefacts:
         #- Case_Outputs/betas_16_21.png
         #- Case_Outputs/betas_1_12.png
         #- Case_Outputs/betas_13_15.png
-        - Case_Outputs/beta_trajectories1.png
-        - Case_Outputs/beta_trajectories2.png
         - Case_Outputs/main_summaries.csv
         - Case_Outputs//random_walk_differences.png
         - Case_Outputs//random_walk_values.png
