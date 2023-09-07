@@ -860,5 +860,62 @@ load("model_data.RData")
 #stan_rhat(stanfit)
 #stan_mcse(stanfit)
 
-
+  ################## Some new additions
+  
+  if(scale_by_susceptible_pool){
+    susc_scaling <- plot(stanfit, pars = 'susc_scaling')
+    #ci_level: 0.8 (80% intervals)
+    #outer_level: 0.95 (95% intervals)
+    
+    png(file="Case_Outputs\\susc_scale_posterior.png",
+        width=1440, height=1080, res = 150)
+    plot(susc_scaling)
+    dev.off() 
+    
+  }
+  if(calculate_loo){
+    #Plot LOO-CV criterions
+    loo_stanfit <- rstan::loo(stanfit)
+    
+    hold <- loo::pareto_k_table(loo_stanfit)
+    
+    tg = gridExtra::tableGrob(hold)
+    h = grid::convertHeight(sum(tg$heights), "in", TRUE)
+    w = grid::convertWidth(sum(tg$widths), "in", TRUE)
+    ggplot2::ggsave("Case_Outputs\\lareto_k_table.png", tg, width=w, height=h)
+    
+    #loo::pareto_k_values(loo_stanfit)
+    #loo::psis_n_eff_values(loo_stanfit)
+    png(file="Case_Outputs\\loo_PSIS.png",
+        width=1440, height=1080, res = 150)
+    plot(loo_stanfit)
+    dev.off()
+    
+    hold <- loo_stanfit$estimates
+    tg = gridExtra::tableGrob(hold)
+    h = grid::convertHeight(sum(tg$heights), "in", TRUE)
+    w = grid::convertWidth(sum(tg$widths), "in", TRUE)
+    ggplot2::ggsave("Case_Outputs\\loo_estimates.png", tg, width=w, height=h)
+    
+  }
+  
+  #Plot Random Walk but with CrI too
+  random_walk_summaries <- summary(stanfit, pars = c('beta_random_walk'))
+  random_walk_summaries <- random_walk_summaries$summary
+  
+  All_dates <- sort(unique(Case_Rates_Data$date_begin))
+  rw_data <- data.frame( Week = All_dates, mean = random_walk_summaries[,1],
+                         lower = random_walk_summaries[,4],
+                         upper = random_walk_summaries[,8])
+  
+  ggplot(rw_data) +
+    geom_line(aes(x = Week, y = mean)) +
+    geom_ribbon(aes(x = Week, ymin = lower, ymax = upper), alpha = 0.4) +
+    ylab("Random Walk term") + theme_classic() -> rw_plot
+  
+  png(file="Case_Outputs\\rw_CrI.png",
+      width=1440, height=1080, res = 150)
+  plot(rw_plot)
+  dev.off()
+  
 

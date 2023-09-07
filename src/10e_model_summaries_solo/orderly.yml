@@ -105,6 +105,8 @@ parameters:
     default: 0
   covariate:
     default: "IMD_Average_score"
+  calculate_loo:
+    default: TRUE
 # Similar to "data" but sets of temporary views before the data are
 # extracted.  Can be embedded SQL strings or filenames to actual
 # queries.  Use this to simplify the extraction.
