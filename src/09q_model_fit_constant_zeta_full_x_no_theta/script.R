@@ -256,7 +256,7 @@ transformed data {
 }
 parameters {
   vector[K] betas;       // covariates
-  vector<lower = 0, upper = 1> zetas;       //spatial kernel, but this can't be less than 0
+  real<lower = 0, upper = 1> zetas;       //spatial kernel, but this can't be less than 0
   
   vector[T] beta_random_walk_steps; //We add in a random walk error term
   real<lower=0> sqrtQ; //Standard deviation of random walk
@@ -319,7 +319,7 @@ transformed data {
 }
 parameters {
   vector[K] betas;       // covariates
-  vector<lower = 0, upper = 1> zetas;       //spatial kernel, but this can't be less than 0
+  real<lower = 0, upper = 1> zetas;       //spatial kernel, but this can't be less than 0
   
   vector[T] beta_random_walk_steps; //We add in a random walk error term
   real<lower=0> sqrtQ; //Standard deviation of random walk
