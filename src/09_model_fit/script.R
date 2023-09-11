@@ -504,4 +504,5 @@ dir.create("Outputs")
 save(stanfit, file = 'Outputs/stanfit.RData')
 save(N,T,y,x,K,E,E_neighbours, susceptible_proxy, 
        Case_Rates_Data, W_reduced, file = "Outputs/model_data.RData")
+save(Stan_model_string_neighbours, file = "Outputs/stan_model_code.RData")
 
