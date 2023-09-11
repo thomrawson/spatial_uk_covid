@@ -174,7 +174,7 @@ resources:
 #           other-data.csv: data.csv
 #
 depends:
-  - 10s_model_fit_no_zeta_full_x_no_theta:
+  - 09s_model_fit_no_zeta_full_x_no_theta:
       id: latest(parameter:total_iterations == total_iterations && parameter:tree_depth == tree_depth && parameter:n_chains == n_chains && parameter:scale_by_susceptible_pool == scale_by_susceptible_pool && parameter:cases_type == cases_type && parameter:use_SGTF_data == use_SGTF_data && parameter:cases_type == cases_type && parameter:final_week == final_week && parameter:random_walk_prior_scale == random_walk_prior_scale && rw_penalty == rw_penalty )
       use:
         stanfit.RData: Outputs/stanfit.RData
