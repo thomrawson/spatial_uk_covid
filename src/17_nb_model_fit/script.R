@@ -277,10 +277,10 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 }
 model {
 
-y[,1] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1])))*exp(x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
+y[,1] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))).*exp(x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
 target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
-  y[,i] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i])))*exp(x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))).*exp(x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
   target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
@@ -351,10 +351,10 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 }
 model {
 
-y[,1] ~ neg_binomial_2( ((susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1])))*exp(x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
+y[,1] ~ neg_binomial_2( ((susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))).*exp(x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
 target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
-  y[,i] ~ neg_binomial_2(((susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i])))*exp(x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ neg_binomial_2(((susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))).*exp(x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
   target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
