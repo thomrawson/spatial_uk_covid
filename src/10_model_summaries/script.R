@@ -438,6 +438,30 @@ load("model_data.RData")
   
   model_approx_y <- exp(model_approx_y)
   
+  #####RESIDUALS
+  
+  # Calculate the residuals
+  residuals <- c(y) - c(model_approx_y)
+  
+  # Standardize the residuals
+  standardized_residuals <- residuals / sqrt(c(model_approx_y))
+  
+  # Plot a histogram of the standardized residuals
+  hist(standardized_residuals, breaks = 30, main = "Histogram of Standardized Residuals")
+  
+  # Calculate summary statistics of the standardized residuals
+  summary(standardized_residuals)
+  
+  # Create a Q-Q plot
+  qqnorm(standardized_residuals)
+  qqline(standardized_residuals)
+  
+  # Calculate the proportion of standardized residuals outside [-2, 2]
+  outliers <- sum(abs(standardized_residuals) > 2) / length(standardized_residuals)
+  cat("Proportion of standardized residuals outside [-2, 2]:", outliers, "\n")
+  
+  #########################
+  
   REAL_week_difference <- abs(y - E)
   MODEL_week_difference <- abs(model_approx_y - E)
   
