@@ -956,6 +956,17 @@ load("model_data.RData")
 
   ################## Some new additions
   
+  #Add a phi plot
+  phi_plot <- plot(stanfit, pars = 'phi')
+  #ci_level: 0.8 (80% intervals)
+  #outer_level: 0.95 (95% intervals)
+  
+  png(file="Case_Outputs\\phi_posterior.png",
+      width=1440, height=1080, res = 150)
+  plot(phi_plot)
+  dev.off() 
+  
+  
   if(scale_by_susceptible_pool){
     susc_scaling <- plot(stanfit, pars = 'susc_scaling')
     #ci_level: 0.8 (80% intervals)
