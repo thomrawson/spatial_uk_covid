@@ -1,9 +1,6 @@
 #This script reads in the Case data as provided in task 00, runs a stan model,
 #and outputs the stanfit object for future use.
 
-#This is same as task 09, but I've changed from a Poisson to a Negative Binomial,
-#to assist with the overdispersion during the Omicron peak.
-
 ###########################################################################
 #Load the cleaned and prepared case/covariate data
 load('Cases_Data.RData')
@@ -264,12 +261,7 @@ parameters {
   vector[T] beta_random_walk_steps; //We add in a random walk error term
   real<lower=0> sqrtQ; //Standard deviation of random walk
 
-  vector[N] theta;       // heterogeneous effects
-  //REMOVED real theta_mu; //hierarchical hyperparameter for drawing theta
-  //REMOVED real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
-  
   real<lower = 0> phi; //Overdispersion parameter for the neg_binom_2
-  
   real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
 }
 transformed parameters {
@@ -277,28 +269,23 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 }
 model {
 
-y[,1] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))).*exp(x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
+y[,1] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))).*exp( x[1] * betas + (beta_random_walk[1])), phi);  // extra noise removed removed: + theta[,i]
 target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
-  y[,i] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))).*exp(x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))).*exp( x[i] * betas + (beta_random_walk[i])), phi);  // extra noise removed removed: + theta[,i]
   target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
   betas ~ normal(0.0, 1.0);
   zetas ~ normal(0.05, 1.0);
-  
+  phi ~ gamma(2,1);
   sqrtQ ~ gamma(1,random_walk_prior);
   susc_scaling ~ beta(1,1);
-  
-  phi ~ gamma(2,1);
 
   for(i in 1:T){
   beta_random_walk_steps[i] ~ normal(0, sqrtQ);
   }
-  
-  theta ~ normal(0.0, 1.0);
-  //REMOVED theta_mu ~ normal(0.0,1.0);
-  //REMOVED theta_sd ~ uniform(0.0,20.0);
+
 
 }
 generated quantities {
@@ -306,7 +293,7 @@ real log_lik[N, T]; // Log-likelihood for each data point
 
   for (n in 1:N) {
     for (t in 1:T) {
-      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susc_scaling*susceptible_proxy[n,t]) * (E[n,t]+ (zetas[n]*E_neighbours[n,t])))*exp(dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]), phi);
+      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susc_scaling*susceptible_proxy[n,t]) * (E[n,t]+ (zetas[n]*E_neighbours[n,t])))*exp(dot_product(x[t,n,], betas) + beta_random_walk[t]), phi);
     }                                               
   }
 }
@@ -337,13 +324,8 @@ parameters {
   
   vector[T] beta_random_walk_steps; //We add in a random walk error term
   real<lower=0> sqrtQ; //Standard deviation of random walk
-
-  vector[N] theta;       // heterogeneous effects
-  //REMOVED real theta_mu; //hierarchical hyperparameter for drawing theta
-  //REMOVED real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
-  
+ 
   real<lower = 0> phi; //Overdispersion parameter for the neg_binom_2
-  
   real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
 }
 transformed parameters {
@@ -351,27 +333,22 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 }
 model {
 
-y[,1] ~ neg_binomial_2( ((susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))).*exp(x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
+y[,1] ~ neg_binomial_2( ((susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))).*exp( x[1] * betas + (beta_random_walk[1])), phi);  // extra noise removed removed: + theta[,i]
 target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
-  y[,i] ~ neg_binomial_2(((susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))).*exp(x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ neg_binomial_2( ((susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))).*exp( x[i] * betas + (beta_random_walk[i])), phi);  // extra noise removed removed: + theta[,i]
   target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
   betas ~ normal(0.0, 1.0);
   zetas ~ normal(0.05, 1.0);
-  
   phi ~ gamma(2,1);
-  
   sqrtQ ~ gamma(1,random_walk_prior);
 
   for(i in 1:T){
   beta_random_walk_steps[i] ~ normal(0, sqrtQ);
   }
   
-  theta ~ normal(0.0, 1.0);
-  //REMOVED theta_mu ~ normal(0.0,1.0);
-  //REMOVED theta_sd ~ uniform(0.0,20.0);
 
 }
 generated quantities {
@@ -379,7 +356,7 @@ real log_lik[N, T]; // Log-likelihood for each data point
 
   for (n in 1:N) {
     for (t in 1:T) {
-      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susceptible_proxy[n,t]) * (E[n,t]+ (zetas[n]*E_neighbours[n,t])))*exp(dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]), phi);
+      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susceptible_proxy[n,t]) * (E[n,t]+ (zetas[n]*E_neighbours[n,t])))*exp( dot_product(x[t,n,], betas) + beta_random_walk[t]), phi);
     }                                               
   }
 }

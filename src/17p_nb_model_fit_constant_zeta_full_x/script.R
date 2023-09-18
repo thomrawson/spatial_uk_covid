@@ -1,9 +1,6 @@
 #This script reads in the Case data as provided in task 00, runs a stan model,
 #and outputs the stanfit object for future use.
 
-#This is same as task 09, but I've changed from a Poisson to a Negative Binomial,
-#to assist with the overdispersion during the Omicron peak.
-
 ###########################################################################
 #Load the cleaned and prepared case/covariate data
 load('Cases_Data.RData')
@@ -57,13 +54,13 @@ close(fileConn)
 ################################################################################
 
 #Prepare Data
-  
-  #Cut down to the only covariates we're interested in:
-  #test <- Case_Rates_Data[,-c(5,6,15,16,18,19,22,24,25,28,30,31,32,33,
-  #                                       43, #Cut Omicron BQ1
-  #                                       50,53,54,55,64,65,66:80)] #Added 4 to all these indices
-  
-  
+
+#Cut down to the only covariates we're interested in:
+#test <- Case_Rates_Data[,-c(5,6,15,16,18,19,22,24,25,28,30,31,32,33,
+#                                       43, #Cut Omicron BQ1
+#                                       50,53,54,55,64,65,66:80)] #Added 4 to all these indices
+
+
 Case_Rates_Data <- Case_Rates_Data[,c("areaCode", "Week", "areaName",
                                       "Population", "INDEX",
                                       "Pop_per_km2",
@@ -114,61 +111,61 @@ Case_Rates_Data <- Case_Rates_Data[,c("areaCode", "Week", "areaName",
                                       "centroid_y")] 
 
 
-  #Weeks go from 2:130
-  #Note, the government stopped providing free LFTs on April 1st 2022
-  #This will have, in turn, affected the case data, so let's chop off everything
-  #after week 104 (w/b 25/04/22)
-  #TODO: Could include still but keep this as a variable
+#Weeks go from 2:130
+#Note, the government stopped providing free LFTs on April 1st 2022
+#This will have, in turn, affected the case data, so let's chop off everything
+#after week 104 (w/b 25/04/22)
+#TODO: Could include still but keep this as a variable
 
 #This is now a orderly parameter.  
 #final_week <- 104
- 
+
 #KEY WEEKS:
 #104 - (w/b 25/04/22) the default, before testing gets weird
 #96 - (w/b 27/02/22) Neil thought this might be a smarter place to end
 #71 - (w/b 5/09/22) This is the last week with NO s_Omicron_prop
-  
- 
-  Case_Rates_Data <- filter(Case_Rates_Data, Week < final_week+1)
 
-  #Let's investigate NAs. First of all, we sadly have incomplete mobility/vaccine
-  #data in devolved nations, so we trim down to just England:
-  #sum(is.na(Case_Rates_Data$prop_white_british))/36668
-  #8% NA
-  #sum(is.na(Case_Rates_Data$IMD_Average_score))/36668
-  #14% NA
-  #sum(is.na(Case_Rates_Data$mean_age))/36668
-  #8% NA
-  #sum(is.na(Case_Rates_Data$residential_percent_change_from_baseline))/36668
-  #0.3% NA
-  #sum(is.na(Case_Rates_Data$Alpha_proportion))/36668
-  #14% NA
-  test <- Case_Rates_Data[which(is.na(Case_Rates_Data$Alpha_proportion)),]
-  unique(test$areaCode)
-  
-  #Missing Scotland and Wales in the variant proportions, so start by filtering out those:
-  Case_Rates_Data <- Case_Rates_Data[which(!is.na(Case_Rates_Data$Alpha_proportion)),]
-  
-  #After this:
-  #sum(is.na(Case_Rates_Data$prop_white_british))/36668
-  #0% NA
-  #sum(is.na(Case_Rates_Data$IMD_Average_score))/36668
-  #0% NA
-  #sum(is.na(Case_Rates_Data$mean_age))/36668
-  #0% NA
-  #sum(is.na(Case_Rates_Data$residential_percent_change_from_baseline))/36668
-  #0.06% NA
-  #sum(is.na(Case_Rates_Data$Alpha_proportion))/36668
-  #0% NA
-  
-  missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
-  unique(missing_data$areaCode)
-  
-  
+
+Case_Rates_Data <- filter(Case_Rates_Data, Week < final_week+1)
+
+#Let's investigate NAs. First of all, we sadly have incomplete mobility/vaccine
+#data in devolved nations, so we trim down to just England:
+#sum(is.na(Case_Rates_Data$prop_white_british))/36668
+#8% NA
+#sum(is.na(Case_Rates_Data$IMD_Average_score))/36668
+#14% NA
+#sum(is.na(Case_Rates_Data$mean_age))/36668
+#8% NA
+#sum(is.na(Case_Rates_Data$residential_percent_change_from_baseline))/36668
+#0.3% NA
+#sum(is.na(Case_Rates_Data$Alpha_proportion))/36668
+#14% NA
+test <- Case_Rates_Data[which(is.na(Case_Rates_Data$Alpha_proportion)),]
+unique(test$areaCode)
+
+#Missing Scotland and Wales in the variant proportions, so start by filtering out those:
+Case_Rates_Data <- Case_Rates_Data[which(!is.na(Case_Rates_Data$Alpha_proportion)),]
+
+#After this:
+#sum(is.na(Case_Rates_Data$prop_white_british))/36668
+#0% NA
+#sum(is.na(Case_Rates_Data$IMD_Average_score))/36668
+#0% NA
+#sum(is.na(Case_Rates_Data$mean_age))/36668
+#0% NA
+#sum(is.na(Case_Rates_Data$residential_percent_change_from_baseline))/36668
+#0.06% NA
+#sum(is.na(Case_Rates_Data$Alpha_proportion))/36668
+#0% NA
+
+missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
+unique(missing_data$areaCode)
+
+
 #We need to quickly clean up an issue with the Residential & transit mobility
 #TODO: Move this to the 00 task.
-  #There are 24 occasions where the residential mobility is NA,
-  #19 of these are Rutland
+#There are 24 occasions where the residential mobility is NA,
+#19 of these are Rutland
 
 #For Rutland, we're going to take the average of it's neighbors mobility score for these days:
 #Rutland is index 97
@@ -259,16 +256,15 @@ transformed data {
 }
 parameters {
   vector[K] betas;       // covariates
-  vector<lower = 0, upper = 1>[N] zetas;       //spatial kernel, but this can't be less than 0
+  real<lower = 0, upper = 1> zetas;       //spatial kernel, but this can't be less than 0
   
+  real<lower = 0> phi; //Overdispersion parameter for the neg_binom_2
   vector[T] beta_random_walk_steps; //We add in a random walk error term
   real<lower=0> sqrtQ; //Standard deviation of random walk
 
   vector[N] theta;       // heterogeneous effects
   //REMOVED real theta_mu; //hierarchical hyperparameter for drawing theta
   //REMOVED real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
-  
-  real<lower = 0> phi; //Overdispersion parameter for the neg_binom_2
   
   real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
 }
@@ -277,20 +273,18 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 }
 model {
 
-y[,1] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))).*exp(x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
+y[,1] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,1]).*(E[,1] + (zetas*E_neighbours[,1]))).*exp( x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
 target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
-  y[,i] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))).*exp(x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ neg_binomial_2( ((susc_scaling*susceptible_proxy[,i]).*(E[,i] + (zetas*E_neighbours[,i]))).*exp( x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
   target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
   betas ~ normal(0.0, 1.0);
   zetas ~ normal(0.05, 1.0);
-  
+  phi ~ gamma(2,1);
   sqrtQ ~ gamma(1,random_walk_prior);
   susc_scaling ~ beta(1,1);
-  
-  phi ~ gamma(2,1);
 
   for(i in 1:T){
   beta_random_walk_steps[i] ~ normal(0, sqrtQ);
@@ -306,7 +300,7 @@ real log_lik[N, T]; // Log-likelihood for each data point
 
   for (n in 1:N) {
     for (t in 1:T) {
-      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susc_scaling*susceptible_proxy[n,t]) * (E[n,t]+ (zetas[n]*E_neighbours[n,t])))*exp(dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]), phi);
+      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susc_scaling*susceptible_proxy[n,t]) * (E[n,t]+ (zetas*E_neighbours[n,t])))*exp( dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]), phi);
     }                                               
   }
 }
@@ -333,16 +327,15 @@ transformed data {
 }
 parameters {
   vector[K] betas;       // covariates
-  vector<lower = 0, upper = 1>[N] zetas;       //spatial kernel, but this can't be less than 0
+  real<lower = 0, upper = 1> zetas;       //spatial kernel, but this can't be less than 0
   
   vector[T] beta_random_walk_steps; //We add in a random walk error term
   real<lower=0> sqrtQ; //Standard deviation of random walk
 
+  real<lower = 0> phi; //Overdispersion parameter for the neg_binom_2
   vector[N] theta;       // heterogeneous effects
   //REMOVED real theta_mu; //hierarchical hyperparameter for drawing theta
   //REMOVED real<lower=0, upper = 20> theta_sd; //hierarchical hyperparameter for drawing theta
-  
-  real<lower = 0> phi; //Overdispersion parameter for the neg_binom_2
   
   real<lower  = 0, upper = 1> susc_scaling; //parameter for scaling the number of first episodes so far for aqcquired immunity
 }
@@ -351,18 +344,16 @@ vector[T] beta_random_walk  = cumulative_sum(beta_random_walk_steps);
 }
 model {
 
-y[,1] ~ neg_binomial_2( ((susceptible_proxy[,1]).*(E[,1] + (zetas .*E_neighbours[,1]))).*exp(x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
+y[,1] ~ neg_binomial_2( ((susceptible_proxy[,1]).*(E[,1] + (zetas*E_neighbours[,1]))).*exp( x[1] * betas + (beta_random_walk[1]) + theta), phi);  // extra noise removed removed: + theta[,i]
 target += -penalty_term*fabs(beta_random_walk[1]);
 for(i in 2:T){
-  y[,i] ~ neg_binomial_2(((susceptible_proxy[,i]).*(E[,i] + (zetas .*E_neighbours[,i]))).*exp(x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
+  y[,i] ~ neg_binomial_2( ((susceptible_proxy[,i]).*(E[,i] + (zetas*E_neighbours[,i]))).*exp( x[i] * betas + (beta_random_walk[i]) + theta), phi);  // extra noise removed removed: + theta[,i]
   target += -penalty_term*fabs(beta_random_walk[i]);
 }
 
   betas ~ normal(0.0, 1.0);
   zetas ~ normal(0.05, 1.0);
-  
   phi ~ gamma(2,1);
-  
   sqrtQ ~ gamma(1,random_walk_prior);
 
   for(i in 1:T){
@@ -379,7 +370,7 @@ real log_lik[N, T]; // Log-likelihood for each data point
 
   for (n in 1:N) {
     for (t in 1:T) {
-      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susceptible_proxy[n,t]) * (E[n,t]+ (zetas[n]*E_neighbours[n,t])))*exp(dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]), phi);
+      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susceptible_proxy[n,t]) * (E[n,t]+ (zetas*E_neighbours[n,t])))*exp( dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]), phi);
     }                                               
   }
 }
@@ -432,7 +423,7 @@ for(i in 2:final_week){
   # I've been scaling each week separately. Meaning a score of "0" one week, won't be the same as "0" the next weel
   # I need to be scaling over the whole data set.
   # i.e. subtract the mean of the entire dataset, and divide by the sd of the whole dataset.
-
+  
   # x[j,,1] <- scale(Reduced_Data$prop_asian)
   # x[j,,2] <- scale(Reduced_Data$prop_black_afr_car)
   # x[j,,3] <- scale(Reduced_Data$prop_mixed_multiple + Reduced_Data$prop_other)
@@ -457,10 +448,10 @@ for(i in 2:final_week){
   
   
   if(use_SGTF_data){
-  x[j,,11] <- Reduced_Data$s_Alpha_prop
-  x[j,,12] <- Reduced_Data$s_Delta_prop
-  x[j,,13] <- Reduced_Data$s_Omicron_prop
-
+    x[j,,11] <- Reduced_Data$s_Alpha_prop
+    x[j,,12] <- Reduced_Data$s_Delta_prop
+    x[j,,13] <- Reduced_Data$s_Omicron_prop
+    
   } else{
     x[j,,11] <- Reduced_Data$Alpha_proportion/100
     x[j,,12] <- (Reduced_Data$Delta_proportion + Reduced_Data$Delta_AY_4_2_proportion)/100
@@ -514,7 +505,7 @@ dir.create("Outputs")
 
 save(stanfit, file = 'Outputs/stanfit.RData')
 save(N,T,y,x,K,E,E_neighbours, susceptible_proxy, 
-       Case_Rates_Data, W_reduced, file = "Outputs/model_data.RData")
+     Case_Rates_Data, W_reduced, file = "Outputs/model_data.RData")
 save(Stan_model_string_neighbours, file = "Outputs/stan_model_code.RData")
 
 
