@@ -517,3 +517,27 @@ save(N,T,y,x,K,E,E_neighbours, susceptible_proxy,
        Case_Rates_Data, W_reduced, file = "Outputs/model_data.RData")
 save(Stan_model_string_neighbours, file = "Outputs/stan_model_code.RData")
 
+
+#Plot LOO-CV criterions
+loo_stanfit <- rstan::loo(stanfit, moment_match = TRUE, cores = 1)
+
+hold <- loo::pareto_k_table(loo_stanfit)
+
+tg = gridExtra::tableGrob(hold)
+h = grid::convertHeight(sum(tg$heights), "in", TRUE)
+w = grid::convertWidth(sum(tg$widths), "in", TRUE)
+ggplot2::ggsave("lareto_k_table_mm.png", tg, width=w, height=h)
+
+#loo::pareto_k_values(loo_stanfit)
+#loo::psis_n_eff_values(loo_stanfit)
+png(file="loo_mm_PSIS.png",
+    width=1440, height=1080, res = 150)
+plot(loo_stanfit)
+dev.off()
+
+hold <- loo_stanfit$estimates
+tg = gridExtra::tableGrob(hold)
+h = grid::convertHeight(sum(tg$heights), "in", TRUE)
+w = grid::convertWidth(sum(tg$widths), "in", TRUE)
+ggplot2::ggsave("loo_mm_estimates.png", tg, width=w, height=h)
+
