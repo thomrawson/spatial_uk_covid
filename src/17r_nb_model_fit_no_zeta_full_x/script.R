@@ -299,7 +299,7 @@ real log_lik[N, T]; // Log-likelihood for each data point
 
   for (n in 1:N) {
     for (t in 1:T) {
-      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susc_scaling*susceptible_proxy[n,t]) * (E[n,t]))*exp( dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]), phi;
+      log_lik[n, t] = neg_binomial_2_lpmf(y[n, t] | ((susc_scaling*susceptible_proxy[n,t]) * (E[n,t]))*exp( dot_product(x[t,n,], betas) + beta_random_walk[t] + theta[n]), phi);
     }                                               
   }
 }
