@@ -1,0 +1,185 @@
+# This is an example orderly configuration file - edit it to suit your
+# needs.  The fields "script" and "artefacts" are the only
+# ones required (plus whatever your project lists in the root
+# configuration) so they are listed first here.  After that optional
+# fields are listed.  The order does not matter so reorder to suit
+# yourself.
+#
+# The "data" section will typically contain one or more fields with
+# the name corresponding to an R object you want and the value
+# corresponding to the SQL query to pull that data from the database.
+# You can use a filename instead of an inline query.  Run queries to
+# multiple lines using the `>-` yaml syntax.
+#
+#     data:
+#       dat: SELECT field1, field2 FROM table
+#       more: >-
+#         SELECT field1, field2
+#           FROM table1 JOIN table2
+#             ON table1.id = table2.fk
+#       another: from_file.sql
+#
+# If you are writing a report that uses only artefacts from other
+# reports, you can omit this field.
+
+# You must have a script that does something with the data.  This
+# will be a single string and the filename must exist when orderly is
+# run
+script: script.R
+
+# You must list at least one artefact that your report will generate.
+# Each artefact consists of one or more files.  The format is to list
+# the "type" of an artefact (staticgraph, interactivegraph, data,
+# report), then below that a description (free text) and then a
+# filename as either a single file or an array of files
+#
+#     artefacts:
+#       - staticgraph:
+#           description: A graph of things
+#           filenames: mygraph.png
+#       - report:
+#           description: A complex report
+#           filenames:
+#             - report.html
+#             - figures/fig1.png
+#             - figures/fig2.png
+artefacts:
+  - data:
+      description: Model traceplot figures
+      filenames:
+        #- Case_Outputs/betas_16_21.png
+        #- Case_Outputs/betas_1_12.png
+        #- Case_Outputs/betas_13_15.png
+        - Case_Outputs/beta_trajectories1.png
+        - Case_Outputs/beta_trajectories2.png
+        - Case_Outputs/main_summaries.csv
+        - Case_Outputs//random_walk_differences.png
+        - Case_Outputs//random_walk_values.png
+        #- Case_Outputs//zeta_plots
+        #- Case_Outputs//Goodness_of_fit
+        - parameters_used.txt
+        
+
+# An optional name to describe the report in more detail than its
+# directory name (which must be short) but less detail than
+# "description" (which can be as long as you want).  Must be a string.
+#
+# displayname:
+
+# An optional free-text description to decsribe the report in as much
+# detail as you want.  Must be a string.  The yaml `>-` or `|` syntax
+# might be useful for long descriptions.
+#
+# description:
+
+# Optional parameters to the report.  These will be substituted into
+# the SQL queries.  For example:
+#
+# parameters:
+#   a:
+#     default: 1
+#   b: ~
+#
+# would declare a parameter called 'a' with a default value of 1, and
+# a parameter of b with no default.
+#
+# parameters:
+parameters:
+  tree_depth:
+    default: 10
+  total_iterations:
+    default: 2000
+  n_chains:
+    default: 4
+  scale_by_susceptible_pool:
+    default: TRUE
+  cases_type:
+    default: "Linelist"
+  use_SGTF_data:
+    default: TRUE
+  final_week:
+    default: 96 #(104, 96, 71 are the main ones to use)
+  random_walk_prior_scale:
+    default: 1
+  print_extra_gof:
+    default: FALSE
+  rw_penalty:
+    default: 0
+  calculate_loo:
+    default: TRUE
+# Similar to "data" but sets of temporary views before the data are
+# extracted.  Can be embedded SQL strings or filenames to actual
+# queries.  Use this to simplify the extraction.
+#
+# views:
+
+# Packages that should be loaded before the script is run.  Use this
+# in preference to explicit library() calls in your script because it
+# will make it easier to provision containers to run the orderly
+# reports.
+#
+packages:
+  - tidyverse
+  - rstan
+  - sf
+  - spdep
+  - gridExtra
+  - cowplot
+  - plyr
+
+# Source files, in addition to the script.  Typically these will
+# contain function definitions.  These will be sourced after loading
+# any packages, and before running your script.  Use this in
+# preference to explicit source() calls in your script because
+# otherwise you will have to add them to "resources" (see below)
+#
+# sources:
+
+# Resources that the script needs to run; this is an array of strings
+# representing filenames *relative to, and below, this directory*.
+# These will be copied into place when the script is run, and again
+# when commiting the report.  If you require a file and do not list it
+# here, your script will fail!  (That's a good thing because we find
+# out what your script actually needed immediately).  You do not need
+# to list files already listed in "sources" here, or any .sql files
+# referenced in "views" or "data"
+#
+resources:
+  - gb_cities.csv
+
+# Optional name of a variable to make the SQL connection available to
+# the script.  Use this with care and avoid using any queries that
+# modify the database (i.e., use DBI::dbGetQuery with "SELECT" queries
+# *only*.  Must be a string.
+#
+# connection:
+
+# Indicate which reports your report depends on.  You can use this to
+# pull in artefacts from previous reports.  You can depend in multiple
+# reports.  The format looks like this:
+#
+#     depends:
+#       other_report_name:
+#         id: (identifier, possibly "latest")
+#         use: (mapping of filenames in the format dest: from)
+
+# For example, to depend on the latest version of report
+# 'other-report', pulling in 'data.csv' as 'other-data.csv' you might
+# use:
+#
+#     depends:
+#       other-report:
+#         id: latest
+#         use:
+#           other-data.csv: data.csv
+#
+depends:
+  - 17r_nb_model_fit_no_zeta_full_x:
+      id: latest(parameter:total_iterations == total_iterations && parameter:tree_depth == tree_depth && parameter:n_chains == n_chains && parameter:scale_by_susceptible_pool == scale_by_susceptible_pool && parameter:cases_type == cases_type && parameter:use_SGTF_data == use_SGTF_data && parameter:cases_type == cases_type && parameter:final_week == final_week && parameter:random_walk_prior_scale == random_walk_prior_scale && rw_penalty == rw_penalty )
+      use:
+        stanfit.RData: Outputs/stanfit.RData
+        model_data.RData: Outputs/model_data.RData
+  - 05_case_data_updated:
+      id: latest
+      use:
+        Boundaries_Data.RData: Outputs/Boundaries_Data.RData
