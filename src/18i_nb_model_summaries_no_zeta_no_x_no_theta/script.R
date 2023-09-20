@@ -225,16 +225,14 @@ load("model_data.RData")
   
   for(i in 1:T){
     if(scale_by_susceptible_pool){
-      model_approx_y[i,] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,]))) + (model_beta_random_walk[i])
+      model_approx_y[i,] <- as.numeric(((model_susc_scale*susceptible_proxy[,i])*(E[i,])))*exp( (model_beta_random_walk[i]))
       
     }else{
-  model_approx_y[i,] <- as.numeric(log(susceptible_proxy[,i]*(E[i,]))) + (model_beta_random_walk[i])
+  model_approx_y[i,] <- as.numeric((susceptible_proxy[,i]*(E[i,])))*exp( (model_beta_random_walk[i]))
     }
   }
   
   
-  
-  model_approx_y <- exp(model_approx_y)
   
   REAL_week_difference <- abs(y - E)
   MODEL_week_difference <- abs(model_approx_y - E)
