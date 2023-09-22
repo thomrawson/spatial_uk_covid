@@ -980,7 +980,7 @@ load("model_data.RData")
   }
   if(calculate_loo){
     #Plot LOO-CV criterions
-    loo_stanfit <- rstan::loo(stanfit)
+    loo_stanfit <- rstan::loo(stanfit, save_psis = TRUE)
     
     hold <- loo::pareto_k_table(loo_stanfit)
     
@@ -1022,6 +1022,37 @@ load("model_data.RData")
       width=1440, height=1080, res = 150)
   plot(rw_plot)
   dev.off()
+  
+  #############
+  #Let's output the y_rep, and the loo object.
+  save(loo_stanfit, file = 'loo_stanfit_savedPSIS.RData')
+  
+  list_of_draws <- rstan::extract(stanfit)
+  print(names(list_of_draws))
+  n_draws <- length(list_of_draws$sqrtQ)
+  #We have 32000 draws, that's because we had 2000 iterations (after a 2000 warm-up) and 16 chains. 16*2000
+  
+  #We now want to have our 32,000 associated draws for y_approx
+  y_approx <- array(data = NA, dim = c((final_week-1),306,n_draws))
+  
+  for(j in 1:n_draws){
+    
+    if(scale_by_susceptible_pool){
+      model_susc_scale <- list_of_draws$susc_scaling[j]
+    }
+    
+    for(i in 1:T){
+      if(scale_by_susceptible_pool){
+        y_approx[i,,j] <- as.numeric(((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i]))))*exp( x[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
+        
+      }else{
+        y_approx[i,,j] <- as.numeric((susceptible_proxy[,i]*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i]))))*exp( x[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
+      }
+    }
+    
+  }
+  
+  save(y_approx, file = 'y_approx_posterior_samples.RData')
   
   graphics.off()
 
