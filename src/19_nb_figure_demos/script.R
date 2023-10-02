@@ -43,7 +43,7 @@ close(fileConn)
 #Here's some switches to possibly save time:
 
 #If TRUE then we don't run all the long code, we just get the final data frames at the end
-Preload_data <- FALSE
+Preload_data <- TRUE
 #Do we want to then factor in the Poisson uncertainty?
 include_NegBin <- TRUE
 
@@ -214,7 +214,8 @@ ggplot() +
   scale_x_date(date_breaks = "2 month", date_labels = "%b %y") +
   coord_cartesian(xlim = c(as.Date('2020-05-01'), as.Date('2022-04-01'))) +
   geom_rect(data = lockdown_shades, aes(xmin = as.Date(date_start), xmax = as.Date(date_end),
-                                        ymin = 775, ymax = 800),
+                                        ymin = max(england_daily_total$Model_upper/1000)-30,
+                                        ymax = max(england_daily_total$Model_upper/1000)),
             fill = c('#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", "#C8E7C1"),
             show.legend = FALSE) +
   
@@ -300,7 +301,9 @@ for(i in 1:length(LTLA_names)){
           axis.title=element_text(size=rel(1.3)),
           legend.text = element_text(size=rel(1.2)),
           legend.title = element_text(size=rel(1.3))) +
-    ggtitle(sprintf("Weekly case rates reported in %s", areaName_hold)) -> plot_hold
+    ggtitle(sprintf("Weekly case rates reported in %s", areaName_hold)) +
+    geom_point(data = filter(Model_fit_data, areaName == areaName_hold), aes(x = date, y = Real_Cases/Population), alpha = 0.7, shape = 18,
+               color = 'black') -> plot_hold
   
   png(file=sprintf("Case_Outputs\\LTLA_infection_rates\\case_rate_fit_%s_%s.png", i, areaName_hold),
       width=1440, height=1080, res = 150)
@@ -320,7 +323,7 @@ LTLA_B_data <- filter(Model_fit_data, areaName == LTLA_B_name)
 
 ggplot() +
   geom_rect(data = lockdown_shades, aes(xmin = as.Date(date_start), xmax = as.Date(date_end),
-                                        ymin = 0.019, ymax = 0.02),
+                                        ymin = 0.029, ymax = 0.03),
             fill = c('#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", "#C8E7C1"),
             show.legend = FALSE) +
   geom_line(data = LTLA_A_data, aes(x = date, y = Model_mean / Population,
@@ -332,7 +335,7 @@ ggplot() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_x_date(date_breaks = "3 month", date_labels = "%b %y") +
   coord_cartesian(xlim = c(as.Date('2020-05-01'), as.Date('2022-04-01'))) +
-  ylim(c(0,0.02)) +
+  ylim(c(0,0.03)) +
   #geom_vline(xintercept = as.Date(variant_dates), alpha = 0.9, color = 'black') +
   geom_vline(xintercept = as.Date(grey_lines), alpha = 0.7, color = 'gray23', lty = 'dashed') +
   xlab("Date") +
@@ -358,7 +361,7 @@ ggplot() +
 
 ggplot() +
   geom_rect(data = lockdown_shades, aes(xmin = as.Date(date_start), xmax = as.Date(date_end),
-                                        ymin = 0.019, ymax = 0.02),
+                                        ymin = 0.029, ymax = 0.03),
             fill = c('#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", '#FFB6B6', "#FFD6A5", "#C8E7C1"),
             show.legend = FALSE) +
   geom_line(data = LTLA_B_data, aes(x = date, y = Model_mean / Population,
@@ -370,7 +373,7 @@ ggplot() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_x_date(date_breaks = "3 month", date_labels = "%b %y") +
   coord_cartesian(xlim = c(as.Date('2020-05-01'), as.Date('2022-04-01'))) +
-  ylim(c(0,0.02)) +
+  ylim(c(0,0.03)) +
   #geom_vline(xintercept = as.Date(variant_dates), alpha = 0.9, color = 'black') +
   geom_vline(xintercept = as.Date(grey_lines), alpha = 0.7, color = 'gray23', lty = 'dashed') +
   xlab("Date") +
@@ -520,7 +523,7 @@ ggsave(filename = "f2_covariates.pdf",
 
 #########################################
 #FIGURE 3
-
+#TODO: ADD THE UNIVARIATE PLACEMENT FOR EACH COVARIATE OPTIONALLY
 #This figure will be my covariate CrI. I want them all on one plot, 
 #but we can have them separated by sections
 
@@ -544,7 +547,7 @@ betas_1_10 <- stan_plot(stanfit, pars = sprintf('betas[%s]',1:10),
                                               labels =labels_hold) +
   geom_vline(xintercept = 0, color = "#9BC362", lty = 5, size = 1) +
     ggtitle("Covariate Coefficients") +
-    xlim(c(-0.4, 0.45)) +
+    xlim(c(-0.4, 0.7)) +
   #theme(axis.text.y = element_text(angle = 35, hjust = 1, vjust = 0)) +
     theme( # remove the vertical grid lines
       panel.grid.major.x = element_blank() ,
@@ -567,7 +570,7 @@ betas_1_10 <- stan_plot(stanfit, pars = sprintf('betas[%s]',1:10),
                                   labels = c("11) Alpha Proportion", "12) Delta Proportion", "13) Omicron Proportion")) +
     geom_vline(xintercept = 0, color = "#9BC362", lty = 5, size = 1) +
     ggtitle("SARS-CoV-2 Variant Coefficients") +
-    xlim(c(-0.4, 0.45)) +
+    xlim(c(-0.4, 0.7)) +
     #theme(axis.text.y = element_text(angle = 35, hjust = 1, vjust = 0)) +
     theme( # remove the vertical grid lines
       panel.grid.major.x = element_blank() ,
@@ -588,7 +591,7 @@ betas_1_10 <- stan_plot(stanfit, pars = sprintf('betas[%s]',1:10),
                                               "15) Outbreak Management", "16) ASC infection control")) +
     geom_vline(xintercept = 0, color = "#9BC362", lty = 5, size = 1) +
     ggtitle("Funding Coefficients") +
-    xlim(c(-0.4, 0.45)) +
+    xlim(c(-0.4, 0.7)) +
     #theme(axis.text.y = element_text(angle = 35, hjust = 1, vjust = 0)) +
     theme( # remove the vertical grid lines
       panel.grid.major.x = element_blank() ,
@@ -716,8 +719,8 @@ if(Preload_data){
       counterfactual_E_neighbours_worst <- W_reduced%*%t(counterfactual_E_worst)
       counterfactual_E_neighbours_best <- W_reduced%*%t(counterfactual_E_best)
       
-      y_approx_IMD_worst[1,,j] <- as.numeric(log((model_susc_scale*counterfactual_susceptible_proxy_worst[,1])*(counterfactual_E_worst[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,1])))) + x_IMD_worst_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,]
-      y_approx_IMD_best[1,,j] <- as.numeric(log((model_susc_scale*counterfactual_susceptible_proxy_best[,1])*(counterfactual_E_best[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,1])))) + x_IMD_best_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,]
+      y_approx_IMD_worst[1,,j] <- as.numeric(((model_susc_scale*counterfactual_susceptible_proxy_worst[,1])*(counterfactual_E_worst[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,1]))))*exp( x_IMD_worst_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,])
+      y_approx_IMD_best[1,,j] <- as.numeric(((model_susc_scale*counterfactual_susceptible_proxy_best[,1])*(counterfactual_E_best[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,1]))))*exp(x_IMD_best_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,])
       
       
     }else{
@@ -735,8 +738,8 @@ if(Preload_data){
       counterfactual_E_neighbours_best <- W_reduced%*%t(counterfactual_E_best)
       
       
-      y_approx_IMD_worst[1,,j] <- as.numeric(log(counterfactual_susceptible_proxy_worst[,1]*(counterfactual_E_worst[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,1])))) + x_IMD_worst_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,]
-      y_approx_IMD_best[1,,j] <- as.numeric(log(counterfactual_susceptible_proxy_best[,1]*(counterfactual_E_best[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,1])))) + x_IMD_best_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,]
+      y_approx_IMD_worst[1,,j] <- as.numeric((counterfactual_susceptible_proxy_worst[,1]*(counterfactual_E_worst[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,1]))))*exp(x_IMD_worst_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,])
+      y_approx_IMD_best[1,,j] <- as.numeric((counterfactual_susceptible_proxy_best[,1]*(counterfactual_E_best[1,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,1]))))*exp(x_IMD_best_counterfactual[1,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,1]) + list_of_draws$theta[j,])
       
     }
     
@@ -746,19 +749,19 @@ if(Preload_data){
       
       if(scale_by_susceptible_pool){
         #Susceptible proxy is a 306x95
-        counterfactual_E_worst[i,] <- exp(y_approx_IMD_worst[(i-1),,j])
+        counterfactual_E_worst[i,] <- (y_approx_IMD_worst[(i-1),,j])
         counterfactual_first_episodes_total_worst[,i] <- counterfactual_first_episodes_total_worst[,(i-1)] +  counterfactual_E_worst[i,]*min(1,(Best_Factor*(1-(counterfactual_first_episodes_total_worst[,(i-1)]/Population_Data$Population))))
         counterfactual_susceptible_proxy_worst[,i] <- 1-(counterfactual_first_episodes_total_worst[,i]/Population_Data$Population)
         
-        counterfactual_E_best[i,] <- exp(y_approx_IMD_best[(i-1),,j])
+        counterfactual_E_best[i,] <- (y_approx_IMD_best[(i-1),,j])
         counterfactual_first_episodes_total_best[,i] <- counterfactual_first_episodes_total_best[,(i-1)] +  counterfactual_E_best[i,]*min(1,(Best_Factor*(1-(counterfactual_first_episodes_total_best[,(i-1)]/Population_Data$Population))))
         counterfactual_susceptible_proxy_best[,i] <- 1-(counterfactual_first_episodes_total_best[,i]/Population_Data$Population)
         
         counterfactual_E_neighbours_worst <- W_reduced%*%t(counterfactual_E_worst)
         counterfactual_E_neighbours_best <- W_reduced%*%t(counterfactual_E_best)
         
-        y_approx_IMD_worst[i,,j] <- as.numeric(log((model_susc_scale*counterfactual_susceptible_proxy_worst[,i])*(counterfactual_E_worst[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,i])))) + x_IMD_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
-        y_approx_IMD_best[i,,j] <- as.numeric(log((model_susc_scale*counterfactual_susceptible_proxy_best[,i])*(counterfactual_E_best[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,i])))) + x_IMD_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_IMD_worst[i,,j] <- as.numeric(((model_susc_scale*counterfactual_susceptible_proxy_worst[,i])*(counterfactual_E_worst[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,i]))))*exp( x_IMD_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
+        y_approx_IMD_best[i,,j] <- as.numeric(((model_susc_scale*counterfactual_susceptible_proxy_best[,i])*(counterfactual_E_best[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,i]))))*exp(x_IMD_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
         
       
         }else{
@@ -771,8 +774,8 @@ if(Preload_data){
           counterfactual_E_neighbours_best <- W_reduced%*%t(counterfactual_E_best)
           
           
-        y_approx_IMD_worst[i,,j] <- as.numeric(log(counterfactual_susceptible_proxy_worst[,i]*(counterfactual_E_worst[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,i])))) + x_IMD_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
-        y_approx_IMD_best[i,,j] <- as.numeric(log(counterfactual_susceptible_proxy_best[,i]*(counterfactual_E_best[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,i])))) + x_IMD_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_IMD_worst[i,,j] <- as.numeric((counterfactual_susceptible_proxy_worst[,i]*(counterfactual_E_worst[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_worst[,i]))))*exp(x_IMD_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
+        y_approx_IMD_best[i,,j] <- as.numeric((counterfactual_susceptible_proxy_best[,i]*(counterfactual_E_best[i,] + (list_of_draws$zetas[j,] *counterfactual_E_neighbours_best[,i]))))*exp(x_IMD_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
         
       }
       
@@ -797,7 +800,7 @@ if(Preload_data){
         hold_values <- rep(NA, n_draws*1000)
         for(k in 1:n_draws){
           #first worst
-          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, exp(y_approx_IMD_worst[i,j,k]))
+          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, (y_approx_IMD_worst[i,j,k]))
         }
         mean_y_IMD_worst[i,j] <- mean(hold_values)
         median_y_IMD_worst[i,j] <- median(hold_values)
@@ -805,7 +808,7 @@ if(Preload_data){
         #################now best
         hold_values <- rep(NA, n_draws*1000)
         for(k in 1:n_draws){
-          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, exp(y_approx_IMD_best[i,j,k]))
+          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, (y_approx_IMD_best[i,j,k]))
         }
         mean_y_IMD_best[i,j] <- mean(hold_values)
         median_y_IMD_best[i,j] <- median(hold_values)
@@ -825,10 +828,7 @@ if(Preload_data){
     # Calculate 95% credible interval
     CI_y_IMD_worst <- apply(y_approx_IMD_worst, c(1, 2), function(x) quantile(x, c(0.025, 0.975)))
     
-    #I may as well take the exponential here
-    mean_y_IMD_worst <- exp(mean_y_IMD_worst)
-    median_y_IMD_worst <- exp(median_y_IMD_worst)
-    CI_y_IMD_worst <- exp(CI_y_IMD_worst)
+
     
     
     #AND BEST
@@ -839,10 +839,6 @@ if(Preload_data){
     # Calculate 95% credible interval
     CI_y_IMD_best <- apply(y_approx_IMD_best, c(1, 2), function(x) quantile(x, c(0.025, 0.975)))
     
-    #I may as well take the exponential here
-    mean_y_IMD_best <- exp(mean_y_IMD_best)
-    median_y_IMD_best <- exp(median_y_IMD_best)
-    CI_y_IMD_best <- exp(CI_y_IMD_best)
     
     #We can remove the y_approx arrays now to save memory
     rm(y_approx_IMD_best, y_approx_IMD_worst)
@@ -1172,10 +1168,10 @@ if(Preload_data){
     
     for(i in 1:T){
       if(scale_by_susceptible_pool){
-        y_approx_fund_worst[i,,j] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_fund_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_fund_worst[i,,j] <- as.numeric(((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i]))))*exp(x_fund_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
        
       }else{
-        y_approx_fund_worst[i,,j] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_fund_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_fund_worst[i,,j] <- as.numeric((susceptible_proxy[,i]*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i]))))*exp(x_fund_worst_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
         
       }
     }
@@ -1194,7 +1190,7 @@ if(Preload_data){
         hold_values <- rep(NA, n_draws*1000)
         for(k in 1:n_draws){
           #first worst
-          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, exp(y_approx_fund_worst[i,j,k]))
+          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, (y_approx_fund_worst[i,j,k]))
         }
         mean_y_fund_worst[i,j] <- mean(hold_values)
         median_y_fund_worst[i,j] <- median(hold_values)
@@ -1213,10 +1209,6 @@ if(Preload_data){
     # Calculate 95% credible interval
     CI_y_fund_worst <- apply(y_approx_fund_worst, c(1, 2), function(x) quantile(x, c(0.025, 0.975)))
     
-    #I may as well take the exponential here
-    mean_y_fund_worst <- exp(mean_y_fund_worst)
-    median_y_fund_worst <- exp(median_y_fund_worst)
-    CI_y_fund_worst <- exp(CI_y_fund_worst)
     
     #We can remove the y_approx arrays now to save memory
     rm(y_approx_fund_worst)
@@ -1297,10 +1289,10 @@ if(Preload_data){
     
     for(i in 1:T){
       if(scale_by_susceptible_pool){
-        y_approx_fund_best[i,,j] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_fund_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_fund_best[i,,j] <- as.numeric(((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i]))))*exp(x_fund_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
         
       }else{
-        y_approx_fund_best[i,,j] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_fund_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_fund_best[i,,j] <- as.numeric((susceptible_proxy[,i]*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i]))))*exp(x_fund_best_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
         
       }
     }
@@ -1319,7 +1311,7 @@ if(Preload_data){
         print(i)
         hold_values <- rep(NA, n_draws*1000)
         for(k in 1:n_draws){
-          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, exp(y_approx_fund_best[i,j,k]))
+          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, (y_approx_fund_best[i,j,k]))
         }
         mean_y_fund_best[i,j] <- mean(hold_values)
         median_y_fund_best[i,j] <- median(hold_values)
@@ -1338,10 +1330,6 @@ if(Preload_data){
     # Calculate 95% credible interval
     CI_y_fund_best <- apply(y_approx_fund_best, c(1, 2), function(x) quantile(x, c(0.025, 0.975)))
     
-    #I may as well take the exponential here
-    mean_y_fund_best <- exp(mean_y_fund_best)
-    median_y_fund_best <- exp(median_y_fund_best)
-    CI_y_fund_best <- exp(CI_y_fund_best)
     
     #We can remove the y_approx arrays now to save memory
     rm(y_approx_fund_best)
@@ -1425,10 +1413,10 @@ if(Preload_data){
     
     for(i in 1:T){
       if(scale_by_susceptible_pool){
-        y_approx_fund_none[i,,j] <- as.numeric(log((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_fund_none_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_fund_none[i,,j] <- as.numeric(((model_susc_scale*susceptible_proxy[,i])*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i]))))*exp(x_fund_none_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
         
       }else{
-        y_approx_fund_none[i,,j] <- as.numeric(log(susceptible_proxy[,i]*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i])))) + x_fund_none_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,]
+        y_approx_fund_none[i,,j] <- as.numeric((susceptible_proxy[,i]*(E[i,] + (list_of_draws$zetas[j,] *E_neighbours[,i]))))*exp(x_fund_none_counterfactual[i,,]%*%list_of_draws$betas[j,] + (list_of_draws$beta_random_walk[j,i]) + list_of_draws$theta[j,])
         
       }
     }
@@ -1447,7 +1435,7 @@ if(Preload_data){
         print(i)
         hold_values <- rep(NA, n_draws*1000)
         for(k in 1:n_draws){
-          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, exp(y_approx_fund_none[i,j,k]))
+          hold_values[(((k-1)*1000)+1):(((k-1)*1000)+1000)] <- rpois(1000, (y_approx_fund_none[i,j,k]))
         }
         mean_y_fund_none[i,j] <- mean(hold_values)
         median_y_fund_none[i,j] <- median(hold_values)
@@ -1465,11 +1453,6 @@ if(Preload_data){
     
     # Calculate 95% credible interval
     CI_y_fund_none<- apply(y_approx_fund_none, c(1, 2), function(x) quantile(x, c(0.025, 0.975)))
-    
-    #I may as well take the exponential here
-    mean_y_fund_none <- exp(mean_y_fund_none)
-    median_y_fund_none <- exp(median_y_fund_none)
-    CI_y_fund_none <- exp(CI_y_fund_none)
     
     #We can remove the y_approx arrays now to save memory
     rm(y_approx_fund_none)
