@@ -729,6 +729,8 @@ Case_Rates_Data <- Case_Rates_Data[order(Case_Rates_Data$INDEX),]
 ###################################################
 # Affix more covariates
 ###################################################
+#prop_eth is taken from 2011 census data , 2019 ONS reports
+
 
 Covar_Data <- read.csv('Data/combined_covariates.csv')
 
