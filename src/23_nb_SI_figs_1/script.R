@@ -109,7 +109,7 @@ variable_vector <- Boundaries_reduced$prop_asian
 
 
   combined_plot <- plot_grid(england_asian, london_asian, nrow = 1, rel_widths = c(2.5,1)) +
-    theme(plot.background = element_rect(fill = "white"))
+    theme(plot.background = element_rect(fill = "white", colour = "white"))
   
 
 ggsave(filename = "prop_asian.png",
@@ -196,7 +196,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_black, london_black, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "prop_black_afr_car.png",
@@ -283,7 +283,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_other, london_other, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "prop_other.png",
@@ -370,7 +370,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_white, london_white, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "prop_white.png",
@@ -451,7 +451,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_IMD, london_IMD, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "IMD_Average_score.png",
@@ -531,7 +531,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_o65, london_o65, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "prop_o65.png",
@@ -612,7 +612,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_popden, london_popden, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "Pop_per_km2.png",
@@ -665,9 +665,10 @@ ggplot(Boundaries_reduced) +
     colours =  colours_list,  # Blue, white, and red colors
     values = scales::rescale(c(min(variable_vector), median(variable_vector), max(variable_vector)))
   ) +
-  ggtitle("Median annual income (£ thousand) by LTLA for 2020/21 financial year") +
+  ggtitle("Median annual income (\u00a3 thousand) by LTLA for 2020/21 financial year") +
   labs(fill = "Over 65s \nProportion") +
   theme_void() +
+  
   theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) -> england_income
 # Highlight the two specific regions
 #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
@@ -692,7 +693,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_income, london_income, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "Median_annual_income_2020_21.png",
@@ -745,9 +746,10 @@ ggplot(Boundaries_reduced) +
     colours =  colours_list,  # Blue, white, and red colors
     values = scales::rescale(c(min(variable_vector), median(variable_vector), max(variable_vector)))
   ) +
-  ggtitle("Median annual income (£ thousand) by LTLA for 2021/22 financial year") +
+  ggtitle("Median annual income (\u00a3 thousand) by LTLA for 2021/22 financial year") +
   labs(fill = "Over 65s \nProportion") +
   theme_void() +
+  
   theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) -> england_income
 # Highlight the two specific regions
 #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
@@ -772,7 +774,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_income, london_income, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "Median_annual_income_2021_22.png",
@@ -825,9 +827,10 @@ ggplot(Boundaries_reduced) +
     colours =  colours_list,  # Blue, white, and red colors
     values = scales::rescale(c(min(variable_vector), median(variable_vector), max(variable_vector)))
   ) +
-  ggtitle("Unringfenced COVID-19 funding (£ thousand) per thousand people by LTLA for 2020/21 financial year") +
+  ggtitle("Unringfenced COVID-19 funding (\u00a3 thousand) per thousand people by LTLA for 2020/21 financial year") +
   labs(fill = "Over 65s \nProportion") +
   theme_void() +
+  
   theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) -> england_unringfenced
 # Highlight the two specific regions
 #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
@@ -852,7 +855,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_unringfenced, london_unringfenced, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "unringfenced_2020_21.png",
@@ -905,9 +908,10 @@ ggplot(Boundaries_reduced) +
     colours =  colours_list,  # Blue, white, and red colors
     values = scales::rescale(c(min(variable_vector), median(variable_vector), max(variable_vector)))
   ) +
-  ggtitle("Unringfenced COVID-19 funding (£ thousand) per thousand people by LTLA for 2021/22 financial year") +
+  ggtitle("Unringfenced COVID-19 funding (\u00a3 thousand) per thousand people by LTLA for 2021/22 financial year") +
   labs(fill = "Over 65s \nProportion") +
   theme_void() +
+  
   theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) -> england_unringfenced
 # Highlight the two specific regions
 #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
@@ -932,7 +936,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_unringfenced, london_unringfenced, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "unringfenced_2021_22.png",
@@ -985,9 +989,10 @@ ggplot(Boundaries_reduced) +
     colours =  colours_list,  # Blue, white, and red colors
     values = scales::rescale(c(min(variable_vector), median(variable_vector), max(variable_vector)))
   ) +
-  ggtitle("Contain Outbreak Management Fund (COMF) funding (£ thousand) per thousand people by LTLA for 2020/21 financial year") +
+  ggtitle("Contain Outbreak Management Fund (COMF) funding (\u00a3 thousand) per thousand people by LTLA for 2020/21 financial year") +
   labs(fill = "Over 65s \nProportion") +
   theme_void() +
+  
   theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) -> england_comf
 # Highlight the two specific regions
 #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
@@ -1012,7 +1017,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_comf, london_comf, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "contain_outbreak_management_2020_21.png",
@@ -1065,9 +1070,10 @@ ggplot(Boundaries_reduced) +
     colours =  colours_list,  # Blue, white, and red colors
     values = scales::rescale(c(min(variable_vector), median(variable_vector), max(variable_vector)))
   ) +
-  ggtitle("Contain Outbreak Management Fund (COMF) funding (£ thousand) per thousand people by LTLA for 2021/22 financial year") +
+  ggtitle("Contain Outbreak Management Fund (COMF) funding (\u00a3 thousand) per thousand people by LTLA for 2021/22 financial year") +
   labs(fill = "Over 65s \nProportion") +
   theme_void() +
+  
   theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) -> england_comf
 # Highlight the two specific regions
 #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
@@ -1092,7 +1098,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_comf, london_comf, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "contain_outbreak_management_2021_22.png",
@@ -1145,9 +1151,10 @@ ggplot(Boundaries_reduced) +
     colours =  colours_list,  # Blue, white, and red colors
     values = scales::rescale(c(min(variable_vector), median(variable_vector), max(variable_vector)))
   ) +
-  ggtitle("Adult Social Care (ASC) infection control funding (£ thousand) per thousand people by LTLA for 2020/21 financial year") +
+  ggtitle("Adult Social Care (ASC) infection control funding (\u00a3 thousand) per thousand people by LTLA for 2020/21 financial year") +
   labs(fill = "Over 65s \nProportion") +
   theme_void() +
+  
   theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) -> england_asc
 # Highlight the two specific regions
 #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
@@ -1172,7 +1179,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_asc, london_asc, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "ASC_infection_control_fund_2020_21.png",
@@ -1225,9 +1232,10 @@ ggplot(Boundaries_reduced) +
     colours =  colours_list,  # Blue, white, and red colors
     values = scales::rescale(c(min(variable_vector), median(variable_vector), max(variable_vector)))
   ) +
-  ggtitle("Adult Social Care (ASC) infection control funding (£ thousand) per thousand people by LTLA for 2021/22 financial year") +
+  ggtitle("Adult Social Care (ASC) infection control funding (\u00a3 thousand) per thousand people by LTLA for 2021/22 financial year") +
   labs(fill = "Over 65s \nProportion") +
   theme_void() +
+  
   theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) -> england_asc
 # Highlight the two specific regions
 #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
@@ -1252,7 +1260,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_asc, london_asc, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "ASC_infection_control_fund_2021_22.png",
@@ -1384,7 +1392,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_workplaces, london_workplaces, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "workplaces.png",
@@ -1497,7 +1505,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_transit, london_transit, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "transit.png",
@@ -1609,7 +1617,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_residential, london_residential, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "residential.png",
@@ -1651,7 +1659,7 @@ ggplot(Plot_data, aes(x=Time, y=time_spent, group = Time)) +
   #ylim(c(0,plyr::round_any(max(Plot_data$time_spent), 0.02, f=ceiling))) + 
   geom_hline(yintercept = 0, color = "red") +
   scale_x_date(date_breaks = "2 month", date_labels = "%b %y") + 
-  ggtitle("Proportion of cases that are wildtype variant over all LTLAs") + 
+  ggtitle("Proportion of cases that are wild-type variant over all LTLAs") + 
   #geom_vline(xintercept = as.Date(grey_lines), alpha = 1, color = 'darkred', lty = 'dashed') +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> time_box
@@ -1697,7 +1705,7 @@ ggplot(Boundaries_reduced) +
     colours =  colours_list,  # Blue, white, and red colors
     values = scales::rescale(c(min(variable_vector), median(variable_vector), max(variable_vector)))
   ) +
-  ggtitle("Mean proportion of cases that were wildtype variant (averaged over all weeks)") +
+  ggtitle("Mean proportion of cases that were wild-type variant (averaged over all weeks)") +
   labs(fill = "Over 65s \nProportion") +
   theme_void() +
   theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) -> england_s_Wild_prop
@@ -1714,7 +1722,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
     limits = c(min(variable_vector),max(variable_vector))
   ) +
   #ggtitle("Average Index of Multiple Deprivation (IMD) by LTLA") +
-  labs(fill = "Mean \nWildtype \nProportion") +
+  labs(fill = "Mean \nWild-type \nProportion") +
   theme_void() +
   theme(plot.margin = unit(c(0, 1, 0, 0), "cm")) -> london_s_Wild_prop
 # Highlight the two specific regions
@@ -1724,7 +1732,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_s_Wild_prop, london_s_Wild_prop, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "s_Wild_prop.png",
@@ -1836,7 +1844,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_s_Alpha_prop, london_s_Alpha_prop, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "s_Alpha_prop.png",
@@ -1948,7 +1956,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_s_Delta_prop, london_s_Delta_prop, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "s_Delta_prop.png",
@@ -2060,7 +2068,7 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
 
 
 combined_plot <- plot_grid(england_s_Omicron_prop, london_s_Omicron_prop, nrow = 1, rel_widths = c(2.5,1)) +
-  theme(plot.background = element_rect(fill = "white"))
+  theme(plot.background = element_rect(fill = "white", colour = "white"))
 
 
 ggsave(filename = "s_Omicron_prop.png",
