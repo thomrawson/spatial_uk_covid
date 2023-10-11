@@ -7,7 +7,7 @@ record_previous_day_cases <- FALSE
 
 #Start by loading information on UK LTLA region boundaries from shape file
 Boundaries <- st_read("Data/district_borough_unitary_region.shp")
-
+#SOURCE: https://geoportal.statistics.gov.uk/datasets/ons::local-authority-districts-december-2021-boundaries-gb-bfc/explore?location=52.029728%2C-2.585724%2C7.03
 
 
 #Now load daily new COVID cases data at LTLA level
