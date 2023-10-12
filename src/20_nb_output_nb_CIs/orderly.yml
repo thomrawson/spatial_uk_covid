@@ -58,6 +58,7 @@ artefacts:
         #- Case_Outputs//zeta_plots
         #- Case_Outputs//Goodness_of_fit
         - parameters_used.txt
+        - CI_data_outputs.RData
         
 
 # An optional name to describe the report in more detail than its
