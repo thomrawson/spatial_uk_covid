@@ -36,7 +36,7 @@ GGally::ggpairs(Case_Rates_Data,
                        "unringfenced", "contain_outbreak_management",
                        "ASC_infection_control_fund"),
                 title = "Correlation between the 16 model covariates analysed by financial year",
-                upper = list(continuous = wrap("cor", size = 8)),
+                upper = list(continuous = wrap("cor", size = 6)),
                 aes(color = financial_year,  # Color by group (cat. variable)
                     alpha = 0.5),
                 columnLabels = c(#"Asian prop.", "Black/Afr./Car. prop.",
