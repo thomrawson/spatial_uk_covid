@@ -20,6 +20,11 @@ GGally::ggpairs(Case_Rates_Data,
 #In general, as IMD increases, residential mobility decreases (corr: -0.2) 
 #i.e. more deprived areas didn't actually stay at home as much
 Case_Rates_Data$prop_white <- Case_Rates_Data$prop_white_british + Case_Rates_Data$prop_all_other_white
+Case_Rates_Data$prop_other_combined <- Case_Rates_Data$prop_other + Case_Rates_Data$prop_mixed_multiple
+
+Case_Rates_Data$unringfenced_scaled <- Case_Rates_Data$unringfenced / Case_Rates_Data$Population
+Case_Rates_Data$contain_outbreak_management_scaled <- Case_Rates_Data$contain_outbreak_management / Case_Rates_Data$Population
+Case_Rates_Data$ASC_infection_control_fund_scaled <- Case_Rates_Data$ASC_infection_control_fund / Case_Rates_Data$Population
 
 GGally::ggpairs(Case_Rates_Data, 
                        columns = c(#"prop_asian", "prop_black_afr_car",
@@ -33,10 +38,10 @@ GGally::ggpairs(Case_Rates_Data,
                        #"s_Alpha_prop",
                        #"s_Delta_prop",
                        #"s_Omicron_prop",
-                       "unringfenced", "contain_outbreak_management",
-                       "ASC_infection_control_fund"),
+                       "unringfenced_scaled", "contain_outbreak_management_scaled",
+                       "ASC_infection_control_fund_scaled"),
                 title = "Correlation between the 16 model covariates analysed by financial year",
-                upper = list(continuous = wrap("cor", size = 6)),
+                upper = list(continuous = wrap("cor", size = 4)),
                 aes(color = financial_year,  # Color by group (cat. variable)
                     alpha = 0.5),
                 columnLabels = c(#"Asian prop.", "Black/Afr./Car. prop.",
@@ -44,14 +49,14 @@ GGally::ggpairs(Case_Rates_Data,
                                   "White prop.",
                                  "IMD score", "Prop. over 65", "Pop. density",
                                  "Median income",
-                                 "workplaces visits", 
-                                 "transit station visits",
-                                 "residential duration",
+                                 "workplaces \nvisits", 
+                                 "transit \nstation visits",
+                                 "residential \nduration",
                                  #"Prop. Alpha",
                                  #"Prop. Delta",
                                  #"Prop. Omicron",
-                                 "Unringfenced funding", "COMF funding",
-                                 "ASC funding")
+                                 "Unringfenced \nfunding per head", "COMF funding \nper head",
+                                 "ASC funding \nper head")
                 ) + theme_bw() + theme(panel.grid.major = element_blank(),
                                        panel.grid.minor = element_blank()) -> ggmatrix
 
@@ -59,8 +64,32 @@ ggsave(filename = "Case_rates_ggmatrix.png",
        path = 'Outputs', plot = ggmatrix,
        dpi=300, height=12, width=16, units="in")
 
-#NOW DO FOR JUST THE FOUR ETHNICITIES SEPARATELY
+#"***"
+#if the p-value is < 0.001
+#"**"
+#if the p-value is < 0.01
+#"*"
+#if the p-value is < 0.05
+#"."
+#if the p-value is < 0.10
 
+#NOW DO FOR JUST THE FOUR ETHNICITIES SEPARATELY
+GGally::ggpairs(Case_Rates_Data, 
+                columns = c("prop_asian", "prop_black_afr_car",
+                  "prop_other_combined",
+                  "prop_white"
+                  ),
+                title = "Correlation between the ethnicity variables",
+                upper = list(continuous = wrap("cor", size = 4)),
+                columnLabels = c("Asian prop.", "Black/Afr./Car. prop.",
+                  "Other eth. prop.",
+                  "White prop.")
+) + theme_bw() + theme(panel.grid.major = element_blank(),
+                       panel.grid.minor = element_blank()) -> ggmatrix
+
+ggsave(filename = "Case_rates_ggmatrix_eth.png",
+       path = 'Outputs', plot = ggmatrix,
+       dpi=300, height=12, width=16, units="in")
 
 #Let's do some other style of plots
 
@@ -75,7 +104,7 @@ ggsave(filename = "Case_rates_ggmatrix.png",
 
 corr <- select(Case_Rates_Data, 
                Population,
-               prop_asian, prop_black_afr_car, prop_other,
+               prop_asian, prop_black_afr_car, prop_other_combined,
                IMD_Average_score, prop_o65, Pop_per_km2,
                Median_annual_income,
                workplaces_percent_change_from_baseline, residential_percent_change_from_baseline,
