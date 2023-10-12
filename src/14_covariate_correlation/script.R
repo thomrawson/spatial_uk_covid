@@ -4,23 +4,62 @@
 # The end goal is to know which covariates to include an interaction effect term for.
 load("model_data.RData")
 dir.create("Outputs")
-GGally::ggpairs(select(Case_Rates_Data, IMD_Average_score, residential_percent_change_from_baseline, unringfenced))
+
+Case_Rates_Data$financial_year <- if_else(Case_Rates_Data$date_begin < as.Date("2021-04-06"), "2020/21", "2021/22")
+
+GGally::ggpairs(Case_Rates_Data,
+                columns = c("IMD_Average_score", "residential_percent_change_from_baseline", "unringfenced"),
+                title = "Correlation between the 16 model covariates analysed by financial year",
+                upper = list(continuous = wrap("cor", size = 8)),
+                aes(color = financial_year,  # Color by group (cat. variable)
+                    alpha = 0.5),
+                columnLabels = c("IMD", "Residential Movement", "Unringfenced funding")
+                ) + theme_bw() + theme(panel.grid.major = element_blank(),
+                                       panel.grid.minor = element_blank())
 
 #In general, as IMD increases, residential mobility decreases (corr: -0.2) 
 #i.e. more deprived areas didn't actually stay at home as much
+Case_Rates_Data$prop_white <- Case_Rates_Data$prop_white_british + Case_Rates_Data$prop_all_other_white
 
-
-GGally::ggpairs(select(Case_Rates_Data, 
-                       prop_asian, prop_black_afr_car,
-                       IMD_Average_score, prop_o65, Pop_per_km2,
-                       Median_annual_income,
-                       workplaces_percent_change_from_baseline, residential_percent_change_from_baseline,
-                       s_Delta_prop,
-                       unringfenced, contain_outbreak_management)) -> ggmatrix
+GGally::ggpairs(Case_Rates_Data, 
+                       columns = c(#"prop_asian", "prop_black_afr_car",
+                                   #"prop_other",
+                         "prop_white",
+                       "IMD_Average_score", "prop_o65", "Pop_per_km2",
+                       "Median_annual_income",
+                       "workplaces_percent_change_from_baseline", 
+                       "transit_stations_percent_change_from_baseline",
+                       "residential_percent_change_from_baseline",
+                       #"s_Alpha_prop",
+                       #"s_Delta_prop",
+                       #"s_Omicron_prop",
+                       "unringfenced", "contain_outbreak_management",
+                       "ASC_infection_control_fund"),
+                title = "Correlation between the 16 model covariates analysed by financial year",
+                upper = list(continuous = wrap("cor", size = 8)),
+                aes(color = financial_year,  # Color by group (cat. variable)
+                    alpha = 0.5),
+                columnLabels = c(#"Asian prop.", "Black/Afr./Car. prop.",
+                                 #"Other eth. prop.",
+                                  "White prop.",
+                                 "IMD score", "Prop. over 65", "Pop. density",
+                                 "Median income",
+                                 "workplaces visits", 
+                                 "transit station visits",
+                                 "residential duration",
+                                 #"Prop. Alpha",
+                                 #"Prop. Delta",
+                                 #"Prop. Omicron",
+                                 "Unringfenced funding", "COMF funding",
+                                 "ASC funding")
+                ) + theme_bw() + theme(panel.grid.major = element_blank(),
+                                       panel.grid.minor = element_blank()) -> ggmatrix
 
 ggsave(filename = "Case_rates_ggmatrix.png",
        path = 'Outputs', plot = ggmatrix,
        dpi=300, height=12, width=16, units="in")
+
+#NOW DO FOR JUST THE FOUR ETHNICITIES SEPARATELY
 
 
 #Let's do some other style of plots
