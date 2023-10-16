@@ -117,6 +117,7 @@ ggplot(Eng_totals_long) +
 
 #Also a reduced version with only these types:
 data_filter <- c("Total_Cases", "Total_Pillar2", "Linelist_P2_PCR")
+data_filter2 <- c("Total_Cases", "Linelist_P2_PCR")
 
 ggplot(filter(UK_totals_long, Data_Source %in% data_filter)) +
   geom_line(aes(x = week_begin, y = Cases, color = Data_Source, lty = linetype), size = 1, alpha = 0.5) +
@@ -124,7 +125,22 @@ ggplot(filter(UK_totals_long, Data_Source %in% data_filter)) +
 
 ggplot(filter(Eng_totals_long, Data_Source %in% data_filter)) +
   geom_line(aes(x = week_begin, y = Cases, color = Data_Source, lty = linetype), size = 1, alpha = 0.5) +
-  theme_minimal() + ggtitle("England COVID-19 Cases by data source") + guides(lty = "none") -> Eng_totals_plot_2
+  theme_minimal() + ggtitle("England COVID-19 cases by data source") + guides(lty = "none") -> Eng_totals_plot_2
+
+ggplot(filter(Eng_totals_long, Data_Source %in% data_filter2)) +
+  geom_line(aes(x = week_begin, y = Cases/1000, color = Data_Source), size = 1.2, alpha = 0.8) +
+  theme_bw() + ggtitle("England COVID-19 Cases by data source") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_x_date(date_breaks = "3 month", date_labels = "%b %y") +
+  xlab("Date") + ylab("Cases (thousands)") +
+  theme(axis.text.y = element_text(size = rel(1.2)),
+        axis.title.y = element_text(size = rel(1.3)),
+        legend.text = element_text(size = rel(1.2)),
+        legend.title = element_text(size = rel(1.3))) +
+  scale_color_manual(labels = c("Dashboard Cases",
+                                "Line List Cases"), 
+                     values=c( "#17bebb", "#e4572e")) +
+  labs(color = "Data Source") -> Eng_totals_plot_3
 
 
 dir.create("Outputs")
@@ -132,6 +148,7 @@ ggsave("Outputs/UK_cases.png", UK_totals_plot, bg = "white", width = 10, height 
 ggsave("Outputs/Eng_cases.png", Eng_totals_plot, bg = "white", width = 10, height = 6)
 ggsave("Outputs/UK_cases_reduced.png", UK_totals_plot_2, bg = "white", width = 10, height = 6)
 ggsave("Outputs/Eng_cases_reduced.png", Eng_totals_plot_2, bg = "white", width = 10, height = 6)
+ggsave("Outputs/Eng_cases_reduced2.png", Eng_totals_plot_3, bg = "white", width = 10, height = 6)
 
 #Now, we repeat, but for every LTLA
 dir.create("Outputs/LTLA_plots")
