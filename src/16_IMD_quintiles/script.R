@@ -171,7 +171,8 @@ ggplot(Boundaries_reduced) +
   geom_sf(aes(fill = IMD_Average_score)) +
   #scale_fill_viridis_c() +
   scale_fill_gradientn(
-    colours =  c("#9BC362", "white", "#e54339"),  # Blue, white, and red colors
+    #colours =  c("#9BC362", "white", "#e54339"),  # Blue, white, and red colors
+    colours = c("#17bebb", "#ffc914", "#e4572e"),
     values = scales::rescale(c(min(Boundaries_reduced$IMD_Average_score), median(Boundaries_reduced$IMD_Average_score), max(Boundaries_reduced$IMD_Average_score)))
   ) +
   ggtitle("Average Index of Multiple Deprivation (IMD) by LTLA") +
@@ -186,7 +187,8 @@ ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed 
   geom_sf(aes(fill = IMD_Average_score), show.legend = FALSE) +
   #scale_fill_viridis_c() +
   scale_fill_gradientn(
-    colours =  c("#9BC362", "white", "#e54339"),  # Blue, white, and red colors
+    #colours =  c("#9BC362", "white", "#e54339"),  # Blue, white, and red colors
+    colours = c("#17bebb", "#ffc914", "#e4572e"),
     values = scales::rescale(c(min(Boundaries_reduced$IMD_Average_score), median(Boundaries_reduced$IMD_Average_score), max(Boundaries_reduced$IMD_Average_score)))
   ) +
   #ggtitle("Average Index of Multiple Deprivation (IMD) by LTLA") +
@@ -203,7 +205,8 @@ ggplot(Boundaries_reduced) +
   geom_sf(aes(fill = prop_white_british)) +
   #scale_fill_viridis_c() +
   scale_fill_gradientn(
-    colours =  c("#9BC362", "white", "#e54339"),  # Blue, white, and red colors
+    #colours =  c("#9BC362", "white", "#e54339"),  # Blue, white, and red colors
+    colours = c("#17bebb", "#ffc914", "#e4572e"),
     values = scales::rescale(c(min(Boundaries_reduced$prop_white_british), median(Boundaries_reduced$prop_white_british), max(Boundaries_reduced$prop_white_british)))
   ) +
   ggtitle("White British Proportion of LTLA Population") +
@@ -262,22 +265,47 @@ ggsave(filename = "Final_fig1.pdf",
 
 #Try another way around
 Fig2_plot <- plot_grid(england_IMD, england_prop_white, 
-                       ncol = 1, labels = c("C", "D"), align = "v", axis = "bt") +
-theme(plot.background = element_rect(fill = "white", color = "white"))
+                       ncol = 1, labels = c("A", "C"), align = "v", axis = "bt") 
 
-Total_Fig_plot <- plot_grid(combined_quintile, Fig2_plot,
+combined_quintile <- plot_grid(quintile_plot+xlab(""), prop_white_quintile_plot,
+                               ncol = 1, labels = c("B","D"),
+                               align = "v", axis = "tb")
+
+Total_Fig_plot <- plot_grid(Fig2_plot, combined_quintile,
                             nrow = 1,
                             #labels = c("A","B",""),
-                            rel_widths = c(0.8,1))
+                            rel_widths = c(1,0.8))
+
+# now add the title
+title <- ggdraw() + 
+  draw_label(
+    "Variation in socio-demographic factors by LTLA and COVID-19 rates",
+    fontface = 'bold',
+    x = 0,
+    hjust = 0,
+    size = 20
+  ) +
+  theme(
+    # add margin on the left of the drawing canvas,
+    # so title is aligned with left edge of first plot
+    plot.margin = margin(0, 0, 0, 7)
+  )
+plot_grid(
+  title, Total_Fig_plot,
+  ncol = 1,
+  # rel_heights values control vertical title margins
+  rel_heights = c(0.06, 1)
+) +
+  theme(plot.background = element_rect(fill = "white", color = "white")) -> Total_Fig_plot_title
 
 ggsave(filename = "Final_fig2.png",
-       path = 'Case_Outputs', plot = Total_Fig_plot,
-       dpi=300, height=14, width=14, units="in")
+       path = 'Case_Outputs', plot = Total_Fig_plot_title,
+       dpi=300, height=15, width=14, units="in")
 
 ggsave(filename = "Final_fig2.tiff",
-       path = 'Case_Outputs', plot = Total_Fig_plot,
-       dpi=300, height=14, width=14, units="in")
+       path = 'Case_Outputs', plot = Total_Fig_plot_title,
+       dpi=300, height=15, width=14, units="in")
 
 ggsave(filename = "Final_fig2.pdf",
-       path = 'Case_Outputs', plot = Total_Fig_plot,
-       dpi=300, height=14, width=14, units="in")
+       path = 'Case_Outputs', plot = Total_Fig_plot_title,
+       dpi=300, height=15, width=14, units="in")
