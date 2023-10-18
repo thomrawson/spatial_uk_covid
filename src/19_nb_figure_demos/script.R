@@ -208,7 +208,7 @@ ggplot() +
                                             color = "Model Fit"), size = 1) +
   geom_ribbon(data = england_daily_total,
               aes(x = date, ymin = Model_lower / 1000, ymax = Model_upper / 1000,
-                  fill = "Model Fit"), alpha = 0.3, show.legend = FALSE) +
+                  fill = "Model Fit"), alpha = 0.3, show.legend = TRUE) +
   theme_classic() + ylab('Weekly New Cases (thousands)') +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_x_date(date_breaks = "2 month", date_labels = "%b %y") +
@@ -234,12 +234,17 @@ ggplot() +
   geom_point(data = england_daily_total, aes(x = date, y = Real_Cases / 1000,
                                              color = "Data"),
              alpha = 0.7, shape = 18) +
-  scale_color_manual(values = c("Data" = "black", "Model Fit" = "#9BC362")) +
-  scale_fill_manual(values = c("Model Fit" = "#9BC362")) +  # Adjust fill for the ribbon legend
-  
-  # Modify legend labels
-  guides(color = guide_legend(override.aes = list(shape = c(18, NA), linetype = c(NA, 1)))) +
-  labs(color = "")  -> england_plot
+  scale_color_manual(name = "", values = c("Data" = "black", "Model Fit" = "#17bebb")) +
+  scale_fill_manual(name = "", values = c("Data" = "white", "Model Fit" = "#17bebb")) +   # Adjust fill for the ribbon legend
+  #scale_linetype_manual(name = "", values = c("Data" = 0, "Model Fit" = 1)) +
+  guides(
+    color = guide_legend(
+      override.aes = list(
+        shape = c(18, NA),  # Remove point from Model Fit
+        linetype = c(0, 1)  # Remove line from Data
+      )
+    )
+  ) -> england_plot
 
 ######################################
 
@@ -257,8 +262,8 @@ for(i in 1:length(LTLA_names)){
   
   #Let's just do a one off, for example, of Bolton
   ggplot(data = filter(Model_fit_data, areaName == areaName_hold), aes(x= date, y = Model_mean )) +
-    geom_line(size = 1, color = "#9BC362") + 
-    geom_ribbon(aes(ymin = Model_lower, ymax = Model_upper), alpha = 0.3, fill = "#9BC362", show.legend = FALSE) + 
+    geom_line(size = 1, color = "#17bebb") + 
+    geom_ribbon(aes(ymin = Model_lower, ymax = Model_upper), alpha = 0.3, fill = "#17bebb", show.legend = FALSE) + 
     theme_classic() + ylab('Weekly Cases') +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b %y") +
@@ -289,8 +294,8 @@ for(i in 1:length(LTLA_names)){
   
   #Let's just do a one off, for example, of Bolton
   ggplot(data = filter(Model_fit_data, areaName == areaName_hold), aes(x= date, y = Model_mean/Population )) +
-    geom_line(size = 1, color = "#9BC362") + 
-    geom_ribbon(aes(ymin = Model_lower/Population, ymax = Model_upper/Population), alpha = 0.3, fill = "#9BC362", show.legend = FALSE) + 
+    geom_line(size = 1, color = "#17bebb") + 
+    geom_ribbon(aes(ymin = Model_lower/Population, ymax = Model_upper/Population), alpha = 0.3, fill = "#17bebb", show.legend = FALSE) + 
     theme_classic() + ylab('Weekly Case rates') +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b %y") +
@@ -347,14 +352,14 @@ ggplot() +
         axis.title.y = element_text(size = rel(1.3)),
         legend.text = element_text(size = rel(1.2)),
         legend.title = element_text(size = rel(1.3)),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank()) +
+        axis.text.x = element_text(size = rel(1.2)),
+        axis.title.x = element_text(size = rel(1.3))) +
   ggtitle(sprintf("%s ", LTLA_A_name)) +
   geom_point(data = LTLA_A_data, aes(x = date, y = Real_Cases / Population,
                                              color = "Real Data"),
              alpha = 0.7, shape = 18, show.legend = FALSE) +
-  scale_color_manual(values = c("Real Data" = "black", "Model Fit" = "#9BC362")) +
-  scale_fill_manual(values = c("Model Fit" = "#9BC362")) +  # Adjust fill for the ribbon legend
+  scale_color_manual(values = c("Real Data" = "black", "Model Fit" = "#17bebb")) +
+  scale_fill_manual(values = c("Model Fit" = "#17bebb")) +  # Adjust fill for the ribbon legend
   # Modify legend labels
   guides(color = guide_legend(override.aes = list(shape = c(18, NA), linetype = c(NA, 1)))) +
   labs(color = "Legend")  -> LTLA_A_plot
@@ -385,14 +390,14 @@ ggplot() +
         axis.title.y = element_text(size = rel(1.3)),
         legend.text = element_text(size = rel(1.2)),
         legend.title = element_text(size = rel(1.3)),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank()) +
+        axis.text.x = element_text(size = rel(1.2)),
+        axis.title.x = element_text(size = rel(1.3))) +
   ggtitle(sprintf("%s ", LTLA_B_name)) +
   geom_point(data = LTLA_B_data, aes(x = date, y = Real_Cases / Population,
                                      color = "Real Data"),
              alpha = 0.7, shape = 18, show.legend = FALSE) +
-  scale_color_manual(values = c("Real Data" = "black", "Model Fit" = "#9BC362")) +
-  scale_fill_manual(values = c("Model Fit" = "#9BC362")) +  # Adjust fill for the ribbon legend
+  scale_color_manual(values = c("Real Data" = "black", "Model Fit" = "#17bebb")) +
+  scale_fill_manual(values = c("Model Fit" = "#17bebb")) +  # Adjust fill for the ribbon legend
   # Modify legend labels
   guides(color = guide_legend(override.aes = list(shape = c(18, NA), linetype = c(NA, 1)))) +
   labs(color = "Legend")  -> LTLA_B_plot
@@ -539,14 +544,16 @@ labels_hold <- c(
 
 #Next we have a look at how good our fit is
 betas_1_10 <- stan_plot(stanfit, pars = sprintf('betas[%s]',1:10),
-                        fill_color = "#e54339",
-                        show_density = FALSE)
+                        fill_color = "#2a2a2a",
+                        show_density = FALSE,
+                        point_est = "mean",
+                        ci_level = 0.95)
 #ci_level: 0.8 (80% intervals)
 #outer_level: 0.95 (95% intervals)
   betas_1_10 + scale_y_continuous(breaks = c(10:1),
                                               labels =labels_hold) +
-  geom_vline(xintercept = 0, color = "#9BC362", lty = 5, size = 1) +
-    ggtitle("Covariate Coefficients") +
+  geom_vline(xintercept = 0, color = "darkgrey", lty = 5, size = 1) +
+    ggtitle("Population Coefficients") +
     xlim(c(-0.4, 0.7)) +
   #theme(axis.text.y = element_text(angle = 35, hjust = 1, vjust = 0)) +
     theme( # remove the vertical grid lines
@@ -562,13 +569,15 @@ betas_1_10 <- stan_plot(stanfit, pars = sprintf('betas[%s]',1:10),
     ) -> betas_1_10
 
   betas_11_13 <- stan_plot(stanfit, pars = sprintf('betas[%s]',11:13),
-                          fill_color = "#e54339",
-                          show_density = FALSE)
+                           fill_color = "#2a2a2a",
+                           show_density = FALSE,
+                           point_est = "mean",
+                           ci_level = 0.95)
   #ci_level: 0.8 (80% intervals)
   #outer_level: 0.95 (95% intervals)
   betas_11_13 + scale_y_continuous(breaks = c(3:1),
                                   labels = c("11) Alpha Proportion", "12) Delta Proportion", "13) Omicron Proportion")) +
-    geom_vline(xintercept = 0, color = "#9BC362", lty = 5, size = 1) +
+    geom_vline(xintercept = 0, color = "darkgrey", lty = 5, size = 1) +
     ggtitle("SARS-CoV-2 Variant Coefficients") +
     xlim(c(-0.4, 0.7)) +
     #theme(axis.text.y = element_text(angle = 35, hjust = 1, vjust = 0)) +
@@ -582,14 +591,16 @@ betas_1_10 <- stan_plot(stanfit, pars = sprintf('betas[%s]',1:10),
     )  -> betas_11_13
   
   betas_14_16 <- stan_plot(stanfit, pars = sprintf('betas[%s]',14:16),
-                           fill_color = "#e54339",
-                           show_density = FALSE)
+                           fill_color = "#2a2a2a",
+                           show_density = FALSE,
+                           point_est = "mean",
+                           ci_level = 0.95)
   #ci_level: 0.8 (80% intervals)
   #outer_level: 0.95 (95% intervals)
   betas_14_16 + scale_y_continuous(breaks = c(3:1),
                                    labels = c("14) Unringfenced",
                                               "15) Outbreak Management", "16) ASC infection control")) +
-    geom_vline(xintercept = 0, color = "#9BC362", lty = 5, size = 1) +
+    geom_vline(xintercept = 0, color = "darkgrey", lty = 5, size = 1) +
     ggtitle("Funding Coefficients") +
     xlim(c(-0.4, 0.7)) +
     #theme(axis.text.y = element_text(angle = 35, hjust = 1, vjust = 0)) +
@@ -1675,4 +1686,5 @@ for(i in 1:length(LTLA_names)){
 
 
 ################################################################
-}
+  }
+  
