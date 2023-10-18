@@ -63,7 +63,7 @@ Boundaries_reduced$zetas <- as.numeric(zetas_mean[,1])
   geom_sf(aes(fill = zetas)) +
   #scale_fill_viridis_c() +
   scale_fill_gradientn(
-    colours =  c("#28A1D7", "white", "#FF6347"),  # Blue, white, and red colors
+    colours =  c("#28A1D7", "#FDFD96", "#FF6347"),  # Blue, white, and red colors
     values = scales::rescale(c(min(Boundaries_reduced$zetas), median(Boundaries_reduced$zetas), max(Boundaries_reduced$zetas)))
   ) +
   ggtitle(expression(paste("Nearest-neighbour spatial kernel value,", zeta, ", by LTLA"))) +
@@ -75,7 +75,7 @@ Boundaries_reduced$zetas <- as.numeric(zetas_mean[,1])
     geom_sf(aes(fill = zetas), show.legend = FALSE) +
     #scale_fill_viridis_c() +
     scale_fill_gradientn(
-      colours =  c("#28A1D7", "white", "#FF6347"),  # Blue, white, and red colors
+      colours =  c("#28A1D7", "#FDFD96", "#FF6347"),  # Blue, white, and red colors
       values = scales::rescale(c(min(Boundaries_reduced$zetas), median(Boundaries_reduced$zetas), max(Boundaries_reduced$zetas)))
     ) +
     #ggtitle("Average Index of Multiple Deprivation (IMD) by LTLA") +
