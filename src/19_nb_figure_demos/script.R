@@ -538,8 +538,8 @@ labels_hold <- c(
   "1) Proportion Asian", "2) Proportion Black Afr/Car",
   "3) Proportion Other Ethnicity", "4) IMD Average Score",
   "5) Proportion Over Age 65", "6) Population per km^2",
-  "7) Median Annual Income", "8) Time At Workplace",
-  "9) Time At Home", "10) Time At Transit Stations")
+  "7) Median Annual Income", "8) Visits To Workplace",
+  "9) Time At Home", "10) Visits To Transit Stations")
 
 
 #Next we have a look at how good our fit is
