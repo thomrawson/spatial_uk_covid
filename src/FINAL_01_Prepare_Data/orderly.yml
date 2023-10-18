@@ -20,7 +20,6 @@ artefacts:
         - Outputs/Google_codes_LTLA_codes.csv
         - Outputs/Variants.png
         - Outputs/Variants_data.csv
-        - Outputs/LTLA_to_region_matrix.RData
         - Outputs/Boundaries_Data.RData
 
 
