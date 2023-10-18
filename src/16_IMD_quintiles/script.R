@@ -50,7 +50,7 @@ ggplot(quintile_data, aes(x = date_begin, y = mean_Case_Rates, group = IMD_quint
         axis.title = element_text(size = rel(1.3)),
         legend.text = element_text(size = rel(1.2)),
         legend.title = element_text(size = rel(1.3))) +
-  ggtitle("Average COVID-19 Case Rates in UK LTLAs \nby IMD Quintile ") +
+  ggtitle("Average COVID-19 Weekly Case Rates in UK LTLAs \nby IMD Quintile ") +
   scale_color_manual(name = "IMD Quintile", values = custom_palette,
                      labels = c("1 - Lowest \nvalues",
                                 "2", "3", "4", "5 - Highest \nvalues")) + 
@@ -109,7 +109,7 @@ ggplot(prop_white_data, aes(x = date_begin, y = mean_Case_Rates, group = prop_wh
         axis.title = element_text(size = rel(1.3)),
         legend.text = element_text(size = rel(1.2)),
         legend.title = element_text(size = rel(1.3))) +
-  ggtitle("Average COVID-19 Case Rates in UK LTLAs \nby Proportion White British Quintile ") +
+  ggtitle("Average COVID-19 Weekly Case Rates in UK LTLAs \nby Proportion White British Quintile ") +
   scale_color_manual(name = "Prop. White \nBritish Quintile", values = custom_palette) + 
   scale_fill_manual(name = "Prop. White \nBritish Quintile", values = custom_palette) -> prop_white_quintile_plot
 
