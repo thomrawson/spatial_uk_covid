@@ -32,8 +32,10 @@ quintile_data <- Case_Rates_Data %>%
 quintile_data$IMD_quintile <- as.factor(quintile_data$IMD_quintile)
 
 #custom_palette <- c("#4CAF50", "#8BC34A", "#FFC107", "#FF9800", "#F44336")
-custom_palette <- c("#4CAF50", "#8BC34A", "#FFC107", "#EB7253", "#e54339")
+#custom_palette <- c("#4CAF50", "#8BC34A", "#FFC107", "#EB7253", "#e54339")
+custom_palette <- c("#17bebb", "#8BC061", "#FFC107", "#F28220", "#e54339")
 
+#17bebb
 #custom_palette <- c("#A5D46E", "#D0A75C", "#EB7253")
 
 ggplot(quintile_data, aes(x = date_begin, y = mean_Case_Rates, group = IMD_quintile, fill = IMD_quintile)) +
@@ -49,8 +51,12 @@ ggplot(quintile_data, aes(x = date_begin, y = mean_Case_Rates, group = IMD_quint
         legend.text = element_text(size = rel(1.2)),
         legend.title = element_text(size = rel(1.3))) +
   ggtitle("Average COVID-19 Case Rates in UK LTLAs \nby IMD Quintile ") +
-  scale_color_manual(name = "IMD Quintile", values = custom_palette) + 
-  scale_fill_manual(name = "IMD Quintile", values = custom_palette) -> quintile_plot
+  scale_color_manual(name = "IMD Quintile", values = custom_palette,
+                     labels = c("1 - Lowest \nvalues",
+                                "2", "3", "4", "5 - Highest \nvalues")) + 
+  scale_fill_manual(name = "IMD Quintile", values = custom_palette,
+                    labels = c("1 - Lowest \nvalues",
+                               "2", "3", "4", "5 - Highest \nvalues")) -> quintile_plot
 
 
 #Export the plot
@@ -178,10 +184,11 @@ ggplot(Boundaries_reduced) +
   ggtitle("Average Index of Multiple Deprivation (IMD) by LTLA") +
   labs(fill = "Average \nIMD Score") +
   theme_void() +
-  theme(plot.margin = unit(c(0, 0, 0, 0.5), "cm")) +
+  theme(plot.margin = unit(c(0, 0, 0, 0.5), "cm")) -> england_IMD
+#+
   # Highlight the two specific regions
-  geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
-          color = "blue", fill = NA, size = 0.8) -> england_IMD
+  #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
+  #        color = "blue", fill = NA, size = 0.8) -> england_IMD
 
 ggplot(Boundaries_reduced[grepl( 'London', Boundaries_reduced$DESCRIPTIO, fixed = TRUE),]) +
   geom_sf(aes(fill = IMD_Average_score), show.legend = FALSE) +
@@ -212,10 +219,10 @@ ggplot(Boundaries_reduced) +
   ggtitle("White British Proportion of LTLA Population") +
   labs(fill = "Proportion \nWhite British") +
   theme_void() +
-  theme(plot.margin = unit(c(0, 0.5, 0, 0), "cm")) +
+  theme(plot.margin = unit(c(0, 0.5, 0, 0), "cm")) -> england_prop_white  #+
   # Highlight the two specific regions
-  geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
-          color = "blue", fill = NA, size = 0.8) -> england_prop_white
+  #geom_sf(data = Boundaries_reduced %>% filter(CODE %in% c(LTLA_A_data$areaCode, LTLA_B_data$areaCode)),
+  #        color = "blue", fill = NA, size = 0.8) -> england_prop_white
 
 
 Fig2_plot <- plot_grid(england_IMD, england_prop_white, 
@@ -279,7 +286,7 @@ Total_Fig_plot <- plot_grid(Fig2_plot, combined_quintile,
 # now add the title
 title <- ggdraw() + 
   draw_label(
-    "Variation in socio-demographic factors by LTLA and COVID-19 rates",
+    "Variation in socio-demographic factors by LTLA and the respective stratification of COVID-19 case rates",
     fontface = 'bold',
     x = 0,
     hjust = 0,
