@@ -1545,6 +1545,7 @@ LTLA_Populations <- distinct(LTLA_Populations)
 COVID_funding_UTLA <- filter(COVID_funding_other, ONS_code %in% UTLA_codes)
 COVID_funding_other <- filter(COVID_funding_other, !(ONS_code %in% UTLA_codes))
 
+#First divide up the UTLAs funding into the respective LTLAs
 for(i in 1:length(COVID_funding_UTLA$ONS_code)){
   UTLA_code_hold <- COVID_funding_UTLA$ONS_code[i]
   tax_year_hold <- COVID_funding_UTLA$tax_year_start[i]
@@ -1620,6 +1621,7 @@ for(i in length(London_populations$areaCode)){
 #Lastly, we need to sort out the northamptonshire issue that's been coming up constantly
 #We need to divide the northamptonshire funding across the seven sub-regions, then split that into the separate two councils
 northamptonshire_codes <- unique(COVID_funding_other$ONS_code)
+#Cut the master UTLA
 northamptonshire_codes <- northamptonshire_codes[-6]
 
 west_north_fund_2020 <- filter(COVID_funding_other, tax_year_start == 2020)
@@ -1631,6 +1633,9 @@ west_north_fund_2020$ONS_code[4] <- "E06000062"
 west_north_fund_2020$ONS_name[4] <- "West Northamptonshire"
 west_north_fund_2020 <- west_north_fund_2020[4,]
 west_north_fund_2020$tax_year_start <- 2020
+#We then take west northamptonshire's proportional amount from the total "northamptonshire" allocation
+#West Northamptonshire population = 406733
+#North Northamptonshire population = 350448
 west_north_fund_2020[1,4:25] <- west_north_fund_2020[1,4:25] + (COVID_funding_other[which((COVID_funding_other$tax_year_start == 2020)&(COVID_funding_other$ONS_code == "E10000021")),4:25]*(406733/(406733+350448)))
 
 west_north_fund_2021 <- filter(COVID_funding_other, tax_year_start == 2021)
