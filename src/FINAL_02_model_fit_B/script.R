@@ -84,6 +84,9 @@ Case_Rates_Data <- Case_Rates_Data[,c("areaCode", "Week", "areaName",
  
   Case_Rates_Data <- filter(Case_Rates_Data, Week < final_week+1)
 
+  #Missing Scotland and Wales in the variant proportions, so start by filtering out those:
+  Case_Rates_Data <- Case_Rates_Data[which(!is.na(Case_Rates_Data$Alpha_proportion)),]
+  
 ###################
 #Begin STAN fit
 
