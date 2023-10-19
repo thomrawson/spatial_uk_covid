@@ -1090,6 +1090,78 @@ for(i in 1:nrow(Case_Rates_Data)){
 
 }
 
+###############
+#We now iron out a few remaining issues with NAs for mobility
+#Where do we still have missing date for residential?
+missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
+unique(missing_data$areaCode)
+
+#Devolved nations we ignore, as these will later be removed anyway
+missing_data <- filter(missing_data, grepl('E', areaCode))
+
+#Majority of these are Rutland due to its very small population
+
+#For Rutland, we're going to take the average of it's neighbors mobility score for these days:
+#Rutland is index 97
+which(W[97,] == 1)
+#Has four neighboring regions, 117, 189, 190, 195
+Rutland_neighbors <- c(117, 189, 190, 195)
+for(i in 1:length(missing_data$areaCode)){
+  if(missing_data$areaName[i] == "Rutland"){
+    Week_hold <- missing_data$Week[i]
+    Neighbor_hold <- filter(Case_Rates_Data, Week == Week_hold)
+    Neighbor_hold <- filter(Neighbor_hold, INDEX %in% Rutland_neighbors)
+    residential_mean_hold <- mean(Neighbor_hold$residential_percent_change_from_baseline)
+    
+    Case_Rates_Data$residential_percent_change_from_baseline[which((Case_Rates_Data$areaName == "Rutland")&(Case_Rates_Data$Week == Week_hold))] <- residential_mean_hold
+    
+  }
+}
+
+#See what is still missing:
+missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
+missing_data <- filter(missing_data, grepl('E', areaCode))
+#Most of these are week 130/131, which we will not be considering, so can ignore
+missing_data <- filter(missing_data, Week < 100)
+
+#For these remaining, all that are week 2 and 3, I'm going to use the mobility scores for
+#week 4 in those areas
+#These dates are within the first lockdown so we don't envision much difference
+for( i in 1:length(missing_data$areaCode)){
+  Week_hold <- missing_data$Week[i]
+  areaCode_hold <- missing_data$areaCode[i]
+  
+  Neighbor_hold <- filter(Case_Rates_Data, areaCode == areaCode_hold)
+  Neighbor_hold <- filter(Neighbor_hold, Week == 4)
+  residential_mean_hold <- Neighbor_hold$residential_percent_change_from_baseline[1]
+  
+  Case_Rates_Data$residential_percent_change_from_baseline[which((Case_Rates_Data$areaCode == areaCode_hold)&(Case_Rates_Data$Week == Week_hold))] <- residential_mean_hold
+  
+}
+
+missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
+
+#Same issue now for the transit station visits
+
+
+missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$transit_stations_percent_change_from_baseline)),]
+missing_data <- filter(missing_data, grepl('E', areaCode))
+#Most of these are week 130/131, which we will not be considering, so can ignore
+missing_data <- filter(missing_data, Week < 100)
+#Every single one is Rutland, so we again use the mean of its neighbours scores
+
+for(i in 1:length(missing_data$areaCode)){
+  Week_hold <- missing_data$Week[i]
+  Neighbor_hold <- filter(Case_Rates_Data, Week == Week_hold)
+  Neighbor_hold <- filter(Neighbor_hold, INDEX %in% Rutland_neighbors)
+  transit_mean_hold <- mean(Neighbor_hold$transit_stations_percent_change_from_baseline)
+  
+  Case_Rates_Data$transit_stations_percent_change_from_baseline[which((Case_Rates_Data$areaName == "Rutland")&(Case_Rates_Data$Week == Week_hold))] <- transit_mean_hold
+  
+}
+
+
+
 #Variant Proportion
 ######################
 #Here we record the proportion of cases by variant as a covariate
