@@ -92,70 +92,9 @@ Case_Rates_Data <- Case_Rates_Data[,c("areaCode", "Week", "areaName",
   Case_Rates_Data <- filter(Case_Rates_Data, Week < final_week+1)
 
 
-  #Missing Scotland and Wales in the variant proportions, so start by filtering out those:
+  #Missing Scotland and Wales in the variant proportions, so filter out those:
   Case_Rates_Data <- Case_Rates_Data[which(!is.na(Case_Rates_Data$Alpha_proportion)),]
   
-
-  missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
-  unique(missing_data$areaCode)
-  
-  
-#We need to quickly clean up an issue with the Residential & transit mobility
-#TODO: Move this to the 00 task.
-  #There are 24 occasions where the residential mobility is NA,
-  #19 of these are Rutland
-
-#For Rutland, we're going to take the average of it's neighbors mobility score for these days:
-#Rutland is index 97
-which(W[97,] == 1)
-#Has four neighboring regions, 117, 189, 190, 195
-Rutland_neighbors <- c(117, 189, 190, 195)
-for(i in 1:length(missing_data$areaCode)){
-  if(missing_data$areaName[i] == "Rutland"){
-    Week_hold <- missing_data$Week[i]
-    Neighbor_hold <- filter(Case_Rates_Data, Week == Week_hold)
-    Neighbor_hold <- filter(Neighbor_hold, INDEX %in% Rutland_neighbors)
-    residential_mean_hold <- mean(Neighbor_hold$residential_percent_change_from_baseline)
-    
-    Case_Rates_Data$residential_percent_change_from_baseline[which((Case_Rates_Data$areaName == "Rutland")&(Case_Rates_Data$Week == Week_hold))] <- residential_mean_hold
-    
-  }
-}
-missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
-
-
-#For these remaining 5, all week 2 and 3, I'm going to use the mobility scores for
-#week 4
-#These dates are within the first lockdown so I don't envision much difference
-for( i in 1:length(missing_data$areaCode)){
-  Week_hold <- missing_data$Week[i]
-  areaCode_hold <- missing_data$areaCode[i]
-  
-  Neighbor_hold <- filter(Case_Rates_Data, areaCode == areaCode_hold)
-  Neighbor_hold <- filter(Neighbor_hold, Week == 4)
-  residential_mean_hold <- Neighbor_hold$residential_percent_change_from_baseline[1]
-  
-  Case_Rates_Data$residential_percent_change_from_baseline[which((Case_Rates_Data$areaCode == areaCode_hold)&(Case_Rates_Data$Week == Week_hold))] <- residential_mean_hold
-  
-}
-
-missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$residential_percent_change_from_baseline)),]
-#All NAs are now removed!
-rm(test, missing_data, Neighbor_hold, Week_hold, areaCode_hold, residential_mean_hold)
-
-#Rutland is missing basically all of it's transit mobility data, so we'll take the average of it's neighbors for all of these
-
-missing_data <- Case_Rates_Data[which(is.na(Case_Rates_Data$transit_stations_percent_change_from_baseline)),]
-for(i in 1:length(missing_data$areaCode)){
-  Week_hold <- missing_data$Week[i]
-  Neighbor_hold <- filter(Case_Rates_Data, Week == Week_hold)
-  Neighbor_hold <- filter(Neighbor_hold, INDEX %in% Rutland_neighbors)
-  transit_mean_hold <- mean(Neighbor_hold$transit_stations_percent_change_from_baseline)
-  
-  Case_Rates_Data$transit_stations_percent_change_from_baseline[which((Case_Rates_Data$areaName == "Rutland")&(Case_Rates_Data$Week == Week_hold))] <- transit_mean_hold
-  
-}
-
 
 ###################
 #Begin STAN fit
