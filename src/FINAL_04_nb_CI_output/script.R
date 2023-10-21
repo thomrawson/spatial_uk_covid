@@ -21,11 +21,10 @@ total_iterations: %s \n
   use_SGTF_data: %s \n
   final_week: %s \n
   random_walk_prior_scale: %s \n
-  rw_penalty: %s \n
-  print_extra_gof:  %s ", tree_depth, n_chains, total_iterations,
+  rw_penalty:  %s ", tree_depth, n_chains, total_iterations,
                         scale_by_susceptible_pool, cases_type,
                         use_SGTF_data, final_week,
-                        random_walk_prior_scale, rw_penalty, print_extra_gof)
+                        random_walk_prior_scale, rw_penalty)
 
 fileConn<-file("parameters_used.txt")
 writeLines(param_string, fileConn)
