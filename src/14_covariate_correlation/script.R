@@ -89,7 +89,7 @@ GGally::ggpairs(Case_Rates_Data,
 
 ggsave(filename = "Case_rates_ggmatrix_eth.png",
        path = 'Outputs', plot = ggmatrix,
-       dpi=300, height=12, width=16, units="in")
+       dpi=300, height=6, width=8, units="in")
 
 #Let's do some other style of plots
 
