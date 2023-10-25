@@ -1517,7 +1517,7 @@ Plot_data <- rbind(Plot_data, new_row)
 #Now load in and add the univariates to the main df
 new_variable_name <- "2) Proportion Black Afr/Car"
 
-df_hold <- read.csv("main_summaries_02_black_afr_car.csv")
+df_hold <- read.csv("main_summaries_02_prop_black_afr_car.csv")
 df_hold <- df_hold[3,c(1,2,5,9)]
 colnames(df_hold) <- c("Variable", "mean", "lower", "upper")
 

@@ -4,7 +4,7 @@ script: script.R
 
 artefacts:
   - data:
-      description: 
+      description: Parameters used
       filenames:
         - parameters_used.txt
 
